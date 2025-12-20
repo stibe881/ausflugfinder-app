@@ -1,13 +1,11 @@
 import { Stack } from "expo-router";
-import { Pressable, StyleSheet, View, useColorScheme as useSystemColorScheme } from "react-native";
-import { useState, useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useTheme } from "@/contexts/theme-context";
 
 type ThemeOption = "system" | "light" | "dark";
 
@@ -17,27 +15,12 @@ const THEME_OPTIONS: { value: ThemeOption; label: string; icon: string; descript
   { value: "dark", label: "Dunkel", icon: "moon.fill", description: "Immer dunkler Modus" },
 ];
 
-const THEME_KEY = "app_theme";
-
 export default function AppearanceSettingsScreen() {
-  const systemColorScheme = useSystemColorScheme();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-  const [selectedTheme, setSelectedTheme] = useState<ThemeOption>("system");
+  const { themePreference, colorScheme, setThemePreference } = useTheme();
+  const colors = Colors[colorScheme];
 
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY).then((saved) => {
-      if (saved === "system" || saved === "light" || saved === "dark") {
-        setSelectedTheme(saved);
-      }
-    });
-  }, []);
-
-  const handleThemeChange = async (theme: ThemeOption) => {
-    setSelectedTheme(theme);
-    await AsyncStorage.setItem(THEME_KEY, theme);
-    // Note: In a real app, you would need to update the color scheme context
-    // This is a simplified version
+  const handleThemeChange = (theme: ThemeOption) => {
+    setThemePreference(theme);
   };
 
   return (
@@ -58,8 +41,8 @@ export default function AppearanceSettingsScreen() {
                   styles.themeItem,
                   {
                     backgroundColor: colors.card,
-                    borderColor: selectedTheme === option.value ? colors.primary : colors.border,
-                    borderWidth: selectedTheme === option.value ? 2 : 1,
+                    borderColor: themePreference === option.value ? colors.primary : colors.border,
+                    borderWidth: themePreference === option.value ? 2 : 1,
                   },
                 ]}
               >
@@ -72,7 +55,7 @@ export default function AppearanceSettingsScreen() {
                     {option.description}
                   </ThemedText>
                 </View>
-                {selectedTheme === option.value && (
+                {themePreference === option.value && (
                   <IconSymbol name="checkmark.circle.fill" size={24} color={colors.primary} />
                 )}
               </Pressable>

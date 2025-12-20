@@ -20,6 +20,7 @@ import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
+import { useAdmin } from "@/contexts/admin-context";
 import { getLoginUrl } from "@/constants/oauth";
 import { trpc } from "@/lib/trpc";
 
@@ -165,11 +166,14 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { user: manusUser, isAuthenticated: manusAuth, loading: manusLoading } = useAuth();
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
-  
+
   const user = supabaseUser || manusUser;
   const isAuthenticated = !!supabaseUser || manusAuth;
   const loading = supabaseLoading || manusLoading;
-  const logout = supabaseUser ? signOut : () => {};
+  const logout = supabaseUser ? signOut : () => { };
+
+  // Admin context
+  const { isAdmin, isAdminModeEnabled, toggleAdminMode } = useAdmin();
 
   // Delete account mutation
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation({
@@ -300,9 +304,28 @@ export default function ProfileScreen() {
                 iconColor={BrandColors.secondary}
                 title="Teilen"
                 subtitle="App mit Freunden teilen"
-                onPress={() => {}}
+                onPress={() => { }}
               />
             </SettingSection>
+
+            {/* Admin Section - Only visible for admins */}
+            {isAdmin && (
+              <SettingSection title="ADMINISTRATION">
+                <SettingItem
+                  icon="wrench.fill"
+                  iconColor={BrandColors.primary}
+                  title="Admin-Modus"
+                  subtitle={isAdminModeEnabled ? "Aktiviert - Bearbeiten möglich" : "Deaktiviert"}
+                  rightElement={
+                    <Switch
+                      value={isAdminModeEnabled}
+                      onValueChange={toggleAdminMode}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                    />
+                  }
+                />
+              </SettingSection>
+            )}
 
             <SettingSection title="SUPPORT">
               <SettingItem
@@ -313,12 +336,12 @@ export default function ProfileScreen() {
               <SettingItem
                 icon="doc.text.fill"
                 title="Datenschutz"
-                onPress={() => {}}
+                onPress={() => { }}
               />
               <SettingItem
                 icon="bubble.left.fill"
                 title="Feedback senden"
-                onPress={() => {}}
+                onPress={() => { }}
               />
             </SettingSection>
 
@@ -361,7 +384,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 48,
     paddingBottom: Spacing.sm,
   },
   headerTitle: {

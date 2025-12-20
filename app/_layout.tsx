@@ -14,11 +14,12 @@ import {
 } from "react-native-safe-area-context";
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { ThemeProvider as AppThemeProvider, useAppColorScheme } from "@/contexts/theme-context";
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { LanguageProvider } from "@/contexts/language-context";
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
+import { AdminProvider } from "@/contexts/admin-context";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -29,7 +30,7 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useAppColorScheme();
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
 
@@ -78,25 +79,30 @@ export default function RootLayout() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <SupabaseAuthProvider>
-            <LanguageProvider>
-            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-                <Stack.Screen name="trip/[id]" options={{ headerShown: false }} />
-                <Stack.Screen name="plan/[id]" options={{ headerShown: true }} />
-                <Stack.Screen name="friends" options={{ headerShown: true }} />
-                <Stack.Screen name="about" options={{ headerShown: true }} />
-                <Stack.Screen name="settings/language" options={{ headerShown: true }} />
-                <Stack.Screen name="settings/appearance" options={{ headerShown: true }} />
-                <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
-                <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                <Stack.Screen name="auth/register" options={{ headerShown: false }} />
-                <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
-              </Stack>
-              <StatusBar style="auto" />
-            </ThemeProvider>
-            </LanguageProvider>
+            <AdminProvider>
+              <AppThemeProvider>
+                <LanguageProvider>
+                  <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+                      <Stack.Screen name="trip/[id]" options={{ headerShown: false }} />
+                      <Stack.Screen name="trip/edit/[id]" options={{ headerShown: true, title: "Bearbeiten" }} />
+                      <Stack.Screen name="plan/[id]" options={{ headerShown: true }} />
+                      <Stack.Screen name="friends" options={{ headerShown: true }} />
+                      <Stack.Screen name="about" options={{ headerShown: true }} />
+                      <Stack.Screen name="settings/language" options={{ headerShown: true }} />
+                      <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
+                      <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
+                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
+                    </Stack>
+                    <StatusBar style="auto" />
+                  </ThemeProvider>
+                </LanguageProvider>
+              </AppThemeProvider>
+            </AdminProvider>
           </SupabaseAuthProvider>
         </QueryClientProvider>
       </trpc.Provider>

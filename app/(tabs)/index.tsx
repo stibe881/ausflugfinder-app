@@ -24,17 +24,17 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
-import { trpc } from "@/lib/trpc";
+import { getAusflugeStatistics } from "@/lib/supabase-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-function AnimatedIcon({ 
-  name, 
-  color, 
-  delay = 0 
-}: { 
-  name: "mountain.2.fill" | "sun.max.fill" | "mappin.and.ellipse"; 
-  color: string; 
+function AnimatedIcon({
+  name,
+  color,
+  delay = 0
+}: {
+  name: "mountain.2.fill" | "sun.max.fill" | "mappin.and.ellipse";
+  color: string;
   delay?: number;
 }) {
   const scale = useSharedValue(1);
@@ -136,8 +136,19 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { user, loading: authLoading, isAuthenticated } = useAuth();
 
-  // Fetch statistics from API
-  const { data: stats, isLoading: statsLoading } = trpc.trips.statistics.useQuery();
+  // Fetch statistics from Supabase
+  const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStats() {
+      setStatsLoading(true);
+      const result = await getAusflugeStatistics();
+      setStats(result);
+      setStatsLoading(false);
+    }
+    loadStats();
+  }, []);
 
   return (
     <ScrollView
@@ -150,7 +161,7 @@ export default function HomeScreen() {
         style={[
           styles.heroSection,
           {
-            paddingTop: insets.top + 60,
+            paddingTop: insets.top + 48,
             backgroundColor: colors.surface,
           },
         ]}
@@ -275,26 +286,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* User Info (if logged in) */}
-      {isAuthenticated && user && (
-        <View style={[styles.section, styles.userSection]}>
-          <View style={[styles.userCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
-              <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                {(user as any).user_metadata?.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
-              </ThemedText>
-            </View>
-            <View style={styles.userInfo}>
-              <ThemedText style={styles.userName}>
-                {(user as any).user_metadata?.name || user.email?.split('@')[0] || "Benutzer"}
-              </ThemedText>
-              <ThemedText style={[styles.userEmail, { color: colors.textSecondary }]}>
-                {user.email || ""}
-              </ThemedText>
-            </View>
-          </View>
-        </View>
-      )}
     </ScrollView>
   );
 }

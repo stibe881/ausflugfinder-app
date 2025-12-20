@@ -1,22 +1,26 @@
 import { Platform, StyleSheet, View } from "react-native";
+import Constants from "expo-constants";
 
 import { ThemedText } from "./themed-text";
 import { GoogleMapsWeb } from "./google-maps-web";
-import { Colors, BrandColors, Spacing } from "@/constants/theme";
+import { Colors, BrandColors, Spacing, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type Trip = {
   id: number;
-  name: string; // ausfluege uses 'name'
-  lat: string | null; // ausfluege uses 'lat'
-  lng: string | null; // ausfluege uses 'lng'
-  kostenStufe: number | null;
+  name: string;
+  lat: string | null;
+  lng: string | null;
+  kosten_stufe: number | null;
 };
 
 type MapViewComponentProps = {
   trips: Trip[];
   onMarkerPress?: (tripId: number) => void;
 };
+
+// Check if we're running in Expo Go (which doesn't support native modules like react-native-maps)
+const isExpoGo = Constants.appOwnership === 'expo';
 
 export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps) {
   const colorScheme = useColorScheme();
@@ -32,59 +36,62 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
   }
 
-  // Mobile fallback - React Native Maps would go here
+  // For Expo Go or when native maps aren't available, show a fallback
+  // react-native-maps requires a development build and won't work in Expo Go
   return (
-    <View style={[styles.webFallback, { backgroundColor: colors.surface }]}>
-      <ThemedText style={styles.webFallbackText}>
-        📍 Kartenansicht ist nur in der mobilen App verfügbar
+    <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
+      <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
+        <ThemedText style={styles.fallbackEmoji}>🗺️</ThemedText>
+      </View>
+      <ThemedText style={styles.fallbackTitle}>
+        Kartenansicht
       </ThemedText>
-      <ThemedText style={[styles.webFallbackSubtext, { color: colors.textSecondary }]}>
-        {tripsWithCoords.length} Ausflugsziele mit Standort
+      <ThemedText style={[styles.fallbackText, { color: colors.textSecondary }]}>
+        {tripsWithCoords.length} Ausflüge mit Standort
       </ThemedText>
+      {isExpoGo && (
+        <ThemedText style={[styles.fallbackNote, { color: colors.textSecondary }]}>
+          Die Karte ist nur im Development Build verfügbar.{"\n"}
+          Verwende "eas build" für die volle Funktionalität.
+        </ThemedText>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  webFallback: {
+  fallback: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: Spacing.xl,
   },
-  webFallbackText: {
-    fontSize: 18,
+  fallbackIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  fallbackEmoji: {
+    fontSize: 40,
+  },
+  fallbackTitle: {
+    fontSize: 20,
     fontWeight: "600",
     textAlign: "center",
     marginBottom: Spacing.sm,
   },
-  webFallbackSubtext: {
-    fontSize: 14,
+  fallbackText: {
+    fontSize: 16,
     textAlign: "center",
     marginBottom: Spacing.lg,
   },
-  tripsList: {
-    width: "100%",
-    maxWidth: 400,
-    gap: Spacing.sm,
-  },
-  tripItem: {
-    padding: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  tripTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: Spacing.xs,
-  },
-  tripCoords: {
-    fontSize: 12,
-  },
-  webFallbackNote: {
-    fontSize: 12,
+  fallbackNote: {
+    fontSize: 13,
     textAlign: "center",
-    marginTop: Spacing.lg,
     fontStyle: "italic",
+    paddingHorizontal: Spacing.lg,
   },
 });

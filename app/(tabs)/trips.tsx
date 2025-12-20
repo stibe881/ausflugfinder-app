@@ -44,14 +44,14 @@ const COST_LABELS: Record<string, string> = {
   very_high: "Sehr teuer",
 };
 
-function TripListItem({ 
-  trip, 
-  onPress, 
+function TripListItem({
+  trip,
+  onPress,
   onToggleFavorite,
   onToggleDone,
   onDelete,
-}: { 
-  trip: Trip; 
+}: {
+  trip: Trip;
   onPress: () => void;
   onToggleFavorite: () => void;
   onToggleDone: () => void;
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 48,
     paddingBottom: Spacing.sm,
   },
   headerTitle: {

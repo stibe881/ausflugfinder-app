@@ -19,7 +19,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { MapViewComponent } from "@/components/map-view-component";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { trpc } from "@/lib/trpc";
+import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto } from "@/lib/supabase-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2;
@@ -42,13 +42,14 @@ const REGIONS = [
 
 type Trip = {
   id: number;
-  name: string; // ausfluege uses 'name' instead of 'title'
-  beschreibung: string | null; // ausfluege uses 'beschreibung' instead of 'description'
-  adresse: string; // ausfluege uses 'adresse' instead of 'destination'
-  kostenStufe: number | null; // ausfluege uses 'kostenStufe' (0-4) instead of 'cost' enum
+  name: string;
+  beschreibung: string | null;
+  adresse: string;
+  kosten_stufe: number | null;
   region: string | null;
-  lat: string | null; // ausfluege uses 'lat' instead of 'latitude'
-  lng: string | null; // ausfluege uses 'lng' instead of 'longitude'
+  lat: string | null;
+  lng: string | null;
+  primaryPhotoUrl?: string | null;
 };
 
 function CostBadge({ cost }: { cost: string }) {
@@ -62,13 +63,16 @@ function CostBadge({ cost }: { cost: string }) {
   );
 }
 
-function TripCard({ trip, onPress, onFavoriteToggle }: { 
-  trip: Trip; 
+function TripCard({ trip, onPress, onFavoriteToggle }: {
+  trip: Trip;
   onPress: () => void;
   onFavoriteToggle: () => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+
+  // Debug log
+  console.log(`[TripCard] ${trip.name} - Photo URL:`, trip.primaryPhotoUrl);
 
   return (
     <Pressable
@@ -84,14 +88,21 @@ function TripCard({ trip, onPress, onFavoriteToggle }: {
     >
       {/* Image */}
       <View style={styles.tripImageContainer}>
-        <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
-          <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
-        </View>
-        
-        {/* Favorite Button */}
+        {trip.primaryPhotoUrl ? (
+          <Image
+            source={{ uri: trip.primaryPhotoUrl }}
+            style={styles.tripImage}
+            contentFit="cover"
+          />
+        ) : (
+          <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
+            <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
+          </View>
+        )}
+
         {/* Cost Badge */}
         <View style={styles.costBadgeContainer}>
-          <CostBadge cost={trip.kostenStufe !== null ? ['free', 'low', 'medium', 'high', 'very_high'][trip.kostenStufe] : 'free'} />
+          <CostBadge cost={trip.kosten_stufe !== null ? ['free', 'low', 'medium', 'high', 'very_high'][trip.kosten_stufe] : 'free'} />
         </View>
       </View>
 
@@ -111,13 +122,13 @@ function TripCard({ trip, onPress, onFavoriteToggle }: {
   );
 }
 
-function CategoryChip({ 
-  label, 
-  selected, 
-  onPress 
-}: { 
-  label: string; 
-  selected: boolean; 
+function CategoryChip({
+  label,
+  selected,
+  onPress
+}: {
+  label: string;
+  selected: boolean;
   onPress: () => void;
 }) {
   const colorScheme = useColorScheme();
@@ -156,34 +167,62 @@ export default function ExploreScreen() {
   const [selectedCost, setSelectedCost] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+  const [trips, setTrips] = useState<Ausflug[]>([]);
+  const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch trips
-  const { data: tripsData, isLoading, refetch } = trpc.trips.search.useQuery({
-    keyword: keyword || undefined,
-    cost: selectedCost || undefined,
-    // Show all trips, not just public ones
-  });
+  // Fetch trips with filters and photos
+  const fetchTrips = useCallback(async () => {
+    setIsLoading(true);
+    const kostenStufe = selectedCost ? { free: 0, low: 1, medium: 2, high: 3, very_high: 4 }[selectedCost] : undefined;
+    const result = await searchAusfluege({
+      keyword: keyword || undefined,
+      kostenStufe,
+    });
+
+    // Fetch primary photos for all trips
+    const tripsWithPhotos = await Promise.all(
+      result.data.map(async (ausflug) => {
+        const primaryPhotoUrl = await getPrimaryPhoto(ausflug.id);
+        return { ...ausflug, primaryPhotoUrl };
+      })
+    );
+
+    setTrips(tripsWithPhotos as any);
+    setIsLoading(false);
+  }, [keyword, selectedCost]);
 
   // Fetch statistics
-  const { data: stats } = trpc.trips.statistics.useQuery();
+  const fetchStats = useCallback(async () => {
+    const result = await getAusflugeStatistics();
+    setStats(result);
+  }, []);
 
-  // Toggle favorite mutation
-  const toggleFavoriteMutation = trpc.trips.toggleFavorite.useMutation({
-    onSuccess: () => refetch(),
-  });
+  // Initial load
+  useEffect(() => {
+    fetchTrips();
+    fetchStats();
+  }, []);
+
+  // Refetch when filters change
+  useEffect(() => {
+    fetchTrips();
+  }, [keyword, selectedCost, fetchTrips]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    await fetchTrips();
+    await fetchStats();
     setRefreshing(false);
-  }, [refetch]);
+  }, [fetchTrips, fetchStats]);
 
   const handleTripPress = (tripId: number) => {
     router.push(`/trip/${tripId}` as any);
   };
 
   const handleFavoriteToggle = (tripId: number) => {
-    toggleFavoriteMutation.mutate({ id: tripId });
+    // TODO: Implement favorite toggle with Supabase
+    console.log("Toggle favorite for trip:", tripId);
   };
 
   const costFilters = [
@@ -193,8 +232,6 @@ export default function ExploreScreen() {
     { key: "medium", label: "Mittel" },
     { key: "high", label: "Teuer" },
   ];
-
-  const trips = tripsData?.data || [];
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -312,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 48,
     paddingBottom: Spacing.sm,
   },
   viewModeButton: {

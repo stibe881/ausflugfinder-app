@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,16 +19,16 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
-import { trpc } from "@/lib/trpc";
+import { getDayPlans, createDayPlan, deleteDayPlan, type DayPlan } from "@/lib/supabase-api";
 
-type DayPlan = {
+type LocalDayPlan = {
   id: number;
   title: string;
   description: string | null;
   startDate: Date;
   endDate: Date;
-  isPublic: number;
-  isDraft: number;
+  isPublic: boolean;
+  isDraft: boolean;
 };
 
 function formatDate(date: Date | string): string {
@@ -47,12 +47,12 @@ function getDaysDiff(start: Date | string, end: Date | string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 }
 
-function PlanCard({ 
-  plan, 
-  onPress, 
-  onDelete 
-}: { 
-  plan: DayPlan; 
+function PlanCard({
+  plan,
+  onPress,
+  onDelete
+}: {
+  plan: LocalDayPlan;
   onPress: () => void;
   onDelete: () => void;
 }) {
@@ -279,47 +279,62 @@ export default function PlannerScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  const [plans, setPlans] = useState<LocalDayPlan[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch day plans
-  const { data: plans, isLoading, refetch } = trpc.dayPlans.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  // Fetch day plans from Supabase
+  const loadPlans = useCallback(async () => {
+    if (!isAuthenticated) return;
 
-  // Create plan mutation
-  const createPlanMutation = trpc.dayPlans.create.useMutation({
-    onSuccess: () => {
-      refetch();
-      setShowCreateModal(false);
-    },
-    onError: (error) => {
-      Alert.alert("Fehler", error.message);
-    },
-  });
+    const data = await getDayPlans();
+    // Convert from database format to local format
+    const localPlans = data.map(p => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      startDate: new Date(p.start_date),
+      endDate: new Date(p.end_date),
+      isPublic: p.is_public,
+      isDraft: p.is_draft,
+    }));
+    setPlans(localPlans);
+    setIsLoading(false);
+  }, [isAuthenticated]);
 
-  // Delete plan mutation
-  const deletePlanMutation = trpc.dayPlans.delete.useMutation({
-    onSuccess: () => refetch(),
-  });
+  // Load plans on mount
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    await loadPlans();
     setRefreshing(false);
-  }, [refetch]);
+  }, [loadPlans]);
 
-  const handleCreatePlan = (title: string, description: string) => {
+  const handleCreatePlan = async (title: string, description: string) => {
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    createPlanMutation.mutate({
+
+    setIsCreating(true);
+    const result = await createDayPlan({
       title,
       description: description || undefined,
       startDate: now,
       endDate: tomorrow,
     });
+    setIsCreating(false);
+
+    if (result.success) {
+      setShowCreateModal(false);
+      loadPlans();
+    } else {
+      Alert.alert("Fehler", result.error || "Plan konnte nicht erstellt werden.");
+    }
   };
 
   const handleDeletePlan = (planId: number, title: string) => {
@@ -331,7 +346,14 @@ export default function PlannerScreen() {
         {
           text: "Löschen",
           style: "destructive",
-          onPress: () => deletePlanMutation.mutate({ id: planId }),
+          onPress: async () => {
+            const result = await deleteDayPlan(planId);
+            if (result.success) {
+              loadPlans();
+            } else {
+              Alert.alert("Fehler", result.error || "Plan konnte nicht gelöscht werden.");
+            }
+          },
         },
       ]
     );
@@ -429,7 +451,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 48,
     paddingBottom: Spacing.sm,
   },
   headerContent: {

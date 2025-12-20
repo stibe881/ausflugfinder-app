@@ -1,7 +1,8 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,15 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { trpc } from "@/lib/trpc";
+import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug } from "@/lib/supabase-api";
+import { useAdmin } from "@/contexts/admin-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -54,12 +57,31 @@ export default function TripDetailScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { canEdit } = useAdmin();
 
-  // Fetch trip data (ausfluege)
-  const { data: trip, isLoading } = trpc.trips.getById.useQuery(
-    { id: Number(id) },
-    { enabled: !!id }
-  );
+  // State for trip data
+  const [trip, setTrip] = useState<Ausflug | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  // Fetch trip data and photo from Supabase
+  useEffect(() => {
+    async function loadTrip() {
+      if (!id) return;
+      setIsLoading(true);
+      const result = await getAusflugById(Number(id));
+      setTrip(result);
+
+      // Fetch primary photo
+      if (result) {
+        const photo = await getPrimaryPhoto(result.id);
+        setPhotoUrl(photo);
+      }
+
+      setIsLoading(false);
+    }
+    loadTrip();
+  }, [id]);
 
   const handleShare = async () => {
     try {
@@ -83,9 +105,38 @@ export default function TripDetailScreen() {
   };
 
   const handleOpenWebsite = () => {
-    if (trip?.websiteUrl) {
-      Linking.openURL(trip.websiteUrl);
+    if (trip?.website_url) {
+      Linking.openURL(trip.website_url);
     }
+  };
+
+  const handleDelete = () => {
+    if (!trip) return;
+
+    Alert.alert(
+      "Ausflug löschen",
+      `Möchtest du "${trip.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      [
+        { text: "Abbrechen", style: "cancel" },
+        {
+          text: "Löschen",
+          style: "destructive",
+          onPress: async () => {
+            const result = await deleteAusflug(trip.id);
+            if (result.success) {
+              Alert.alert("Gelöscht", "Der Ausflug wurde erfolgreich gelöscht.");
+              router.back();
+            } else {
+              Alert.alert("Fehler", result.error || "Fehler beim Löschen.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEdit = () => {
+    router.push(`/trip/edit/${id}` as any);
   };
 
   if (isLoading) {
@@ -113,7 +164,7 @@ export default function TripDetailScreen() {
     );
   }
 
-  const kostenStufe = trip.kostenStufe ?? 0;
+  const kostenStufe = trip.kosten_stufe ?? 0;
   const costLabel = COST_LABELS[kostenStufe] || "Kostenlos";
   const costColors = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#DC2626"];
   const costColor = costColors[kostenStufe] || costColors[0];
@@ -147,13 +198,21 @@ export default function TripDetailScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image Placeholder */}
+        {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <View style={[styles.heroPlaceholder, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
-          </View>
+          {photoUrl ? (
+            <Image
+              source={{ uri: photoUrl }}
+              style={styles.heroImage}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.heroPlaceholder, { backgroundColor: colors.surface }]}>
+              <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
+            </View>
+          )}
           <View style={styles.heroOverlay} />
-          
+
           {/* Cost Badge */}
           <View style={[styles.costBadge, { backgroundColor: costColor }]}>
             <ThemedText style={styles.costBadgeText}>{costLabel}</ThemedText>
@@ -182,8 +241,8 @@ export default function TripDetailScreen() {
                 <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
               </Pressable>
             ) : null}
-            
-            {trip.websiteUrl ? (
+
+            {trip.website_url ? (
               <Pressable
                 onPress={handleOpenWebsite}
                 style={[styles.actionButtonLarge, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
@@ -207,40 +266,63 @@ export default function TripDetailScreen() {
           {/* Details */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Details</ThemedText>
-            
+
             {trip.region ? (
               <InfoRow icon="location.fill" label="Region" value={trip.region} />
             ) : null}
-            
+
             {trip.land ? (
               <InfoRow icon="flag.fill" label="Land" value={trip.land} />
             ) : null}
-            
+
             {trip.parkplatz ? (
               <InfoRow icon="parkingsign" label="Parkplatz" value={trip.parkplatz} />
             ) : null}
-            
+
             {trip.altersempfehlung ? (
               <InfoRow icon="person.2.fill" label="Altersempfehlung" value={trip.altersempfehlung} />
             ) : null}
-            
+
             {trip.jahreszeiten ? (
               <InfoRow icon="calendar" label="Jahreszeiten" value={trip.jahreszeiten} />
             ) : null}
           </View>
 
           {/* Nice to Know */}
-          {trip.niceToKnow ? (
+          {trip.nice_to_know ? (
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>Gut zu wissen</ThemedText>
               <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <IconSymbol name="lightbulb.fill" size={20} color={colors.primary} />
                 <ThemedText style={[styles.infoBoxText, { color: colors.textSecondary }]}>
-                  {trip.niceToKnow}
+                  {trip.nice_to_know}
                 </ThemedText>
               </View>
             </View>
           ) : null}
+
+          {/* Admin Actions */}
+          {canEdit && (
+            <View style={styles.section}>
+              <ThemedText style={styles.sectionTitle}>Admin-Aktionen</ThemedText>
+              <View style={styles.adminActions}>
+                <Pressable
+                  onPress={handleEdit}
+                  style={[styles.adminButton, { backgroundColor: colors.primary }]}
+                >
+                  <IconSymbol name="pencil" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.adminButtonText}>Bearbeiten</ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={handleDelete}
+                  style={[styles.adminButton, { backgroundColor: "#EF4444" }]}
+                >
+                  <IconSymbol name="trash.fill" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.adminButtonText}>Löschen</ThemedText>
+                </Pressable>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Bottom Spacing */}
@@ -296,6 +378,10 @@ const styles = StyleSheet.create({
     height: 300,
     position: "relative",
   },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
   heroPlaceholder: {
     flex: 1,
     justifyContent: "center",
@@ -307,7 +393,7 @@ const styles = StyleSheet.create({
   },
   costBadge: {
     position: "absolute",
-    top: Spacing.lg,
+    bottom: Spacing.lg,
     right: Spacing.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -402,5 +488,23 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
+  },
+  adminActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  adminButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  adminButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
