@@ -185,7 +185,7 @@ export default function ExploreScreen() {
   const { data: tripsData, isLoading, refetch } = trpc.trips.search.useQuery({
     keyword: keyword || undefined,
     cost: selectedCost || undefined,
-    isPublic: true,
+    // Show all trips, not just public ones
   });
 
   // Fetch statistics

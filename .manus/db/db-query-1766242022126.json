@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, title, isPublic FROM trips LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 39nB9MMxm8dKKgZ.4569459278e8 --database fEUDbtjH5ohSpNbohx5Qrr --execute SELECT id, title, isPublic FROM trips LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "title": "Rheinfall Abenteuer",
+      "isPublic": "1"
+    },
+    {
+      "id": "2",
+      "title": "Matterhorn Wanderung",
+      "isPublic": "1"
+    },
+    {
+      "id": "3",
+      "title": "Zürichsee Schifffahrt",
+      "isPublic": "1"
+    },
+    {
+      "id": "4",
+      "title": "Jungfraujoch Ausflug",
+      "isPublic": "1"
+    },
+    {
+      "id": "5",
+      "title": "Luzern Stadtbummel",
+      "isPublic": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tisPublic\n1\tRheinfall Abenteuer\t1\n2\tMatterhorn Wanderung\t1\n3\tZürichsee Schifffahrt\t1\n4\tJungfraujoch Ausflug\t1\n5\tLuzern Stadtbummel\t1\n",
+  "stderr": "",
+  "execution_time_ms": 187
+}

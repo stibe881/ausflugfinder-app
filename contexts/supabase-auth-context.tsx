@@ -62,14 +62,22 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
-    const { error } = await supabase.auth.signUp({
+    console.log('[SupabaseAuth] signUp called with:', { email, hasPassword: !!password, name });
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           name,
         },
+        emailRedirectTo: undefined, // No email confirmation redirect needed
       },
+    });
+    console.log('[SupabaseAuth] signUp result:', { 
+      hasData: !!data, 
+      hasUser: !!data?.user,
+      hasSession: !!data?.session,
+      error: error?.message 
     });
     return { error };
   };

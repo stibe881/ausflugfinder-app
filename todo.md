@@ -157,3 +157,9 @@
 - [x] Development Server Restart-Loop (tsx watch durch nodemon ersetzt)
 - [x] window.localStorage Fehler (Alten AuthProvider entfernt, nur Supabase Auth aktiv)
 - [x] Supabase AsyncStorage Web-Fehler (Platform-spezifische Storage implementiert)
+
+## Neue kritische Bugs (vom Benutzer gemeldet)
+- [x] Permission-denied Fehler: "insufficient permissions to get project" (Alte Manus OAuth Dateien entfernt)
+- [x] Permission-denied Fehler: "insufficient permissions to list custom domains" (Alte Manus OAuth Dateien entfernt)
+- [x] Registrierung funktioniert nicht - lädt lange, dann passiert nichts (Email-Bestätigung in Supabase deaktiviert)
+- [x] Daten aus der Original-Webapp werden in der App nicht angezeigt (isPublic Filter entfernt)
