@@ -402,7 +402,7 @@ export default function PlannerScreen() {
           }
           renderItem={({ item }) => (
             <PlanCard
-              plan={item as DayPlan}
+              plan={item as any}
               onPress={() => handlePlanPress(item.id)}
               onDelete={() => handleDeletePlan(item.id, item.title)}
             />

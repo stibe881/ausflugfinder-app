@@ -342,7 +342,7 @@ export default function TripsScreen() {
           }
           renderItem={({ item }) => (
             <TripListItem
-              trip={item as Trip}
+              trip={item as any}
               onPress={() => handleTripPress(item.id)}
               onToggleFavorite={() => toggleFavoriteMutation.mutate({ id: item.id })}
               onToggleDone={() => toggleDoneMutation.mutate({ id: item.id })}

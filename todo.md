@@ -140,3 +140,14 @@
 - [ ] RLS Policies für alle Tabellen erstellen
 - [ ] Daten von Original-Webapp nach Supabase migrieren
 - [ ] Testdaten in Supabase einfügen
+
+## Supabase Auth Implementation
+- [x] @supabase/supabase-js installieren
+- [x] Supabase Client konfigurieren
+- [x] Auth Context für Supabase Auth erstellen
+- [x] Login Screen implementieren
+- [x] Register Screen implementieren
+- [x] Passwort-Reset Flow
+- [ ] Server-seitige Auth-Integration
+- [ ] RLS Policies für Supabase Auth anpassen
+- [ ] Profile Screen an Supabase Auth anpassen

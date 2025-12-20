@@ -282,7 +282,7 @@ export default function ExploreScreen() {
       {/* Content - Grid or Map */}
       {viewMode === "map" ? (
         <MapViewComponent
-          trips={trips as Trip[]}
+          trips={trips as any}
           onMarkerPress={handleTripPress}
         />
       ) : isLoading ? (
@@ -316,7 +316,7 @@ export default function ExploreScreen() {
           }
           renderItem={({ item }) => (
             <TripCard
-              trip={item as Trip}
+              trip={item as any}
               onPress={() => handleTripPress(item.id)}
               onFavoriteToggle={() => handleFavoriteToggle(item.id)}
             />

@@ -19,6 +19,7 @@ import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { LanguageProvider } from "@/contexts/language-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -77,8 +78,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <LanguageProvider>
+          <SupabaseAuthProvider>
+            <AuthProvider>
+              <LanguageProvider>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -91,11 +93,15 @@ export default function RootLayout() {
                 <Stack.Screen name="settings/language" options={{ headerShown: true }} />
                 <Stack.Screen name="settings/appearance" options={{ headerShown: true }} />
                 <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
+                <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+                <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
-            </LanguageProvider>
-          </AuthProvider>
+              </LanguageProvider>
+            </AuthProvider>
+          </SupabaseAuthProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>

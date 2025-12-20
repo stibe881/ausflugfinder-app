@@ -19,6 +19,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import { getLoginUrl } from "@/constants/oauth";
 import { trpc } from "@/lib/trpc";
 
@@ -116,51 +117,13 @@ function LoginScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = async () => {
-    try {
-      setIsLoggingIn(true);
-      const loginUrl = getLoginUrl();
+  const handleLogin = () => {
+    router.push("/auth/login" as any);
+  };
 
-      if (Platform.OS === "web") {
-        window.location.href = loginUrl;
-        return;
-      }
-
-      const result = await WebBrowser.openAuthSessionAsync(
-        loginUrl,
-        undefined,
-        {
-          preferEphemeralSession: false,
-          showInRecents: true,
-        }
-      );
-
-      if (result.type === "success" && result.url) {
-        let url: URL;
-        if (result.url.startsWith("exp://") || result.url.startsWith("exps://")) {
-          const urlStr = result.url.replace(/^exp(s)?:\/\//, "http://");
-          url = new URL(urlStr);
-        } else {
-          url = new URL(result.url);
-        }
-
-        const code = url.searchParams.get("code");
-        const state = url.searchParams.get("state");
-
-        if (code && state) {
-          router.push({
-            pathname: "/oauth/callback" as any,
-            params: { code, state },
-          });
-        }
-      }
-    } catch (error) {
-      console.error("[Auth] Login error:", error);
-    } finally {
-      setIsLoggingIn(false);
-    }
+  const handleRegister = () => {
+    router.push("/auth/register" as any);
   };
 
   return (
@@ -174,20 +137,22 @@ function LoginScreen() {
       </ThemedText>
       <Pressable
         onPress={handleLogin}
-        disabled={isLoggingIn}
         style={[
           styles.loginButton,
-          { backgroundColor: colors.primary, opacity: isLoggingIn ? 0.7 : 1 },
+          { backgroundColor: colors.primary },
         ]}
       >
-        {isLoggingIn ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <>
-            <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
-            <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
-          </>
-        )}
+        <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
+        <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
+      </Pressable>
+      <Pressable
+        onPress={handleRegister}
+        style={[
+          styles.registerButton,
+          { borderColor: colors.primary },
+        ]}
+      >
+        <ThemedText style={[styles.registerButtonText, { color: colors.primary }]}>Registrieren</ThemedText>
       </Pressable>
     </View>
   );
@@ -198,7 +163,13 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user: manusUser, isAuthenticated: manusAuth, loading: manusLoading } = useAuth();
+  const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
+  
+  const user = supabaseUser || manusUser;
+  const isAuthenticated = !!supabaseUser || manusAuth;
+  const loading = supabaseLoading || manusLoading;
+  const logout = supabaseUser ? signOut : () => {};
 
   // Delete account mutation
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation({
@@ -281,15 +252,15 @@ export default function ProfileScreen() {
             <View style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
                 <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                  {user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
+                  {(supabaseUser?.user_metadata?.name || supabaseUser?.email || manusUser?.name || manusUser?.email || "U").charAt(0).toUpperCase()}
                 </ThemedText>
               </View>
               <View style={styles.userInfo}>
                 <ThemedText style={styles.userName}>
-                  {user?.name || "Benutzer"}
+                  {supabaseUser?.user_metadata?.name || manusUser?.name || "Benutzer"}
                 </ThemedText>
                 <ThemedText style={[styles.userEmail, { color: colors.textSecondary }]}>
-                  {user?.email || ""}
+                  {supabaseUser?.email || manusUser?.email || ""}
                 </ThemedText>
               </View>
             </View>
@@ -442,6 +413,20 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  registerButton: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
+    borderRadius: BorderRadius.md,
+    minWidth: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    marginTop: Spacing.md,
+  },
+  registerButtonText: {
     fontSize: 16,
     fontWeight: "600",
   },

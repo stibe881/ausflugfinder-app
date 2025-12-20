@@ -48,7 +48,7 @@ function PackingListTab({ dayPlanId }: { dayPlanId: number }) {
     addMutation.mutate({ dayPlanId, item: newItem.trim() });
   };
 
-  const packedCount = items?.filter(i => i.isPacked === 1).length || 0;
+  const packedCount = items?.filter(i => i.isPacked).length || 0;
   const totalCount = items?.length || 0;
 
   return (
@@ -95,13 +95,13 @@ function PackingListTab({ dayPlanId }: { dayPlanId: number }) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => toggleMutation.mutate({ id: item.id, isPacked: item.isPacked !== 1 })}
+            onPress={() => toggleMutation.mutate({ id: item.id, isPacked: !item.isPacked })}
             style={[styles.packingItem, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
-            <View style={[styles.checkbox, item.isPacked === 1 && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              {item.isPacked === 1 && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
+            <View style={[styles.checkbox, item.isPacked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              {item.isPacked && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
             </View>
-            <ThemedText style={[styles.packingItemText, item.isPacked === 1 && styles.packedText]}>
+            <ThemedText style={[styles.packingItemText, item.isPacked && styles.packedText]}>
               {item.item}
             </ThemedText>
             <Pressable onPress={() => deleteMutation.mutate({ id: item.id })}>
@@ -279,7 +279,7 @@ function ChecklistTab({ dayPlanId }: { dayPlanId: number }) {
     addMutation.mutate({ dayPlanId, title: newItem.trim() });
   };
 
-  const completedCount = items?.filter(i => i.isCompleted === 1).length || 0;
+  const completedCount = items?.filter(i => i.isCompleted).length || 0;
   const totalCount = items?.length || 0;
 
   return (
@@ -326,13 +326,13 @@ function ChecklistTab({ dayPlanId }: { dayPlanId: number }) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => toggleMutation.mutate({ id: item.id, isCompleted: item.isCompleted !== 1 })}
+            onPress={() => toggleMutation.mutate({ id: item.id, isCompleted: !item.isCompleted })}
             style={[styles.packingItem, { backgroundColor: colors.card, borderColor: colors.border }]}
           >
-            <View style={[styles.checkbox, item.isCompleted === 1 && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              {item.isCompleted === 1 && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
+            <View style={[styles.checkbox, item.isCompleted && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              {item.isCompleted && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
             </View>
-            <ThemedText style={[styles.packingItemText, item.isCompleted === 1 && styles.packedText]}>
+            <ThemedText style={[styles.packingItemText, item.isCompleted && styles.packedText]}>
               {item.title}
             </ThemedText>
             <Pressable onPress={() => deleteMutation.mutate({ id: item.id })}>
