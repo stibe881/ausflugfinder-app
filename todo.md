@@ -120,3 +120,12 @@
 
 ## Bugs
 - [x] Login funktioniert nicht - Benutzer landen unangemeldet auf der Startseite
+
+## Kritische Bugs und Anforderungen
+- [ ] Login funktioniert immer noch nicht - Benutzer werden unangemeldet weitergeleitet
+- [x] Auf Supabase (PostgreSQL) migrieren
+- [x] Supabase-Verbindung erfolgreich getestet
+- [ ] Alle Daten von Original-Webapp nach Supabase migrieren
+- [ ] Supabase Auth implementieren
+- [x] Datenbankschema von MySQL auf PostgreSQL konvertieren
+- [x] Schema erfolgreich nach Supabase gepusht

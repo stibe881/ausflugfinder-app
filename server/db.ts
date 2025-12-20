@@ -1,15 +1,19 @@
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _client: ReturnType<typeof postgres> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+  if (!_db && connectionString) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _client = postgres(connectionString);
+      _db = drizzle(_client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -196,8 +200,8 @@ export async function searchTrips(params: {
 export async function createTrip(data: InsertTrip) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(trips).values(data);
-  return result[0].insertId;
+  const result = await db.insert(trips).values(data).returning({ id: trips.id });
+  return result[0].id;
 }
 
 export async function updateTrip(id: number, userId: number, data: Partial<InsertTrip>) {
@@ -393,8 +397,8 @@ export async function getDayPlanById(id: number) {
 export async function createDayPlan(data: InsertDayPlan) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(dayPlans).values(data);
-  return result[0].insertId;
+  const result = await db.insert(dayPlans).values(data).returning({ id: dayPlans.id });
+  return result[0].id;
 }
 
 export async function updateDayPlan(id: number, userId: number, data: Partial<InsertDayPlan>) {
@@ -446,7 +450,7 @@ export async function addPackingListItem(data: { dayPlanId: number; item: string
 export async function updatePackingListItem(id: number, isPacked: boolean) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(packingListItems).set({ isPacked: isPacked ? 1 : 0 }).where(eq(packingListItems.id, id));
+  await db.update(packingListItems).set({ isPacked }).where(eq(packingListItems.id, id));
 }
 
 export async function deletePackingListItem(id: number) {
@@ -492,7 +496,7 @@ export async function addChecklistItem(data: { dayPlanId: number; title: string;
 export async function updateChecklistItem(id: number, isCompleted: boolean) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(checklistItems).set({ isCompleted: isCompleted ? 1 : 0 }).where(eq(checklistItems.id, id));
+  await db.update(checklistItems).set({ isCompleted }).where(eq(checklistItems.id, id));
 }
 
 export async function deleteChecklistItem(id: number) {
@@ -537,7 +541,7 @@ export async function getUserNotifications(userId: number) {
 export async function markNotificationRead(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(notifications).set({ isRead: 1 }).where(eq(notifications.id, id));
+  await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
 }
 
 // ============ USER ============

@@ -75,7 +75,7 @@ export const appRouter = router({
         const tripId = await db.createTrip({
           userId: ctx.user.id,
           ...input,
-          isPublic: input.isPublic ? 1 : 0,
+          isPublic: input.isPublic,
         });
         return { id: tripId };
       }),
@@ -94,7 +94,7 @@ export const appRouter = router({
         const { id, ...data } = input;
         await db.updateTrip(id, ctx.user.id, {
           ...data,
-          isPublic: data.isPublic !== undefined ? (data.isPublic ? 1 : 0) : undefined,
+          isPublic: data.isPublic,
         });
         return { success: true };
       }),
@@ -326,7 +326,7 @@ export const appRouter = router({
         const planId = await db.createDayPlan({
           userId: ctx.user.id,
           ...input,
-          isPublic: input.isPublic ? 1 : 0,
+          isPublic: input.isPublic,
         });
         return { id: planId };
       }),
@@ -345,8 +345,8 @@ export const appRouter = router({
         const { id, ...data } = input;
         await db.updateDayPlan(id, ctx.user.id, {
           ...data,
-          isPublic: data.isPublic !== undefined ? (data.isPublic ? 1 : 0) : undefined,
-          isDraft: data.isDraft !== undefined ? (data.isDraft ? 1 : 0) : undefined,
+          isPublic: data.isPublic,
+          isDraft: data.isDraft,
         });
         return { success: true };
       }),
