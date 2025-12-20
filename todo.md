@@ -156,3 +156,4 @@
 - [x] Permission-Denied Fehler beim Laden der Vorschau (Manus OAuth Aufrufe entfernt)
 - [x] Development Server Restart-Loop (tsx watch durch nodemon ersetzt)
 - [x] window.localStorage Fehler (Alten AuthProvider entfernt, nur Supabase Auth aktiv)
+- [x] Supabase AsyncStorage Web-Fehler (Platform-spezifische Storage implementiert)
