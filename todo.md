@@ -166,3 +166,17 @@
 
 ## Neues Problem (vom Benutzer gemeldet)
 - [x] Daten (Ausflüge, Kategorien etc.) aus der Webapp werden in der App nicht angezeigt (18 Ausflüge von MySQL nach Supabase migriert, App angepasst)
+
+## Neue Probleme (vom Benutzer gemeldet)
+- [x] "Ausflug nicht gefunden" Fehler beim Klicken auf einen Ausflug (Detail-Seite angepasst für ausfluege)
+- [ ] Nur 18 statt 45 Ausflüge - MySQL hat nur 18, Benutzer kümmert sich um fehlende Daten
+- [ ] Keine Titelbilder - Benutzer lädt Bilder manuell in Supabase Storage hoch
+
+## Aktuelles Problem
+- [ ] Detail-Seite zeigt "Ausflug nicht gefunden" obwohl Ausflug existiert
+
+## Neues Problem (vom Benutzer gemeldet)
+- [x] Header-Buttons in Detail-Seite haben doppeltes Design (backgroundColor entfernt, expliziter Stil gesetzt)
+
+## Neues Problem (vom Benutzer gemeldet)
+- [ ] Kartenansicht zeigt "0 Ausflugsziele mit Standort" - Koordinaten fehlen oder Karte funktioniert nicht

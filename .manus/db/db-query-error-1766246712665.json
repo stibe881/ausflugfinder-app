@@ -1,0 +1,8 @@
+{
+  "query": "SELECT COUNT(*) as total, \n       COUNT(lat) as with_lat, \n       COUNT(lng) as with_lng\nFROM ausfluege;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 39nB9MMxm8dKKgZ.4569459278e8 --database fEUDbtjH5ohSpNbohx5Qrr --execute SELECT COUNT(*) as total, \n       COUNT(lat) as with_lat, \n       COUNT(lng) as with_lng\nFROM ausfluege;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'feudbtjh5ohspnbohx5qrr.ausfluege' doesn't exist"
+  ]
+}

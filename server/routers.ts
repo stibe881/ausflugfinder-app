@@ -31,7 +31,8 @@ export const appRouter = router({
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return db.getTripById(input.id);
+        // Use ausfluege (original webapp data) instead of trips
+        return db.getAusflugById(input.id);
       }),
     
     search: publicProcedure

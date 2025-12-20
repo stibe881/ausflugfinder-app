@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useState, useCallback } from "react";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,30 +11,22 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
+import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const COST_LABELS: Record<string, string> = {
-  free: "Kostenlos",
-  low: "Günstig (CHF 10-30)",
-  medium: "Mittel (CHF 30-60)",
-  high: "Teuer (CHF 60-100)",
-  very_high: "Sehr teuer (CHF 100+)",
-};
-
-const ROUTE_TYPE_LABELS: Record<string, string> = {
-  round_trip: "Rundweg",
-  one_way: "Einweg",
-  location: "Standort",
+const COST_LABELS: Record<number, string> = {
+  0: "Kostenlos",
+  1: "Günstig (CHF 10-30)",
+  2: "Mittel (CHF 30-60)",
+  3: "Teuer (CHF 60-100)",
+  4: "Sehr teuer (CHF 100+)",
 };
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
@@ -56,91 +48,24 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
   );
 }
 
-function ActionButton({
-  icon,
-  label,
-  onPress,
-  color,
-  active,
-}: {
-  icon: string;
-  label: string;
-  onPress: () => void;
-  color?: string;
-  active?: boolean;
-}) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-  const buttonColor = color || colors.primary;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.actionButton,
-        {
-          backgroundColor: active ? buttonColor + "20" : colors.surface,
-          borderColor: active ? buttonColor : colors.border,
-          opacity: pressed ? 0.9 : 1,
-        },
-      ]}
-    >
-      <IconSymbol
-        name={icon as any}
-        size={20}
-        color={active ? buttonColor : colors.textSecondary}
-      />
-      <ThemedText
-        style={[
-          styles.actionButtonText,
-          { color: active ? buttonColor : colors.textSecondary },
-        ]}
-      >
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const { isAuthenticated } = useAuth();
 
-  // Fetch trip data
-  const { data: trip, isLoading, refetch } = trpc.trips.getById.useQuery(
+  // Fetch trip data (ausfluege)
+  const { data: trip, isLoading } = trpc.trips.getById.useQuery(
     { id: Number(id) },
     { enabled: !!id }
   );
 
-  // Fetch photos
-  const { data: photos } = trpc.tripPhotos.list.useQuery(
-    { tripId: Number(id) },
-    { enabled: !!id }
-  );
-
-  // Fetch videos
-  const { data: videos } = trpc.tripVideos.list.useQuery(
-    { tripId: Number(id) },
-    { enabled: !!id }
-  );
-
-  // Mutations
-  const toggleFavoriteMutation = trpc.trips.toggleFavorite.useMutation({
-    onSuccess: () => refetch(),
-  });
-  const toggleDoneMutation = trpc.trips.toggleDone.useMutation({
-    onSuccess: () => refetch(),
-  });
-
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Schau dir diesen Ausflug an: ${trip?.title}\n${trip?.destination}`,
-        title: trip?.title,
+        message: `Schau dir diesen Ausflug an: ${trip?.name}\n${trip?.adresse}`,
+        title: trip?.name,
       });
     } catch (error) {
       console.error("Share error:", error);
@@ -148,11 +73,11 @@ export default function TripDetailScreen() {
   };
 
   const handleOpenMap = () => {
-    if (trip?.latitude && trip?.longitude) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${trip.latitude},${trip.longitude}`;
+    if (trip?.lat && trip?.lng) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${trip.lat},${trip.lng}`;
       Linking.openURL(url);
-    } else if (trip?.address) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.address)}`;
+    } else if (trip?.adresse) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.adresse)}`;
       Linking.openURL(url);
     }
   };
@@ -188,7 +113,10 @@ export default function TripDetailScreen() {
     );
   }
 
-  const costColor = CostColors[trip.cost as keyof typeof CostColors] || CostColors.free;
+  const kostenStufe = trip.kostenStufe ?? 0;
+  const costLabel = COST_LABELS[kostenStufe] || "Kostenlos";
+  const costColors = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#DC2626"];
+  const costColor = costColors[kostenStufe] || costColors[0];
 
   return (
     <>
@@ -200,17 +128,17 @@ export default function TripDetailScreen() {
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}
-              style={[styles.headerButton, { backgroundColor: "rgba(0,0,0,0.3)" }]}
+              style={styles.headerButton}
             >
-              <IconSymbol name="chevron.left" size={20} color="#FFFFFF" />
+              <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
             </Pressable>
           ),
           headerRight: () => (
             <Pressable
               onPress={handleShare}
-              style={[styles.headerButton, { backgroundColor: "rgba(0,0,0,0.3)" }]}
+              style={styles.headerButton}
             >
-              <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
+              <IconSymbol name="square.and.arrow.up" size={24} color="#FFFFFF" />
             </Pressable>
           ),
         }}
@@ -219,209 +147,104 @@ export default function TripDetailScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image */}
+        {/* Hero Image Placeholder */}
         <View style={styles.heroContainer}>
-          {trip.image ? (
-            <Image
-              source={{ uri: trip.image }}
-              style={styles.heroImage}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={[styles.heroPlaceholder, { backgroundColor: colors.surface }]}>
-              <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
-            </View>
-          )}
+          <View style={[styles.heroPlaceholder, { backgroundColor: colors.surface }]}>
+            <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
+          </View>
           <View style={styles.heroOverlay} />
           
           {/* Cost Badge */}
           <View style={[styles.costBadge, { backgroundColor: costColor }]}>
-            <ThemedText style={styles.costBadgeText}>
-              {COST_LABELS[trip.cost] || trip.cost}
-            </ThemedText>
+            <ThemedText style={styles.costBadgeText}>{costLabel}</ThemedText>
           </View>
         </View>
 
         {/* Content */}
         <View style={styles.content}>
           {/* Title & Location */}
-          <ThemedText style={styles.title}>{trip.title}</ThemedText>
+          <ThemedText style={styles.title}>{trip.name}</ThemedText>
           <View style={styles.locationRow}>
             <IconSymbol name="mappin.and.ellipse" size={16} color={colors.textSecondary} />
-            <ThemedText style={[styles.location, { color: colors.textSecondary }]}>
-              {trip.destination}
+            <ThemedText style={[styles.locationText, { color: colors.textSecondary }]}>
+              {trip.adresse}
             </ThemedText>
           </View>
 
           {/* Action Buttons */}
-          {isAuthenticated && (
-            <View style={styles.actionButtons}>
-              <ActionButton
-                icon="heart.fill"
-                label="Favorit"
-                onPress={() => toggleFavoriteMutation.mutate({ id: trip.id })}
-                color="#EF4444"
-                active={trip.isFavorite}
-              />
-              <ActionButton
-                icon="checkmark.circle.fill"
-                label="Erledigt"
-                onPress={() => toggleDoneMutation.mutate({ id: trip.id })}
-                color={BrandColors.primary}
-                active={trip.isDone}
-              />
-              <ActionButton
-                icon="map.fill"
-                label="Karte"
+          <View style={styles.actionButtons}>
+            {(trip.lat && trip.lng) || trip.adresse ? (
+              <Pressable
                 onPress={handleOpenMap}
-              />
-            </View>
-          )}
+                style={[styles.actionButtonLarge, { backgroundColor: colors.primary }]}
+              >
+                <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
+                <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
+              </Pressable>
+            ) : null}
+            
+            {trip.websiteUrl ? (
+              <Pressable
+                onPress={handleOpenWebsite}
+                style={[styles.actionButtonLarge, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+              >
+                <IconSymbol name="globe" size={20} color={colors.primary} />
+                <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
 
           {/* Description */}
-          {trip.description && (
+          {trip.beschreibung ? (
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>Beschreibung</ThemedText>
               <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                {trip.description}
+                {trip.beschreibung}
               </ThemedText>
             </View>
-          )}
+          ) : null}
 
-          {/* Info Section */}
+          {/* Details */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Details</ThemedText>
-            <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {trip.region && (
-                <InfoRow icon="mappin.and.ellipse" label="Region" value={trip.region} />
-              )}
-              {trip.routeType && (
-                <InfoRow icon="figure.walk" label="Art" value={ROUTE_TYPE_LABELS[trip.routeType] || trip.routeType} />
-              )}
-              {trip.ageRecommendation && (
-                <InfoRow icon="person.2.fill" label="Alter" value={trip.ageRecommendation} />
-              )}
-              {(trip.durationMin || trip.durationMax) && (
-                <InfoRow
-                  icon="clock.fill"
-                  label="Dauer"
-                  value={
-                    trip.durationMin && trip.durationMax
-                      ? `${trip.durationMin} - ${trip.durationMax} Std.`
-                      : `${trip.durationMin || trip.durationMax} Std.`
-                  }
-                />
-              )}
-              {(trip.distanceMin || trip.distanceMax) && (
-                <InfoRow
-                  icon="figure.walk"
-                  label="Distanz"
-                  value={
-                    trip.distanceMin && trip.distanceMax
-                      ? `${trip.distanceMin} - ${trip.distanceMax} km`
-                      : `${trip.distanceMin || trip.distanceMax} km`
-                  }
-                />
-              )}
-            </View>
+            
+            {trip.region ? (
+              <InfoRow icon="location.fill" label="Region" value={trip.region} />
+            ) : null}
+            
+            {trip.land ? (
+              <InfoRow icon="flag.fill" label="Land" value={trip.land} />
+            ) : null}
+            
+            {trip.parkplatz ? (
+              <InfoRow icon="parkingsign" label="Parkplatz" value={trip.parkplatz} />
+            ) : null}
+            
+            {trip.altersempfehlung ? (
+              <InfoRow icon="person.2.fill" label="Altersempfehlung" value={trip.altersempfehlung} />
+            ) : null}
+            
+            {trip.jahreszeiten ? (
+              <InfoRow icon="calendar" label="Jahreszeiten" value={trip.jahreszeiten} />
+            ) : null}
           </View>
 
           {/* Nice to Know */}
-          {trip.niceToKnow && (
+          {trip.niceToKnow ? (
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>Gut zu wissen</ThemedText>
-              <View style={[styles.niceToKnowCard, { backgroundColor: BrandColors.secondary + "10", borderColor: BrandColors.secondary + "30" }]}>
-                <IconSymbol name="info.circle.fill" size={20} color={BrandColors.secondary} />
-                <ThemedText style={[styles.niceToKnowText, { color: colors.text }]}>
+              <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <IconSymbol name="lightbulb.fill" size={20} color={colors.primary} />
+                <ThemedText style={[styles.infoBoxText, { color: colors.textSecondary }]}>
                   {trip.niceToKnow}
                 </ThemedText>
               </View>
             </View>
-          )}
-
-          {/* Contact Section */}
-          {(trip.websiteUrl || trip.contactEmail || trip.contactPhone || trip.address) && (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Kontakt</ThemedText>
-              <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                {trip.address && (
-                  <Pressable onPress={handleOpenMap}>
-                    <InfoRow icon="mappin.and.ellipse" label="Adresse" value={trip.address} />
-                  </Pressable>
-                )}
-                {trip.websiteUrl && (
-                  <Pressable onPress={handleOpenWebsite}>
-                    <InfoRow icon="globe" label="Website" value="Webseite öffnen" />
-                  </Pressable>
-                )}
-                {trip.contactEmail && (
-                  <Pressable onPress={() => Linking.openURL(`mailto:${trip.contactEmail}`)}>
-                    <InfoRow icon="paperplane.fill" label="E-Mail" value={trip.contactEmail} />
-                  </Pressable>
-                )}
-                {trip.contactPhone && (
-                  <Pressable onPress={() => Linking.openURL(`tel:${trip.contactPhone}`)}>
-                    <InfoRow icon="bubble.left.fill" label="Telefon" value={trip.contactPhone} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Photos */}
-          {photos && photos.length > 0 && (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Fotos ({photos.length})</ThemedText>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.photoList}
-              >
-                {photos.map((photo) => (
-                  <Image
-                    key={photo.id}
-                    source={{ uri: photo.photoUrl }}
-                    style={styles.photoThumbnail}
-                    contentFit="cover"
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Videos */}
-          {videos && videos.length > 0 && (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Videos ({videos.length})</ThemedText>
-              {videos.map((video) => (
-                <Pressable
-                  key={video.id}
-                  onPress={() => {
-                    const url = video.platform === "youtube"
-                      ? `https://www.youtube.com/watch?v=${video.videoId}`
-                      : `https://www.tiktok.com/@user/video/${video.videoId}`;
-                    Linking.openURL(url);
-                  }}
-                  style={[styles.videoItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
-                  <IconSymbol name="video.fill" size={24} color={colors.primary} />
-                  <View style={styles.videoContent}>
-                    <ThemedText style={styles.videoTitle}>
-                      {video.title || `${video.platform} Video`}
-                    </ThemedText>
-                    <ThemedText style={[styles.videoPlatform, { color: colors.textSecondary }]}>
-                      {video.platform === "youtube" ? "YouTube" : "TikTok"}
-                    </ThemedText>
-                  </View>
-                  <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          {/* Bottom Spacing */}
-          <View style={{ height: insets.bottom + Spacing.xl }} />
+          ) : null}
         </View>
+
+        {/* Bottom Spacing */}
+        <View style={{ height: insets.bottom + 32 }} />
       </ScrollView>
     </>
   );
@@ -444,12 +267,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    marginTop: Spacing.lg,
-    marginBottom: Spacing.xl,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   backButton: {
+    paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.md,
   },
   backButtonText: {
@@ -458,42 +281,39 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
+    marginHorizontal: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   heroContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 0.75,
+    height: 300,
     position: "relative",
   },
-  heroImage: {
-    width: "100%",
-    height: "100%",
-  },
   heroPlaceholder: {
-    width: "100%",
-    height: "100%",
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   heroOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
   costBadge: {
     position: "absolute",
-    bottom: Spacing.lg,
-    left: Spacing.lg,
+    top: Spacing.lg,
+    right: Spacing.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.full,
   },
   costBadgeText: {
     color: "#FFFFFF",
@@ -506,63 +326,58 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    lineHeight: 34,
+    marginBottom: Spacing.sm,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    marginBottom: Spacing.lg,
   },
-  location: {
+  locationText: {
     fontSize: 16,
   },
   actionButtons: {
     flexDirection: "row",
-    gap: Spacing.sm,
-    marginTop: Spacing.lg,
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
   },
-  actionButton: {
+  actionButtonLarge: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.xs,
+    gap: Spacing.sm,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
-    borderWidth: 1,
   },
-  actionButtonText: {
-    fontSize: 13,
-    fontWeight: "500",
+  actionButtonLargeText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
   section: {
-    marginTop: Spacing.xl,
+    marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "bold",
     marginBottom: Spacing.md,
   },
   description: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
-  },
-  infoCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    overflow: "hidden",
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: Spacing.md,
     gap: Spacing.md,
+    marginBottom: Spacing.md,
   },
   infoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.sm,
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -570,52 +385,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 14,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "500",
-    marginTop: 2,
   },
-  niceToKnowCard: {
+  infoBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
     gap: Spacing.md,
-  },
-  niceToKnowText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  photoList: {
-    gap: Spacing.sm,
-  },
-  photoThumbnail: {
-    width: 120,
-    height: 90,
+    padding: Spacing.md,
     borderRadius: BorderRadius.md,
-  },
-  videoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    gap: Spacing.md,
-    marginBottom: Spacing.sm,
   },
-  videoContent: {
+  infoBoxText: {
     flex: 1,
-  },
-  videoTitle: {
     fontSize: 15,
-    fontWeight: "500",
-  },
-  videoPlatform: {
-    fontSize: 13,
-    marginTop: 2,
+    lineHeight: 22,
   },
 });
