@@ -17,6 +17,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
+import { LanguageProvider } from "@/contexts/language-context";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -75,14 +76,23 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-              <Stack.Screen name="oauth/callback" options={{ headerShown: false }} />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
+          <LanguageProvider>
+            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+                <Stack.Screen name="oauth/callback" options={{ headerShown: false }} />
+                <Stack.Screen name="trip/[id]" options={{ headerShown: false }} />
+                <Stack.Screen name="plan/[id]" options={{ headerShown: true }} />
+                <Stack.Screen name="friends" options={{ headerShown: true }} />
+                <Stack.Screen name="about" options={{ headerShown: true }} />
+                <Stack.Screen name="settings/language" options={{ headerShown: true }} />
+                <Stack.Screen name="settings/appearance" options={{ headerShown: true }} />
+                <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+          </LanguageProvider>
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>

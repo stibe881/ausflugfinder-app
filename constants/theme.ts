@@ -1,41 +1,101 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * AusflugFinder App Theme Configuration
+ * Colors based on the original webapp design
  */
 
 import { Platform } from "react-native";
 
-const tintColorLight = "#0a7ea4";
-const tintColorDark = "#fff";
+// Brand Colors
+export const BrandColors = {
+  primary: "#22C55E",      // Green - Nature/Outdoor
+  secondary: "#F59E0B",    // Orange/Yellow - Sun/Energy
+  accent: "#3B82F6",       // Blue - Compass/Navigation
+};
+
+// Cost Badge Colors
+export const CostColors = {
+  free: "#22C55E",
+  low: "#84CC16",
+  medium: "#F59E0B",
+  high: "#F97316",
+  very_high: "#EF4444",
+};
+
+// Semantic Colors
+export const SemanticColors = {
+  success: "#22C55E",
+  warning: "#F59E0B",
+  error: "#EF4444",
+  info: "#3B82F6",
+};
 
 export const Colors = {
   light: {
-    text: "#11181C",
-    background: "#fff",
-    tint: tintColorLight,
-    icon: "#687076",
-    tabIconDefault: "#687076",
-    tabIconSelected: tintColorLight,
+    text: "#0F172A",
+    textSecondary: "#64748B",
+    textDisabled: "#94A3B8",
+    background: "#FFFFFF",
+    surface: "#F8FAFC",
+    card: "#FFFFFF",
+    border: "#E2E8F0",
+    tint: BrandColors.primary,
+    icon: "#64748B",
+    tabIconDefault: "#94A3B8",
+    tabIconSelected: BrandColors.primary,
+    primary: BrandColors.primary,
+    secondary: BrandColors.secondary,
+    accent: BrandColors.accent,
   },
   dark: {
-    text: "#ECEDEE",
-    background: "#151718",
-    tint: tintColorDark,
-    icon: "#9BA1A6",
-    tabIconDefault: "#9BA1A6",
-    tabIconSelected: tintColorDark,
+    text: "#F8FAFC",
+    textSecondary: "#94A3B8",
+    textDisabled: "#64748B",
+    background: "#0F172A",
+    surface: "#1E293B",
+    card: "#1E293B",
+    border: "#334155",
+    tint: BrandColors.primary,
+    icon: "#94A3B8",
+    tabIconDefault: "#64748B",
+    tabIconSelected: BrandColors.primary,
+    primary: BrandColors.primary,
+    secondary: BrandColors.secondary,
+    accent: BrandColors.accent,
   },
+};
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
+
+export const BorderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+};
+
+export const FontSizes = {
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 28,
+  hero: 32,
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: "system-ui",
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: "ui-serif",
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: "ui-rounded",
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: "ui-monospace",
   },
   default: {

@@ -1,278 +1,455 @@
 import { Image } from "expo-image";
-import { useRouter, Link } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  Dimensions,
+} from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withDelay,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { HelloWave } from "@/components/hello-wave";
-import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { getLoginUrl } from "@/constants/oauth";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 
-export default function HomeScreen() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const router = useRouter();
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+function AnimatedIcon({ 
+  name, 
+  color, 
+  delay = 0 
+}: { 
+  name: "mountain.2.fill" | "sun.max.fill" | "mappin.and.ellipse"; 
+  color: string; 
+  delay?: number;
+}) {
+  const scale = useSharedValue(1);
+  const opacity = useSharedValue(0.7);
 
   useEffect(() => {
-    console.log("[HomeScreen] Auth state:", {
-      hasUser: !!user,
-      loading,
-      isAuthenticated,
-      user: user ? { id: user.id, openId: user.openId, name: user.name, email: user.email } : null,
-    });
-  }, [user, loading, isAuthenticated]);
+    scale.value = withDelay(
+      delay,
+      withRepeat(withTiming(1.1, { duration: 2000 }), -1, true)
+    );
+    opacity.value = withDelay(
+      delay,
+      withRepeat(withTiming(1, { duration: 2000 }), -1, true)
+    );
+  }, []);
 
-  const handleLogin = async () => {
-    try {
-      console.log("[Auth] Login button clicked");
-      setIsLoggingIn(true);
-      const loginUrl = getLoginUrl();
-      console.log("[Auth] Generated login URL:", loginUrl);
-
-      // On web, use direct redirect in same tab
-      // On mobile, use WebBrowser to open OAuth in a separate context
-      if (Platform.OS === "web") {
-        console.log("[Auth] Web platform: redirecting to OAuth in same tab...");
-        window.location.href = loginUrl;
-        return;
-      }
-
-      // Mobile: Open OAuth URL in browser
-      // The OAuth server will redirect to our deep link (manusapp://oauth/callback?code=...&state=...)
-      console.log("[Auth] Opening OAuth URL in browser...");
-      const result = await WebBrowser.openAuthSessionAsync(
-        loginUrl,
-        undefined, // Deep link is already configured in getLoginUrl, so no need to specify here
-        {
-          preferEphemeralSession: false,
-          showInRecents: true,
-        },
-      );
-
-      console.log("[Auth] WebBrowser result:", result);
-      if (result.type === "cancel") {
-        console.log("[Auth] OAuth cancelled by user");
-      } else if (result.type === "dismiss") {
-        console.log("[Auth] OAuth dismissed");
-      } else if (result.type === "success" && result.url) {
-        console.log("[Auth] OAuth session successful, navigating to callback:", result.url);
-        // Extract code and state from the URL
-        try {
-          // Parse the URL - it might be exp:// or a regular URL
-          let url: URL;
-          if (result.url.startsWith("exp://") || result.url.startsWith("exps://")) {
-            // For exp:// URLs, we need to parse them differently
-            // Format: exp://192.168.31.156:8081/--/oauth/callback?code=...&state=...
-            const urlStr = result.url.replace(/^exp(s)?:\/\//, "http://");
-            url = new URL(urlStr);
-          } else {
-            url = new URL(result.url);
-          }
-
-          const code = url.searchParams.get("code");
-          const state = url.searchParams.get("state");
-          const error = url.searchParams.get("error");
-
-          console.log("[Auth] Extracted params from callback URL:", {
-            code: code?.substring(0, 20) + "...",
-            state: state?.substring(0, 20) + "...",
-            error,
-          });
-
-          if (error) {
-            console.error("[Auth] OAuth error in callback:", error);
-            return;
-          }
-
-          if (code && state) {
-            // Navigate to callback route with params
-            console.log("[Auth] Navigating to callback route with params...");
-            router.push({
-              pathname: "/oauth/callback" as any,
-              params: { code, state },
-            });
-          } else {
-            console.error("[Auth] Missing code or state in callback URL");
-          }
-        } catch (err) {
-          console.error("[Auth] Failed to parse callback URL:", err, result.url);
-          // Fallback: try parsing with regex
-          const codeMatch = result.url.match(/[?&]code=([^&]+)/);
-          const stateMatch = result.url.match(/[?&]state=([^&]+)/);
-
-          if (codeMatch && stateMatch) {
-            const code = decodeURIComponent(codeMatch[1]);
-            const state = decodeURIComponent(stateMatch[1]);
-            console.log("[Auth] Fallback: extracted params via regex, navigating...");
-            router.push({
-              pathname: "/oauth/callback" as any,
-              params: { code, state },
-            });
-          } else {
-            console.error("[Auth] Could not extract code/state from URL");
-          }
-        }
-      }
-    } catch (error) {
-      console.error("[Auth] Login error:", error);
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/partial-react-logo.png")}
-          style={styles.reactLogo}
-        />
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.authContainer}>
-        {loading ? (
-          <ActivityIndicator />
-        ) : isAuthenticated && user ? (
-          <ThemedView style={styles.userInfo}>
-            <ThemedText type="subtitle">Logged in as</ThemedText>
-            <ThemedText type="defaultSemiBold">{user.name || user.email || user.openId}</ThemedText>
-            <Pressable onPress={logout} style={styles.logoutButton}>
-              <ThemedText style={styles.logoutText}>Logout</ThemedText>
-            </Pressable>
-          </ThemedView>
-        ) : (
-          <Pressable
-            onPress={handleLogin}
-            disabled={isLoggingIn}
-            style={[styles.loginButton, isLoggingIn && styles.loginButtonDisabled]}
-          >
-            {isLoggingIn ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText style={styles.loginText}>Login</ThemedText>
-            )}
-          </Pressable>
-        )}
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{" "}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: "cmd + d",
-              android: "cmd + m",
-              web: "F12",
-            })}
-          </ThemedText>{" "}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert("Action pressed")} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert("Share pressed")}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert("Delete pressed")}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <Animated.View style={animatedStyle}>
+      <IconSymbol name={name} size={40} color={color} />
+    </Animated.View>
+  );
+}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+function StatCard({
+  value,
+  label,
+  color,
+  onPress,
+}: {
+  value: number | string;
+  label: string;
+  color: string;
+  onPress?: () => void;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.statCard,
+        {
+          backgroundColor: color + "15",
+          borderColor: color + "30",
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+      ]}
+    >
+      <ThemedText style={[styles.statValue, { color }]}>{value}</ThemedText>
+      <ThemedText style={[styles.statLabel, { color: colors.textSecondary }]}>
+        {label}
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+function FeatureItem({
+  icon,
+  title,
+  description,
+}: {
+  icon: "magnifyingglass" | "calendar" | "person.2.fill" | "map.fill";
+  title: string;
+  description: string;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
+
+  return (
+    <View style={styles.featureItem}>
+      <View
+        style={[
+          styles.featureIconContainer,
+          { backgroundColor: colors.primary + "15" },
+        ]}
+      >
+        <IconSymbol name={icon} size={24} color={colors.primary} />
+      </View>
+      <View style={styles.featureContent}>
+        <ThemedText style={styles.featureTitle}>{title}</ThemedText>
+        <ThemedText style={[styles.featureDescription, { color: colors.textSecondary }]}>
+          {description}
         </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{" "}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{" "}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{" "}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+      </View>
+    </View>
+  );
+}
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "light"];
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
+
+  // Fetch statistics from API
+  const { data: stats, isLoading: statsLoading } = trpc.trips.statistics.useQuery();
+
+  return (
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={{ paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero Section */}
+      <View
+        style={[
+          styles.heroSection,
+          {
+            paddingTop: insets.top + 60,
+            backgroundColor: colors.surface,
+          },
+        ]}
+      >
+        {/* Animated Icons */}
+        <View style={styles.iconRow}>
+          <AnimatedIcon name="mountain.2.fill" color={BrandColors.primary} delay={0} />
+          <AnimatedIcon name="sun.max.fill" color={BrandColors.secondary} delay={500} />
+          <AnimatedIcon name="mappin.and.ellipse" color={BrandColors.accent} delay={1000} />
+        </View>
+
+        {/* App Title */}
+        <ThemedText style={styles.heroTitle}>AusflugFinder</ThemedText>
+        <ThemedText style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
+          Entdecke die schönsten Ausflugsziele in der Schweiz und Umgebung
         </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+
+        {/* CTA Buttons */}
+        <View style={styles.ctaContainer}>
+          {authLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : isAuthenticated ? (
+            <>
+              <Pressable
+                onPress={() => router.push("/(tabs)/explore")}
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+                ]}
+              >
+                <IconSymbol name="magnifyingglass" size={20} color="#FFFFFF" />
+                <ThemedText style={styles.primaryButtonText}>Entdecken</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(tabs)/profile")}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  {
+                    borderColor: colors.secondary,
+                    opacity: pressed ? 0.9 : 1,
+                  },
+                ]}
+              >
+                <IconSymbol name="person.fill" size={20} color={colors.secondary} />
+                <ThemedText style={[styles.secondaryButtonText, { color: colors.secondary }]}>
+                  Profil
+                </ThemedText>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable
+              onPress={() => router.push("/(tabs)/profile")}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
+              ]}
+            >
+              <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
+              <ThemedText style={styles.primaryButtonText}>Anmelden</ThemedText>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      {/* Statistics Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Statistiken</ThemedText>
+        {statsLoading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+        ) : (
+          <View style={styles.statsGrid}>
+            <StatCard
+              value={stats?.totalActivities ?? 0}
+              label="Aktivitäten"
+              color={BrandColors.primary}
+              onPress={() => router.push("/(tabs)/explore")}
+            />
+            <StatCard
+              value={stats?.freeActivities ?? 0}
+              label="Kostenlos"
+              color={BrandColors.secondary}
+              onPress={() => router.push("/(tabs)/explore?cost=free")}
+            />
+            <StatCard
+              value={stats?.totalRegions ?? 0}
+              label="Regionen"
+              color={BrandColors.accent}
+              onPress={() => router.push("/(tabs)/explore")}
+            />
+          </View>
+        )}
+      </View>
+
+      {/* Features Section */}
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Was dich erwartet</ThemedText>
+        <ThemedText style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+          Alles was du für deinen perfekten Ausflug brauchst
+        </ThemedText>
+
+        <View style={styles.featuresContainer}>
+          <FeatureItem
+            icon="magnifyingglass"
+            title="Ausflüge entdecken"
+            description="Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget"
+          />
+          <FeatureItem
+            icon="calendar"
+            title="Tagesplanung"
+            description="Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget"
+          />
+          <FeatureItem
+            icon="person.2.fill"
+            title="Mit Freunden teilen"
+            description="Teile deine Lieblingsausflüge und plane gemeinsame Abenteuer"
+          />
+          <FeatureItem
+            icon="map.fill"
+            title="Kartenansicht"
+            description="Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte"
+          />
+        </View>
+      </View>
+
+      {/* User Info (if logged in) */}
+      {isAuthenticated && user && (
+        <View style={[styles.section, styles.userSection]}>
+          <View style={[styles.userCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
+              <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
+                {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+              </ThemedText>
+            </View>
+            <View style={styles.userInfo}>
+              <ThemedText style={styles.userName}>
+                {user.name || "Benutzer"}
+              </ThemedText>
+              <ThemedText style={[styles.userEmail, { color: colors.textSecondary }]}>
+                {user.email || ""}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  heroSection: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    borderBottomLeftRadius: BorderRadius.xl,
+    borderBottomRightRadius: BorderRadius.xl,
+  },
+  iconRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  heroTitle: {
+    fontSize: 40,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 24,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  ctaContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: Spacing.md,
+  },
+  primaryButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-  },
-  authContainer: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-  },
-  userInfo: {
-    gap: 8,
-    alignItems: "center",
-  },
-  loginButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginText: {
-    color: "#fff",
+  primaryButtonText: {
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
-  logoutButton: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    backgroundColor: "rgba(255, 59, 48, 0.1)",
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    borderWidth: 2,
   },
-  logoutText: {
-    color: "#FF3B30",
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  section: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: Spacing.xs,
+  },
+  sectionSubtitle: {
     fontSize: 14,
-    fontWeight: "500",
+    marginBottom: Spacing.lg,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 2,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: Spacing.xs,
+  },
+  statLabel: {
+    fontSize: 12,
+    textAlign: "center",
+  },
+  featuresContainer: {
+    gap: Spacing.lg,
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.md,
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: Spacing.xs,
+  },
+  featureDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  userSection: {
+    paddingBottom: Spacing.xl,
+  },
+  userCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    gap: Spacing.md,
+  },
+  userAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userAvatarText: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  userEmail: {
+    fontSize: 14,
   },
 });
