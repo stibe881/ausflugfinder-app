@@ -111,3 +111,9 @@
 - [x] Friends, Notifications
 - [x] Photos, Videos, Comments, Journal
 
+
+## Neue Verbesserungen
+- [x] Testdaten für Ausflugsziele importieren
+- [x] Kartenansicht mit react-native-maps im Explore-Tab
+- [x] Push-Benachrichtigungen mit Expo Notifications
+- [x] Vorschau-Screenshots erstellen

@@ -81,6 +81,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "react-native-maps",
   ],
   experiments: {
     typedRoutes: true,

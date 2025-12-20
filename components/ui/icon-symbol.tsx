@@ -31,6 +31,7 @@ const MAPPING = {
   
   // Trip related
   "map.fill": "map",
+  "map": "map",
   "mappin.and.ellipse": "place",
   "location.fill": "my-location",
   "star.fill": "star",
@@ -45,6 +46,7 @@ const MAPPING = {
   "doc.text.fill": "description",
   "list.bullet": "format-list-bulleted",
   "square.grid.2x2.fill": "grid-view",
+  "square.grid.2x2": "grid-view",
   
   // Weather
   "sun.max.fill": "wb-sunny",

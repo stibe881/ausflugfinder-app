@@ -16,6 +16,7 @@ import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { MapViewComponent } from "@/components/map-view-component";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { trpc } from "@/lib/trpc";
@@ -178,6 +179,7 @@ export default function ExploreScreen() {
   const [keyword, setKeyword] = useState("");
   const [selectedCost, setSelectedCost] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 
   // Fetch trips
   const { data: tripsData, isLoading, refetch } = trpc.trips.search.useQuery({
@@ -222,10 +224,22 @@ export default function ExploreScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Entdecken</ThemedText>
-        <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-          {stats?.totalActivities || 0} Ausflugsziele warten auf dich
-        </ThemedText>
+        <View>
+          <ThemedText style={styles.headerTitle}>Entdecken</ThemedText>
+          <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {stats?.totalActivities || 0} Ausflugsziele warten auf dich
+          </ThemedText>
+        </View>
+        <Pressable
+          onPress={() => setViewMode(viewMode === "grid" ? "map" : "grid")}
+          style={[styles.viewModeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <IconSymbol
+            name={viewMode === "grid" ? "map" : "square.grid.2x2"}
+            size={20}
+            color={colors.primary}
+          />
+        </Pressable>
       </View>
 
       {/* Search Bar */}
@@ -265,8 +279,13 @@ export default function ExploreScreen() {
         />
       </View>
 
-      {/* Trips Grid */}
-      {isLoading ? (
+      {/* Content - Grid or Map */}
+      {viewMode === "map" ? (
+        <MapViewComponent
+          trips={trips as Trip[]}
+          onMarkerPress={handleTripPress}
+        />
+      ) : isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -313,9 +332,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
+  },
+  viewModeButton: {
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
   },
   headerTitle: {
     fontSize: 28,
