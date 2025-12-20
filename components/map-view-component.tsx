@@ -6,10 +6,10 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type Trip = {
   id: number;
-  title: string;
-  latitude: string | null;
-  longitude: string | null;
-  cost: string | null;
+  name: string; // ausfluege uses 'name'
+  lat: string | null; // ausfluege uses 'lat'
+  lng: string | null; // ausfluege uses 'lng'
+  kostenStufe: number | null;
 };
 
 type MapViewComponentProps = {
@@ -23,7 +23,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
 
   // Filter trips with valid coordinates
   const tripsWithCoords = trips.filter(
-    (trip) => trip.latitude && trip.longitude && !isNaN(parseFloat(trip.latitude)) && !isNaN(parseFloat(trip.longitude))
+    (trip) => trip.lat && trip.lng && !isNaN(parseFloat(trip.lat)) && !isNaN(parseFloat(trip.lng))
   );
 
   // Web fallback - Maps not supported on web
@@ -38,9 +38,9 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
       <View style={styles.tripsList}>
         {tripsWithCoords.slice(0, 5).map((trip) => (
           <View key={trip.id} style={[styles.tripItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <ThemedText style={styles.tripTitle}>{trip.title}</ThemedText>
+            <ThemedText style={styles.tripTitle}>{trip.name}</ThemedText>
             <ThemedText style={[styles.tripCoords, { color: colors.textSecondary }]}>
-              {parseFloat(trip.latitude!).toFixed(4)}, {parseFloat(trip.longitude!).toFixed(4)}
+              {parseFloat(trip.lat!).toFixed(4)}, {parseFloat(trip.lng!).toFixed(4)}
             </ThemedText>
           </View>
         ))}

@@ -177,4 +177,4 @@
 
 ## Aktuelle Probleme (vom Benutzer bestätigt)
 - [x] Header-Buttons sollen Glass-Design haben (Glassmorphismus implementiert)
-- [x] Kartenansicht zeigt "0 Ausflugsziele mit Standort" (13 von 18 Ausflügen haben jetzt Koordinaten)
+- [x] Kartenansicht zeigt "0 Ausflugsziele mit Standort" (MapViewComponent angepasst für lat/lng statt latitude/longitude)
