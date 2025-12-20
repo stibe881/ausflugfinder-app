@@ -151,3 +151,6 @@
 - [ ] Server-seitige Auth-Integration
 - [ ] RLS Policies für Supabase Auth anpassen
 - [ ] Profile Screen an Supabase Auth anpassen
+
+## Neue Bugs
+- [x] Permission-Denied Fehler beim Laden der Vorschau (Manus OAuth Aufrufe entfernt)

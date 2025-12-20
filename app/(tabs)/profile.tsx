@@ -252,12 +252,12 @@ export default function ProfileScreen() {
             <View style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
                 <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                  {(supabaseUser?.user_metadata?.name || supabaseUser?.email || manusUser?.name || manusUser?.email || "U").charAt(0).toUpperCase()}
+                  {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
                 </ThemedText>
               </View>
               <View style={styles.userInfo}>
                 <ThemedText style={styles.userName}>
-                  {supabaseUser?.user_metadata?.name || manusUser?.name || "Benutzer"}
+                  {supabaseUser?.user_metadata?.name || (manusUser as any)?.name || supabaseUser?.email?.split('@')[0] || "Benutzer"}
                 </ThemedText>
                 <ThemedText style={[styles.userEmail, { color: colors.textSecondary }]}>
                   {supabaseUser?.email || manusUser?.email || ""}

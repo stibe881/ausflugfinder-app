@@ -6,20 +6,26 @@ interface SupabaseAuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  refresh: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   session: null,
   user: null,
   loading: true,
+  isAuthenticated: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
+  refresh: async () => {},
+  logout: async () => {},
 });
 
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
@@ -77,16 +83,27 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     return { error };
   };
 
+  const refresh = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setSession(session);
+    setUser(session?.user ?? null);
+  };
+
+  const logout = signOut; // Alias for compatibility
+
   return (
     <SupabaseAuthContext.Provider
       value={{
         session,
         user,
         loading,
+        isAuthenticated: !!user,
         signIn,
         signUp,
         signOut,
         resetPassword,
+        refresh,
+        logout,
       }}
     >
       {children}

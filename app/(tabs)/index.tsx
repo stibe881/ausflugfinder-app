@@ -281,12 +281,12 @@ export default function HomeScreen() {
           <View style={[styles.userCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
               <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                {user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+                {(user as any).user_metadata?.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
               </ThemedText>
             </View>
             <View style={styles.userInfo}>
               <ThemedText style={styles.userName}>
-                {user.name || "Benutzer"}
+                {(user as any).user_metadata?.name || user.email?.split('@')[0] || "Benutzer"}
               </ThemedText>
               <ThemedText style={[styles.userEmail, { color: colors.textSecondary }]}>
                 {user.email || ""}

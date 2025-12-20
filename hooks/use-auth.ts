@@ -1,9 +1,8 @@
-import { useAuthContext } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 
 /**
- * Hook to access authentication state from AuthContext.
- * This is now a simple wrapper around useAuthContext.
+ * Hook to access authentication state from Supabase Auth.
  */
 export function useAuth() {
-  return useAuthContext();
+  return useSupabaseAuth();
 }
