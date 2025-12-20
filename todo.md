@@ -175,8 +175,6 @@
 ## Aktuelles Problem
 - [ ] Detail-Seite zeigt "Ausflug nicht gefunden" obwohl Ausflug existiert
 
-## Neues Problem (vom Benutzer gemeldet)
-- [x] Header-Buttons in Detail-Seite haben doppeltes Design (backgroundColor entfernt, expliziter Stil gesetzt)
-
-## Neues Problem (vom Benutzer gemeldet)
-- [ ] Kartenansicht zeigt "0 Ausflugsziele mit Standort" - Koordinaten fehlen oder Karte funktioniert nicht
+## Aktuelle Probleme (vom Benutzer bestätigt)
+- [x] Header-Buttons sollen Glass-Design haben (Glassmorphismus implementiert)
+- [x] Kartenansicht zeigt "0 Ausflugsziele mit Standort" (13 von 18 Ausflügen haben jetzt Koordinaten)
