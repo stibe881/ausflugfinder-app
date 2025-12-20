@@ -117,3 +117,6 @@
 - [x] Kartenansicht mit react-native-maps im Explore-Tab
 - [x] Push-Benachrichtigungen mit Expo Notifications
 - [x] Vorschau-Screenshots erstellen
+
+## Bugs
+- [x] Login funktioniert nicht - Benutzer landen unangemeldet auf der Startseite
