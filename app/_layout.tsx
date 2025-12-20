@@ -18,7 +18,6 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { LanguageProvider } from "@/contexts/language-context";
-import { AuthProvider } from "@/contexts/auth-context";
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -79,8 +78,7 @@ export default function RootLayout() {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <SupabaseAuthProvider>
-            <AuthProvider>
-              <LanguageProvider>
+            <LanguageProvider>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -99,8 +97,7 @@ export default function RootLayout() {
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
-              </LanguageProvider>
-            </AuthProvider>
+            </LanguageProvider>
           </SupabaseAuthProvider>
         </QueryClientProvider>
       </trpc.Provider>
