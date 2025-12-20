@@ -72,7 +72,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -123,13 +124,13 @@ import {
 export async function getAllTrips() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(trips).where(eq(trips.isPublic, 1));
+  return db.select().from(trips).where(eq(trips.isPublic, true));
 }
 
 export async function getPublicTrips() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(trips).where(eq(trips.isPublic, 1));
+  return db.select().from(trips).where(eq(trips.isPublic, true));
 }
 
 export async function getTripById(id: number) {
@@ -158,7 +159,7 @@ export async function searchTrips(params: {
   const conditions = [];
   
   if (params.isPublic) {
-    conditions.push(eq(trips.isPublic, 1));
+    conditions.push(eq(trips.isPublic, true));
   }
   
   if (params.keyword) {
@@ -221,7 +222,7 @@ export async function toggleFavorite(id: number) {
   if (!db) throw new Error("Database not available");
   const trip = await getTripById(id);
   if (!trip) throw new Error("Trip not found");
-  await db.update(trips).set({ isFavorite: trip.isFavorite ? 0 : 1 }).where(eq(trips.id, id));
+  await db.update(trips).set({ isFavorite: !trip.isFavorite }).where(eq(trips.id, id));
 }
 
 export async function toggleDone(id: number) {
@@ -229,16 +230,16 @@ export async function toggleDone(id: number) {
   if (!db) throw new Error("Database not available");
   const trip = await getTripById(id);
   if (!trip) throw new Error("Trip not found");
-  await db.update(trips).set({ isDone: trip.isDone ? 0 : 1 }).where(eq(trips.id, id));
+  await db.update(trips).set({ isDone: !trip.isDone }).where(eq(trips.id, id));
 }
 
 export async function getStatistics() {
   const db = await getDb();
   if (!db) return { totalActivities: 0, freeActivities: 0, totalRegions: 0, categories: [] };
 
-  const totalResult = await db.select({ count: count() }).from(trips).where(eq(trips.isPublic, 1));
-  const freeResult = await db.select({ count: count() }).from(trips).where(and(eq(trips.isPublic, 1), eq(trips.cost, "free")));
-  const regionsResult = await db.selectDistinct({ region: trips.region }).from(trips).where(eq(trips.isPublic, 1));
+  const totalResult = await db.select({ count: count() }).from(trips).where(eq(trips.isPublic, true));
+  const freeResult = await db.select({ count: count() }).from(trips).where(and(eq(trips.isPublic, true), eq(trips.cost, "free")));
+  const regionsResult = await db.selectDistinct({ region: trips.region }).from(trips).where(eq(trips.isPublic, true));
   const categoriesResult = await db
     .select({ category: tripCategories.category, count: count() })
     .from(tripCategories)

@@ -86,7 +86,7 @@ function TripListItem({
             <IconSymbol name="mountain.2.fill" size={24} color={colors.textSecondary} />
           </View>
         )}
-        {trip.isDone === 1 && (
+        {trip.isDone && (
           <View style={styles.doneOverlay}>
             <IconSymbol name="checkmark.circle.fill" size={24} color="#FFFFFF" />
           </View>
@@ -235,15 +235,15 @@ export default function TripsScreen() {
 
   // Filter trips
   const filteredTrips = (trips || []).filter((trip) => {
-    if (filter === "favorites") return trip.isFavorite === 1;
-    if (filter === "done") return trip.isDone === 1;
+    if (filter === "favorites") return trip.isFavorite;
+    if (filter === "done") return trip.isDone;
     return true;
   });
 
   const filterOptions = [
     { key: "all", label: "Alle", count: trips?.length || 0 },
-    { key: "favorites", label: "Favoriten", count: trips?.filter(t => t.isFavorite === 1).length || 0 },
-    { key: "done", label: "Erledigt", count: trips?.filter(t => t.isDone === 1).length || 0 },
+    { key: "favorites", label: "Favoriten", count: trips?.filter(t => t.isFavorite).length || 0 },
+    { key: "done", label: "Erledigt", count: trips?.filter(t => t.isDone).length || 0 },
   ];
 
   if (authLoading) {

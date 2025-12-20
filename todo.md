@@ -129,3 +129,14 @@
 - [ ] Supabase Auth implementieren
 - [x] Datenbankschema von MySQL auf PostgreSQL konvertieren
 - [x] Schema erfolgreich nach Supabase gepusht
+
+## TypeScript-Fehler beheben
+- [x] Drizzle ORM Query-Builder Type-Fehler (isPublic boolean vs number)
+- [ ] Schema-Type-Fehler in Tests (username, passwordHash)
+- [ ] Client-seitige Type-Fehler in App-Komponenten
+- [ ] TypeScript-Kompilierung ohne Fehler verifizieren
+
+## Supabase-Probleme
+- [ ] RLS Policies für alle Tabellen erstellen
+- [ ] Daten von Original-Webapp nach Supabase migrieren
+- [ ] Testdaten in Supabase einfügen

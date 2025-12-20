@@ -261,14 +261,14 @@ export default function TripDetailScreen() {
                 label="Favorit"
                 onPress={() => toggleFavoriteMutation.mutate({ id: trip.id })}
                 color="#EF4444"
-                active={trip.isFavorite === 1}
+                active={trip.isFavorite}
               />
               <ActionButton
                 icon="checkmark.circle.fill"
                 label="Erledigt"
                 onPress={() => toggleDoneMutation.mutate({ id: trip.id })}
                 color={BrandColors.primary}
-                active={trip.isDone === 1}
+                active={trip.isDone}
               />
               <ActionButton
                 icon="map.fill"

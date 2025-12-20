@@ -108,14 +108,14 @@ function PlanCard({
               {days} {days === 1 ? "Tag" : "Tage"}
             </ThemedText>
           </View>
-          {plan.isDraft === 1 && (
+          {plan.isDraft && (
             <View style={[styles.tag, { backgroundColor: BrandColors.secondary + "15" }]}>
               <ThemedText style={[styles.tagText, { color: BrandColors.secondary }]}>
                 Entwurf
               </ThemedText>
             </View>
           )}
-          {plan.isPublic === 1 && (
+          {plan.isPublic && (
             <View style={[styles.tag, { backgroundColor: BrandColors.accent + "15" }]}>
               <IconSymbol name="globe" size={12} color={BrandColors.accent} />
               <ThemedText style={[styles.tagText, { color: BrandColors.accent }]}>
