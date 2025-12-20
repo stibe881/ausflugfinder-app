@@ -163,3 +163,6 @@
 - [x] Permission-denied Fehler: "insufficient permissions to list custom domains" (Alte Manus OAuth Dateien entfernt)
 - [x] Registrierung funktioniert nicht - lädt lange, dann passiert nichts (Email-Bestätigung in Supabase deaktiviert)
 - [x] Daten aus der Original-Webapp werden in der App nicht angezeigt (isPublic Filter entfernt)
+
+## Neues Problem (vom Benutzer gemeldet)
+- [x] Daten (Ausflüge, Kategorien etc.) aus der Webapp werden in der App nicht angezeigt (18 Ausflüge von MySQL nach Supabase migriert, App angepasst)

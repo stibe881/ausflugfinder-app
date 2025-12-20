@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, title, destination, region, cost, isPublic FROM trips LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 39nB9MMxm8dKKgZ.4569459278e8 --database fEUDbtjH5ohSpNbohx5Qrr --execute SELECT id, title, destination, region, cost, isPublic FROM trips LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "title": "Rheinfall Abenteuer",
+      "destination": "Rheinfall",
+      "region": "Schaffhausen",
+      "cost": "low",
+      "isPublic": "1"
+    },
+    {
+      "id": "2",
+      "title": "Matterhorn Wanderung",
+      "destination": "Zermatt",
+      "region": "Wallis",
+      "cost": "high",
+      "isPublic": "1"
+    },
+    {
+      "id": "3",
+      "title": "Zürichsee Schifffahrt",
+      "destination": "Zürich",
+      "region": "Zürich",
+      "cost": "medium",
+      "isPublic": "1"
+    },
+    {
+      "id": "4",
+      "title": "Jungfraujoch Ausflug",
+      "destination": "Jungfraujoch",
+      "region": "Bern",
+      "cost": "very_high",
+      "isPublic": "1"
+    },
+    {
+      "id": "5",
+      "title": "Luzern Stadtbummel",
+      "destination": "Luzern",
+      "region": "Luzern",
+      "cost": "free",
+      "isPublic": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tdestination\tregion\tcost\tisPublic\n1\tRheinfall Abenteuer\tRheinfall\tSchaffhausen\tlow\t1\n2\tMatterhorn Wanderung\tZermatt\tWallis\thigh\t1\n3\tZürichsee Schifffahrt\tZürich\tZürich\tmedium\t1\n4\tJungfraujoch Ausflug\tJungfraujoch\tBern\tvery_high\t1\n5\tLuzern Stadtbummel\tLuzern\tLuzern\tfree\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1260
+}

@@ -43,11 +43,18 @@ export const appRouter = router({
         isPublic: z.boolean().optional(),
       }))
       .query(async ({ input }) => {
-        return db.searchTrips(input);
+        // Use ausfluege (original webapp data) instead of trips
+        const kostenStufe = input.cost ? { free: 0, low: 1, medium: 2, high: 3, very_high: 4 }[input.cost] : undefined;
+        return db.searchAusfluege({
+          keyword: input.keyword,
+          region: input.region,
+          kostenStufe,
+        });
       }),
     
     statistics: publicProcedure.query(async () => {
-      return db.getStatistics();
+      // Use ausfluege statistics
+      return db.getAusflugeStatistics();
     }),
     
     userTrips: protectedProcedure.query(async ({ ctx }) => {

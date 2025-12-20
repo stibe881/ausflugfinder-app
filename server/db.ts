@@ -101,6 +101,7 @@ export async function getUserByOpenId(openId: string) {
 import { and, like, or, desc, asc, sql, count } from "drizzle-orm";
 import {
   trips,
+  ausfluege,
   tripCategories,
   tripPhotos,
   tripVideos,
@@ -557,4 +558,69 @@ export async function deleteUser(userId: number) {
   await db.delete(friendships).where(or(eq(friendships.userId, userId), eq(friendships.friendId, userId)));
   await db.delete(notifications).where(eq(notifications.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
+}
+
+// ============ AUSFLUEGE (Original Webapp Data) ============
+
+export async function getAllAusfluege() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ausfluege).orderBy(desc(ausfluege.createdAt));
+}
+
+export async function getAusflugById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(ausfluege).where(eq(ausfluege.id, id));
+  return result[0] || null;
+}
+
+export async function searchAusfluege(params: {
+  keyword?: string;
+  region?: string;
+  kostenStufe?: number;
+}) {
+  const db = await getDb();
+  if (!db) return { data: [], total: 0 };
+
+  const conditions = [];
+  
+  if (params.keyword) {
+    conditions.push(
+      or(
+        like(ausfluege.name, `%${params.keyword}%`),
+        like(ausfluege.beschreibung, `%${params.keyword}%`),
+        like(ausfluege.adresse, `%${params.keyword}%`)
+      )
+    );
+  }
+  
+  if (params.region) {
+    conditions.push(eq(ausfluege.region, params.region));
+  }
+  
+  if (params.kostenStufe !== undefined) {
+    conditions.push(eq(ausfluege.kostenStufe, params.kostenStufe));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  
+  const data = await db.select().from(ausfluege).where(whereClause).orderBy(desc(ausfluege.createdAt));
+
+  return { data, total: data.length };
+}
+
+export async function getAusflugeStatistics() {
+  const db = await getDb();
+  if (!db) return { totalActivities: 0, freeActivities: 0, totalRegions: 0 };
+
+  const totalResult = await db.select({ count: count() }).from(ausfluege);
+  const freeResult = await db.select({ count: count() }).from(ausfluege).where(eq(ausfluege.kostenStufe, 0));
+  const regionsResult = await db.selectDistinct({ region: ausfluege.region }).from(ausfluege);
+
+  return {
+    totalActivities: totalResult[0]?.count || 0,
+    freeActivities: freeResult[0]?.count || 0,
+    totalRegions: regionsResult.filter(r => r.region).length,
+  };
 }

@@ -42,15 +42,13 @@ const REGIONS = [
 
 type Trip = {
   id: number;
-  title: string;
-  description: string | null;
-  destination: string;
-  cost: string;
+  name: string; // ausfluege uses 'name' instead of 'title'
+  beschreibung: string | null; // ausfluege uses 'beschreibung' instead of 'description'
+  adresse: string; // ausfluege uses 'adresse' instead of 'destination'
+  kostenStufe: number | null; // ausfluege uses 'kostenStufe' (0-4) instead of 'cost' enum
   region: string | null;
-  image: string | null;
-  isFavorite: number;
-  latitude: string | null;
-  longitude: string | null;
+  lat: string | null; // ausfluege uses 'lat' instead of 'latitude'
+  lng: string | null; // ausfluege uses 'lng' instead of 'longitude'
 };
 
 function CostBadge({ cost }: { cost: string }) {
@@ -86,48 +84,26 @@ function TripCard({ trip, onPress, onFavoriteToggle }: {
     >
       {/* Image */}
       <View style={styles.tripImageContainer}>
-        {trip.image ? (
-          <Image
-            source={{ uri: trip.image }}
-            style={styles.tripImage}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
-          </View>
-        )}
+        <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
+          <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
+        </View>
         
         {/* Favorite Button */}
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation();
-            onFavoriteToggle();
-          }}
-          style={styles.favoriteButton}
-        >
-          <IconSymbol
-            name={trip.isFavorite ? "heart.fill" : "heart.fill"}
-            size={20}
-            color={trip.isFavorite ? "#EF4444" : "#FFFFFF"}
-          />
-        </Pressable>
-        
         {/* Cost Badge */}
         <View style={styles.costBadgeContainer}>
-          <CostBadge cost={trip.cost} />
+          <CostBadge cost={trip.kostenStufe !== null ? ['free', 'low', 'medium', 'high', 'very_high'][trip.kostenStufe] : 'free'} />
         </View>
       </View>
 
       {/* Content */}
       <View style={styles.tripContent}>
         <ThemedText style={styles.tripTitle} numberOfLines={2}>
-          {trip.title}
+          {trip.name}
         </ThemedText>
         <View style={styles.tripLocation}>
           <IconSymbol name="mappin.and.ellipse" size={14} color={colors.textSecondary} />
           <ThemedText style={[styles.tripLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {trip.destination}
+            {trip.adresse}
           </ThemedText>
         </View>
       </View>
