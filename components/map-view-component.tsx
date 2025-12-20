@@ -1,6 +1,7 @@
 import { Platform, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "./themed-text";
+import { GoogleMapsWeb } from "./google-maps-web";
 import { Colors, BrandColors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -26,7 +27,12 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     (trip) => trip.lat && trip.lng && !isNaN(parseFloat(trip.lat)) && !isNaN(parseFloat(trip.lng))
   );
 
-  // Web fallback - Maps not supported on web
+  // Use Google Maps for web
+  if (Platform.OS === 'web') {
+    return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
+  }
+
+  // Mobile fallback - React Native Maps would go here
   return (
     <View style={[styles.webFallback, { backgroundColor: colors.surface }]}>
       <ThemedText style={styles.webFallbackText}>
@@ -34,19 +40,6 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
       </ThemedText>
       <ThemedText style={[styles.webFallbackSubtext, { color: colors.textSecondary }]}>
         {tripsWithCoords.length} Ausflugsziele mit Standort
-      </ThemedText>
-      <View style={styles.tripsList}>
-        {tripsWithCoords.slice(0, 5).map((trip) => (
-          <View key={trip.id} style={[styles.tripItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <ThemedText style={styles.tripTitle}>{trip.name}</ThemedText>
-            <ThemedText style={[styles.tripCoords, { color: colors.textSecondary }]}>
-              {parseFloat(trip.lat!).toFixed(4)}, {parseFloat(trip.lng!).toFixed(4)}
-            </ThemedText>
-          </View>
-        ))}
-      </View>
-      <ThemedText style={[styles.webFallbackNote, { color: colors.textDisabled }]}>
-        Öffne die App auf deinem Smartphone, um die interaktive Karte zu sehen
       </ThemedText>
     </View>
   );

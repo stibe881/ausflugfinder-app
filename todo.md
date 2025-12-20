@@ -178,3 +178,7 @@
 ## Aktuelle Probleme (vom Benutzer bestätigt)
 - [x] Header-Buttons sollen Glass-Design haben (Glassmorphismus implementiert)
 - [x] Kartenansicht zeigt "0 Ausflugsziele mit Standort" (MapViewComponent angepasst für lat/lng statt latitude/longitude)
+
+## Neues Feature (vom Benutzer gewünscht)
+- [x] Echte Google Maps Karte in der Web-Version statt nur Liste (Google Maps JS API implementiert)
+- [x] Nicht alle 13 Ausflüge werden angezeigt (slice(0,5) entfernt, jetzt alle 13)
