@@ -3,35 +3,44 @@
 /**
  * EAS Build Pre-Install Hook
  * This script runs before npm/pnpm install during EAS builds.
- * It creates the .expo directory with proper permissions to fix EACCES errors.
+ * It changes ownership of the build directory to fix EACCES permission errors.
+ * 
+ * Based on: https://github.com/expo/eas-cli/issues/2005
  */
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
-console.log('[eas-build-pre-install] Starting pre-install setup...');
+console.log('[eas-build-pre-install] Starting permission fix...');
 
-const directories = [
-    '.expo',
-    '.expo/web',
-    '.expo/web/cache',
-];
+try {
+    // Get current user
+    const currentUser = process.env.USER || 'expo';
+    console.log(`[eas-build-pre-install] Current user: ${currentUser}`);
 
-// Create directories with proper permissions
-directories.forEach((dir) => {
-    const dirPath = path.join(process.cwd(), dir);
-    try {
+    // Change ownership of the entire build directory to the current user
+    console.log('[eas-build-pre-install] Changing ownership of build directory...');
+    execSync(`sudo chown -R ${currentUser}:staff .`, { stdio: 'inherit' });
+
+    // Create .expo directories with proper permissions
+    const directories = ['.expo', '.expo/web', '.expo/web/cache'];
+    directories.forEach((dir) => {
+        const dirPath = path.join(process.cwd(), dir);
         if (!fs.existsSync(dirPath)) {
             fs.mkdirSync(dirPath, { recursive: true, mode: 0o777 });
-            console.log(`[eas-build-pre-install] Created directory: ${dirPath}`);
+            console.log(`[eas-build-pre-install] Created: ${dirPath}`);
         }
-        // Set permissions to 777 to ensure write access
-        fs.chmodSync(dirPath, 0o777);
-        console.log(`[eas-build-pre-install] Set permissions for: ${dirPath}`);
-    } catch (error) {
-        console.error(`[eas-build-pre-install] Error creating ${dirPath}:`, error.message);
-    }
-});
+    });
 
-console.log('[eas-build-pre-install] Pre-install setup completed!');
+    // Clean node_modules and reinstall (optional, helps with permission issues)
+    if (fs.existsSync('node_modules')) {
+        console.log('[eas-build-pre-install] Cleaning node_modules...');
+        execSync('rm -rf node_modules', { stdio: 'inherit' });
+    }
+
+    console.log('[eas-build-pre-install] Permission fix completed!');
+} catch (error) {
+    console.error('[eas-build-pre-install] Error:', error.message);
+    // Don't fail the build, continue anyway
+}
