@@ -71,32 +71,13 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     (trip) => trip.lat && trip.lng && !isNaN(parseFloat(trip.lat)) && !isNaN(parseFloat(trip.lng))
   );
 
-  // Use Google Maps for web
-  if (Platform.OS === 'web') {
+  // Use Google Maps for web OR Expo Go (since react-native-maps doesn't work in Expo Go)
+  if (Platform.OS === 'web' || isExpoGo) {
     return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
   }
 
-  // Copy debug info to clipboard
-  const handleCopyDebugInfo = async () => {
-    const info = {
-      ...debugInfo,
-      renderError,
-      tripsCount: trips.length,
-      tripsWithCoordsCount: tripsWithCoords.length,
-      timestamp: new Date().toISOString(),
-    };
-    const text = JSON.stringify(info, null, 2);
-
-    try {
-      await Clipboard.setStringAsync(text);
-      Alert.alert("Kopiert!", "Debug-Info wurde in die Zwischenablage kopiert.");
-    } catch (e) {
-      Alert.alert("Debug Info", text);
-    }
-  };
-
-  // For Expo Go or when native maps aren't available, show a fallback with debug info
-  if (isExpoGo || !MapView) {
+  // For native builds without react-native-maps available, show debug info
+  if (!MapView) {
     return (
       <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
         <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
