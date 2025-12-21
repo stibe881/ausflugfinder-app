@@ -530,6 +530,22 @@ export async function createDayPlan(params: {
     return { success: true, plan: data };
 }
 
+// Get a single day plan by ID
+export async function getDayPlanById(id: number): Promise<DayPlan | null> {
+    const { data, error } = await supabase
+        .from("day_plans")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        console.error("[Supabase] Error fetching day plan:", error);
+        return null;
+    }
+
+    return data;
+}
+
 // Delete a day plan
 export async function deleteDayPlan(planId: number): Promise<{ success: boolean; error?: string }> {
     const { data: { user } } = await supabase.auth.getUser();
