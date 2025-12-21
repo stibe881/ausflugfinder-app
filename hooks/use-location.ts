@@ -65,10 +65,15 @@ export function useLocation() {
             return false;
         }
 
-        const { status } = await Location.getForegroundPermissionsAsync();
-        const granted = status === "granted";
-        setPermissionGranted(granted);
-        return granted;
+        try {
+            const { status } = await Location.getForegroundPermissionsAsync();
+            const granted = status === "granted";
+            setPermissionGranted(granted);
+            return granted;
+        } catch (error) {
+            console.warn("[Location] Permission check failed (Expo Go limitation):", error);
+            return false;
+        }
     }, []);
 
     // Request location permission
@@ -77,10 +82,15 @@ export function useLocation() {
             return false;
         }
 
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        const granted = status === "granted";
-        setPermissionGranted(granted);
-        return granted;
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            const granted = status === "granted";
+            setPermissionGranted(granted);
+            return granted;
+        } catch (error) {
+            console.warn("[Location] Permission request failed (Expo Go limitation):", error);
+            return false;
+        }
     }, []);
 
     // Get current location
