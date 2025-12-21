@@ -259,7 +259,7 @@ export default function ExploreScreen() {
   ];
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 16,
+    paddingTop: 0,
     paddingBottom: Spacing.md,
   },
   viewModeButton: {
