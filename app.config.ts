@@ -28,7 +28,7 @@ const config: ExpoConfig = {
   version: "1.0.0",
   platforms: ["ios", "android", "web"],
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  // icon: "./assets/images/icon.png", // Disabled for EAS build - EAS has EACCES permission issues with icon caching
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
