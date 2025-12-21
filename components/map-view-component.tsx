@@ -71,23 +71,45 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     (trip) => trip.lat && trip.lng && !isNaN(parseFloat(trip.lat)) && !isNaN(parseFloat(trip.lng))
   );
 
-  // Use Google Maps for web OR Expo Go (since react-native-maps doesn't work in Expo Go)
-  if (Platform.OS === 'web' || isExpoGo) {
+  // Use Google Maps for web
+  if (Platform.OS === 'web') {
     return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
   }
 
-  // For native builds without react-native-maps available, show debug info
-  if (!MapView) {
+  // Copy debug info to clipboard
+  const handleCopyDebugInfo = async () => {
+    const info = {
+      ...debugInfo,
+      renderError,
+      tripsCount: trips.length,
+      tripsWithCoordsCount: tripsWithCoords.length,
+      timestamp: new Date().toISOString(),
+    };
+    const text = JSON.stringify(info, null, 2);
+
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert("Kopiert!", "Debug-Info wurde in die Zwischenablage kopiert.");
+    } catch (e) {
+      Alert.alert("Debug Info", text);
+    }
+  };
+
+  // For Expo Go or when native maps aren't available, show a fallback with info
+  if (isExpoGo || !MapView) {
     return (
       <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
         <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
           <ThemedText style={styles.fallbackEmoji}>🗺️</ThemedText>
         </View>
         <ThemedText style={styles.fallbackTitle}>
-          Kartenansicht nicht verfügbar
+          {isExpoGo ? "Karte nur in Production Build" : "Kartenansicht nicht verfügbar"}
         </ThemedText>
         <ThemedText style={[styles.fallbackText, { color: colors.textSecondary }]}>
-          {tripsWithCoords.length} Ausflüge mit Standort
+          {isExpoGo
+            ? `Google Maps funktioniert nicht in Expo Go.\n${tripsWithCoords.length} Ausflüge mit Standort verfügbar im TestFlight Build.`
+            : `${tripsWithCoords.length} Ausflüge mit Standort`
+          }
         </ThemedText>
 
         {/* Debug Info Box */}
