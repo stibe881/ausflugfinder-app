@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: 16,
+    paddingTop: Platform.OS === "web" ? 16 : 24,
     paddingBottom: Spacing.md,
   },
   viewModeButton: {
