@@ -101,16 +101,24 @@ function FeatureItem({
   icon,
   title,
   description,
+  onPress,
 }: {
   icon: "magnifyingglass" | "calendar" | "person.2.fill" | "map.fill";
   title: string;
   description: string;
+  onPress?: () => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
 
   return (
-    <View style={styles.featureItem}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.featureItem,
+        { opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
       <View
         style={[
           styles.featureIconContainer,
@@ -125,7 +133,10 @@ function FeatureItem({
           {description}
         </ThemedText>
       </View>
-    </View>
+      {onPress && (
+        <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+      )}
+    </Pressable>
   );
 }
 
@@ -267,21 +278,25 @@ export default function HomeScreen() {
             icon="magnifyingglass"
             title="Ausflüge entdecken"
             description="Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget"
+            onPress={() => router.push("/(tabs)/explore")}
           />
           <FeatureItem
             icon="calendar"
             title="Tagesplanung"
             description="Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget"
+            onPress={() => router.push("/(tabs)/planner")}
           />
           <FeatureItem
             icon="person.2.fill"
             title="Mit Freunden teilen"
             description="Teile deine Lieblingsausflüge und plane gemeinsame Abenteuer"
+            onPress={() => router.push("/(tabs)/trips")}
           />
           <FeatureItem
             icon="map.fill"
             title="Kartenansicht"
             description="Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte"
+            onPress={() => router.push("/(tabs)/explore")}
           />
         </View>
       </View>
