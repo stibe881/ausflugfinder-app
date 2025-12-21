@@ -31,93 +31,92 @@ function formatDate(date: Date | string): string {
 
 // ============ MAIN COMPONENT ============
 
-function PackingListTab({ dayPlanId }: { dayPlanId: number }) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-  const [newItem, setNewItem] = useState("");
+const colorScheme = useColorScheme();
+const colors = Colors[colorScheme ?? "light"];
+const [newItem, setNewItem] = useState("");
 
-  const { data: items, refetch } = trpc.packingList.list.useQuery({ dayPlanId });
-  const addMutation = trpc.packingList.add.useMutation({ onSuccess: () => { refetch(); setNewItem(""); } });
-  const toggleMutation = trpc.packingList.toggle.useMutation({ onSuccess: () => refetch() });
-  const deleteMutation = trpc.packingList.delete.useMutation({ onSuccess: () => refetch() });
+const { data: items, refetch } = trpc.packingList.list.useQuery({ dayPlanId });
+const addMutation = trpc.packingList.add.useMutation({ onSuccess: () => { refetch(); setNewItem(""); } });
+const toggleMutation = trpc.packingList.toggle.useMutation({ onSuccess: () => refetch() });
+const deleteMutation = trpc.packingList.delete.useMutation({ onSuccess: () => refetch() });
 
-  const handleAdd = () => {
-    if (!newItem.trim()) return;
-    addMutation.mutate({ dayPlanId, item: newItem.trim() });
-  };
+const handleAdd = () => {
+  if (!newItem.trim()) return;
+  addMutation.mutate({ dayPlanId, item: newItem.trim() });
+};
 
-  const packedCount = items?.filter(i => i.isPacked).length || 0;
-  const totalCount = items?.length || 0;
+const packedCount = items?.filter(i => i.isPacked).length || 0;
+const totalCount = items?.length || 0;
 
-  return (
-    <View style={styles.tabContent}>
-      {/* Progress */}
-      <View style={[styles.progressCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.progressHeader}>
-          <ThemedText style={styles.progressTitle}>Fortschritt</ThemedText>
-          <ThemedText style={[styles.progressCount, { color: colors.primary }]}>
-            {packedCount}/{totalCount}
+return (
+  <View style={styles.tabContent}>
+    {/* Progress */}
+    <View style={[styles.progressCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.progressHeader}>
+        <ThemedText style={styles.progressTitle}>Fortschritt</ThemedText>
+        <ThemedText style={[styles.progressCount, { color: colors.primary }]}>
+          {packedCount}/{totalCount}
+        </ThemedText>
+      </View>
+      <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              backgroundColor: colors.primary,
+              width: totalCount > 0 ? `${(packedCount / totalCount) * 100}%` : "0%",
+            },
+          ]}
+        />
+      </View>
+    </View>
+
+    {/* Add Item */}
+    <View style={[styles.addItemRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <TextInput
+        style={[styles.addItemInput, { color: colors.text }]}
+        placeholder="Neuer Gegenstand..."
+        placeholderTextColor={colors.textSecondary}
+        value={newItem}
+        onChangeText={setNewItem}
+        onSubmitEditing={handleAdd}
+      />
+      <Pressable onPress={handleAdd} style={[styles.addItemButton, { backgroundColor: colors.primary }]}>
+        <IconSymbol name="plus" size={20} color="#FFFFFF" />
+      </Pressable>
+    </View>
+
+    {/* Items List */}
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={({ item }) => (
+        <Pressable
+          onPress={() => toggleMutation.mutate({ id: item.id, isPacked: !item.isPacked })}
+          style={[styles.packingItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <View style={[styles.checkbox, item.isPacked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+            {item.isPacked && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
+          </View>
+          <ThemedText style={[styles.packingItemText, item.isPacked && styles.packedText]}>
+            {item.item}
+          </ThemedText>
+          <Pressable onPress={() => deleteMutation.mutate({ id: item.id })}>
+            <IconSymbol name="trash.fill" size={16} color="#EF4444" />
+          </Pressable>
+        </Pressable>
+      )}
+      ListEmptyComponent={
+        <View style={styles.emptyTab}>
+          <IconSymbol name="bag.fill" size={40} color={colors.textSecondary} />
+          <ThemedText style={[styles.emptyTabText, { color: colors.textSecondary }]}>
+            Noch keine Gegenstände
           </ThemedText>
         </View>
-        <View style={[styles.progressBar, { backgroundColor: colors.border }]}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                backgroundColor: colors.primary,
-                width: totalCount > 0 ? `${(packedCount / totalCount) * 100}%` : "0%",
-              },
-            ]}
-          />
-        </View>
-      </View>
-
-      {/* Add Item */}
-      <View style={[styles.addItemRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <TextInput
-          style={[styles.addItemInput, { color: colors.text }]}
-          placeholder="Neuer Gegenstand..."
-          placeholderTextColor={colors.textSecondary}
-          value={newItem}
-          onChangeText={setNewItem}
-          onSubmitEditing={handleAdd}
-        />
-        <Pressable onPress={handleAdd} style={[styles.addItemButton, { backgroundColor: colors.primary }]}>
-          <IconSymbol name="plus" size={20} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
-      {/* Items List */}
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => toggleMutation.mutate({ id: item.id, isPacked: !item.isPacked })}
-            style={[styles.packingItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <View style={[styles.checkbox, item.isPacked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              {item.isPacked && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
-            </View>
-            <ThemedText style={[styles.packingItemText, item.isPacked && styles.packedText]}>
-              {item.item}
-            </ThemedText>
-            <Pressable onPress={() => deleteMutation.mutate({ id: item.id })}>
-              <IconSymbol name="trash.fill" size={16} color="#EF4444" />
-            </Pressable>
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyTab}>
-            <IconSymbol name="bag.fill" size={40} color={colors.textSecondary} />
-            <ThemedText style={[styles.emptyTabText, { color: colors.textSecondary }]}>
-              Noch keine Gegenstände
-            </ThemedText>
-          </View>
-        }
-      />
-    </View>
-  );
+      }
+    />
+  </View>
+);
 }
 
 // ============ BUDGET TAB ============
