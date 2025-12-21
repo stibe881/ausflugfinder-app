@@ -16,7 +16,8 @@
             "node": "20.18.0",
             "pnpm": "9.12.0",
             "ios": {
-                "image": "macos-ventura-13.6-xcode-15.2"
+                "image": "latest",
+                "resourceClass": "m-medium"
             }
         }
     },
