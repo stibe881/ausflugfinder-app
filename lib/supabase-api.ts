@@ -451,10 +451,22 @@ export async function createDayPlan(params: {
         return { success: false, error: "Nicht angemeldet" };
     }
 
+    // Get the manus_users integer ID from the auth user's UUID
+    const { data: manusUser, error: userError } = await supabase
+        .from("manus_users")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+    if (userError || !manusUser) {
+        console.error("[Supabase] Error fetching manus user:", userError);
+        return { success: false, error: "Benutzer nicht gefunden" };
+    }
+
     const { data, error } = await supabase
         .from("day_plans")
         .insert({
-            user_id: user.id,
+            user_id: manusUser.id, // Use integer ID from manus_users
             title: params.title,
             description: params.description || null,
             start_date: params.startDate.toISOString(),
