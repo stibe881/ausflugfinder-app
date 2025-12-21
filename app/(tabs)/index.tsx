@@ -311,6 +311,7 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     paddingHorizontal: Spacing.lg,
+    paddingTop: 16,
     paddingBottom: Spacing.xxl,
     borderBottomLeftRadius: BorderRadius.xl,
     borderBottomRightRadius: BorderRadius.xl,
