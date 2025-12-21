@@ -474,17 +474,38 @@ export async function createDayPlan(params: {
         .from("users")
         .select("id")
         .eq("open_id", user.id)
-        .maybeSingle(); // Use maybeSingle() to handle case where user doesn't exist in users table yet
+        .maybeSingle();
 
     if (userError) {
         console.error("[Supabase] Error fetching user:", userError);
         return { success: false, error: "Datenbankfehler beim Laden des Benutzers" };
     }
 
-    // If no user found in users table, return error
+    let userId: number;
+
+    // If no user found in users table, create one
     if (!userData) {
-        console.log("[Supabase] No user found in users table for auth user", user.id);
-        return { success: false, error: "Benutzer noch nicht in der Datenbank registriert" };
+        console.log("[Supabase] Creating new user in users table for auth user", user.id);
+
+        const { data: newUser, error: createError } = await supabase
+            .from("users")
+            .insert({
+                open_id: user.id,
+                email: user.email,
+                name: user.user_metadata?.name || user.email?.split('@')[0],
+                login_method: "supabase",
+            })
+            .select("id")
+            .single();
+
+        if (createError || !newUser) {
+            console.error("[Supabase] Error creating user:", createError);
+            return { success: false, error: "Fehler beim Erstellen des Benutzers" };
+        }
+
+        userId = newUser.id;
+    } else {
+        userId = userData.id;
     }
 
     const { data, error } = await supabase
