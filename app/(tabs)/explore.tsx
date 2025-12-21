@@ -259,7 +259,7 @@ export default function ExploreScreen() {
   ];
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+    <ThemedView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View>
