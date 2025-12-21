@@ -160,44 +160,49 @@ export function useProximityTracking() {
             return false;
         }
 
-        // Request notification permissions
-        const { status: notifStatus } = await Notifications.requestPermissionsAsync();
-        if (notifStatus !== "granted") {
-            console.log("[ProximityTracking] Notification permission not granted");
-            return false;
-        }
+        try {
+            // Request notification permissions
+            const { status: notifStatus } = await Notifications.requestPermissionsAsync();
+            if (notifStatus !== "granted") {
+                console.log("[ProximityTracking] Notification permission not granted");
+                return false;
+            }
 
-        // Request background location permission
-        const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
-        if (bgStatus !== "granted") {
-            console.log("[ProximityTracking] Background location permission not granted");
-            return false;
-        }
+            // Request background location permission
+            const { status: bgStatus } = await Location.requestBackgroundPermissionsAsync();
+            if (bgStatus !== "granted") {
+                console.log("[ProximityTracking] Background location permission not granted");
+                return false;
+            }
 
-        // Check if already tracking
-        const hasStarted = await Location.hasStartedLocationUpdatesAsync(PROXIMITY_TASK_NAME);
-        if (hasStarted) {
-            console.log("[ProximityTracking] Already tracking");
+            // Check if already tracking
+            const hasStarted = await Location.hasStartedLocationUpdatesAsync(PROXIMITY_TASK_NAME);
+            if (hasStarted) {
+                console.log("[ProximityTracking] Already tracking");
+                isTrackingRef.current = true;
+                return true;
+            }
+
+            // Start background location updates
+            await Location.startLocationUpdatesAsync(PROXIMITY_TASK_NAME, {
+                accuracy: Location.Accuracy.Balanced,
+                distanceInterval: 100, // Update every 100 meters
+                timeInterval: 60000, // Or every minute
+                showsBackgroundLocationIndicator: true,
+                foregroundService: {
+                    notificationTitle: "AusflugFinder",
+                    notificationBody: "Suche nach Ausflugszielen in deiner Nähe",
+                    notificationColor: "#22C55E",
+                },
+            });
+
             isTrackingRef.current = true;
+            console.log("[ProximityTracking] Started background tracking");
             return true;
+        } catch (error) {
+            console.warn("[ProximityTracking] Failed to start tracking (Expo Go limitation):", error);
+            return false;
         }
-
-        // Start background location updates
-        await Location.startLocationUpdatesAsync(PROXIMITY_TASK_NAME, {
-            accuracy: Location.Accuracy.Balanced,
-            distanceInterval: 100, // Update every 100 meters
-            timeInterval: 60000, // Or every minute
-            showsBackgroundLocationIndicator: true,
-            foregroundService: {
-                notificationTitle: "AusflugFinder",
-                notificationBody: "Suche nach Ausflugszielen in deiner Nähe",
-                notificationColor: "#22C55E",
-            },
-        });
-
-        isTrackingRef.current = true;
-        console.log("[ProximityTracking] Started background tracking");
-        return true;
     }, [settings]);
 
     // Stop background location tracking
