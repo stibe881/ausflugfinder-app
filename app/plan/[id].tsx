@@ -1,25 +1,22 @@
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
-  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
+import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getDayPlanById } from "@/lib/supabase-api";
 import type { DayPlan } from "@/lib/supabase-api";
+import { PackingListTab, BudgetTab, ChecklistTab, ActivitiesTab } from "./plan-tabs";
 
 type TabType = "activities" | "packing" | "budget" | "checklist";
 
@@ -32,7 +29,7 @@ function formatDate(date: Date | string): string {
   });
 }
 
-// ============ PACKING LIST TAB ============
+// ============ MAIN COMPONENT ============
 
 function PackingListTab({ dayPlanId }: { dayPlanId: number }) {
   const colorScheme = useColorScheme();
