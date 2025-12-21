@@ -28,7 +28,7 @@ const config: ExpoConfig = {
   version: "1.0.0",
   platforms: ["ios", "android", "web"],
   orientation: "portrait",
-  // icon: "./assets/images/icon.png",
+  icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
@@ -87,19 +87,15 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    // Temporarily disabled to fix EAS build EACCES error during splash screen generation
-    // [
-    //   "expo-splash-screen",
-    //   {
-    //     image: "./assets/images/splash-icon.png",
-    //     imageWidth: 200,
-    //     resizeMode: "contain",
-    //     backgroundColor: "#ffffff",
-    //     dark: {
-    //       backgroundColor: "#000000",
-    //     },
-    //   },
-    // ],
+    [
+      "expo-splash-screen",
+      {
+        // Using minimal config with only backgroundColor to avoid EACCES image caching errors on EAS
+        // No image specified - uses default Expo splash
+        resizeMode: "contain",
+        backgroundColor: "#ffffff",
+      },
+    ],
     [
       "expo-location",
       {
