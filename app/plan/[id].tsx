@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,8 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { trpc } from "@/lib/trpc";
+import { getDayPlanById } from "@/lib/supabase-api";
+import type { DayPlan } from "@/lib/supabase-api";
 
 type TabType = "activities" | "packing" | "budget" | "checklist";
 
@@ -415,12 +416,22 @@ export default function PlanDetailScreen() {
   const colors = Colors[colorScheme ?? "light"];
 
   const [activeTab, setActiveTab] = useState<TabType>("activities");
+  const [plan, setPlan] = useState<DayPlan | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch plan data
-  const { data: plan, isLoading } = trpc.dayPlans.getById.useQuery(
-    { id: Number(id) },
-    { enabled: !!id }
-  );
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchPlan = async () => {
+      setIsLoading(true);
+      const data = await getDayPlanById(Number(id));
+      setPlan(data);
+      setIsLoading(false);
+    };
+
+    fetchPlan();
+  }, [id]);
 
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: "activities", label: "Aktivitäten", icon: "calendar" },
