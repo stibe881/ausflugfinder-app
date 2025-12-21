@@ -85,6 +85,7 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
   const googleMapRef = useRef<any>(null);
   const clustererRef = useRef<MarkerClusterer | null>(null);
   const markersRef = useRef<any[]>([]);
+  const userMarkerRef = useRef<any>(null);
 
   // Filter trips with valid coordinates
   const tripsWithCoords = trips.filter(
@@ -200,11 +201,10 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
 
         markersRef.current = markers;
 
-        // Create marker clusterer
+        // Create marker clusterer (simplified, no custom algorithm)
         clustererRef.current = new MarkerClusterer({
           map,
           markers,
-          algorithm: new (MarkerClusterer as any).GridAlgorithm({ gridSize: 60 }),
           renderer: {
             render: ({ count, position }: any) => {
               const color = count > 20 ? "#EF4444" : count > 10 ? BrandColors.secondary : BrandColors.primary;
@@ -230,68 +230,59 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
             },
           },
           onClusterClick: (_, cluster: any) => {
-            // Zoom into cluster
-            const bounds = new google.maps.LatLngBounds();
-            cluster.markers.forEach((marker: any) => {
-              bounds.extend(marker.getPosition());
-            });
-            map.fitBounds(bounds);
-
-            // Zoom in a bit more to separate markers
-            const listener = google.maps.event.addListener(map, "idle", () => {
-              const currentZoom = map.getZoom();
-              if (currentZoom < 15) {
-                map.setZoom(Math.min(currentZoom + 2, 15));
-              }
-              google.maps.event.removeListener(listener);
-            });
-          },
+            const currentZoom = map.getZoom();
+            if (currentZoom < 15) {
+              map.setZoom(Math.min(currentZoom + 2, 15));
+            }
+            google.maps.event.removeListener(listener);
+          });
+      },
         });
 
-        // Initial fit bounds
-        map.fitBounds(bounds);
-      })
-      .catch((error: any) => {
-        console.error("[GoogleMaps] Error loading Google Maps:", error);
-      });
+  // Initial fit bounds
+  map.fitBounds(bounds);
+})
+      .catch ((error: any) => {
+  console.error("[GoogleMaps] Error loading Google Maps:", error);
+});
 
-    return () => {
-      // Cleanup
-      if (clustererRef.current) {
-        clustererRef.current.clearMarkers();
-      }
-      markersRef.current.forEach((marker) => {
-        if ((marker as any).infoWindow) {
-          (marker as any).infoWindow.close();
-        }
-        marker.setMap(null);
-      });
-      markersRef.current = [];
-    };
+return () => {
+  // Cleanup
+  if (clustererRef.current) {
+    clustererRef.current.clearMarkers();
+  }
+  markersRef.current.forEach((marker) => {
+    if ((marker as any).infoWindow) {
+      (marker as any).infoWindow.close();
+    }
+    marker.setMap(null);
+  });
+  markersRef.current = [];
+};
   }, [tripsWithCoords, onMarkerPress, colorScheme]);
 
-  if (tripsWithCoords.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-        <ThemedText style={styles.emptyText}>
-          📍 Keine Ausflugsziele mit Standort gefunden
-        </ThemedText>
-      </View>
-    );
-  }
-
+if (tripsWithCoords.length === 0) {
   return (
-    <View style={styles.container}>
-      <div
-        ref={mapRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          borderRadius: 12,
-        }}
-      />
+    <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+      <ThemedText style={styles.emptyText}>
+        📍 Keine Ausflugsziele mit Standort gefunden
+      </ThemedText>
     </View>
   );
+}
+
+return (
+  <View style={styles.container}>
+    <div
+      ref={mapRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        borderRadius: 12,
+      }}
+    />
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
