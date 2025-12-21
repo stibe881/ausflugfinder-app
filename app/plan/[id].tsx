@@ -480,7 +480,7 @@ export default function PlanDetailScreen() {
           <View style={styles.planInfoRow}>
             <IconSymbol name="calendar" size={16} color={colors.textSecondary} />
             <ThemedText style={[styles.planInfoText, { color: colors.textSecondary }]}>
-              {formatDate(plan.startDate)} - {formatDate(plan.endDate)}
+              {formatDate(plan.start_date)} - {formatDate(plan.end_date)}
             </ThemedText>
           </View>
           {plan.description && (
