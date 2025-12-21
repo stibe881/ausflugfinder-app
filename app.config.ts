@@ -87,15 +87,14 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    [
-      "expo-splash-screen",
-      {
-        // Using minimal config with only backgroundColor to avoid EACCES image caching errors on EAS
-        // No image specified - uses default Expo splash
-        resizeMode: "contain",
-        backgroundColor: "#ffffff",
-      },
-    ],
+    // Splash screen plugin disabled - causes EACCES errors during asset generation on EAS
+    // [
+    //   "expo-splash-screen",
+    //   {
+    //     resizeMode: "contain",
+    //     backgroundColor: "#ffffff",
+    //   },
+    // ],
     [
       "expo-location",
       {
