@@ -16,6 +16,7 @@ import { Platform } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { EditProfileModal } from "@/components/edit-profile-modal";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
@@ -167,6 +168,8 @@ export default function ProfileScreen() {
   const { user: manusUser, isAuthenticated: manusAuth, loading: manusLoading } = useAuth();
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
 
+  const [showEditModal, setShowEditModal] = useState(false);
+
   const user = supabaseUser || manusUser;
   const isAuthenticated = !!supabaseUser || manusAuth;
   const loading = supabaseLoading || manusLoading;
@@ -253,7 +256,17 @@ export default function ProfileScreen() {
         ) : (
           <>
             {/* User Info */}
-            <View style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Pressable
+              onPress={() => setShowEditModal(true)}
+              style={({ pressed }) => [
+                styles.userCard,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
               <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
                 <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
                   {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
@@ -267,7 +280,20 @@ export default function ProfileScreen() {
                   {supabaseUser?.email || manusUser?.email || ""}
                 </ThemedText>
               </View>
-            </View>
+              <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+            </Pressable>
+
+            {/* Edit Profile Modal */}
+            <EditProfileModal
+              visible={showEditModal}
+              onClose={() => setShowEditModal(false)}
+              currentEmail={supabaseUser?.email || ""}
+              currentPhotoUrl={supabaseUser?.user_metadata?.avatar_url}
+              onSuccess={() => {
+                // Refresh user data if needed
+                setShowEditModal(false);
+              }}
+            />
 
             {/* Settings Sections */}
             <SettingSection title="ALLGEMEIN">
