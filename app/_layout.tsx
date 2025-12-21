@@ -20,6 +20,7 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { LanguageProvider } from "@/contexts/language-context";
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 import { AdminProvider } from "@/contexts/admin-context";
+import { ProximityTrackingInitializer } from "@/components/proximity-tracking-initializer";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -94,10 +95,12 @@ export default function RootLayout() {
                       <Stack.Screen name="settings/language" options={{ headerShown: true }} />
                       <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
                       <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
+                      <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
                       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
                       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
                       <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
                     </Stack>
+                    <ProximityTrackingInitializer />
                     <StatusBar style="auto" />
                   </ThemeProvider>
                 </LanguageProvider>

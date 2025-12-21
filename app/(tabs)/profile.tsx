@@ -272,6 +272,13 @@ export default function ProfileScreen() {
             {/* Settings Sections */}
             <SettingSection title="ALLGEMEIN">
               <SettingItem
+                icon="location.fill"
+                iconColor={BrandColors.accent}
+                title="Standort"
+                subtitle="Standort & Nähe-Benachrichtigungen"
+                onPress={() => router.push("/settings/location" as any)}
+              />
+              <SettingItem
                 icon="bell.fill"
                 title="Benachrichtigungen"
                 subtitle="Push-Benachrichtigungen verwalten"

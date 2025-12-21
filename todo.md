@@ -24,7 +24,7 @@
 - [x] Favorit-Toggle
 - [x] Pull-to-Refresh
 - [ ] Listen-Ansicht für Trips
-- [ ] Karten-Ansicht mit react-native-maps
+- [ ] Karten-Ansicht mit react-native-maps (nur Fallback-Text in Expo Go)
 - [ ] Infinite Scroll / Pagination
 
 ## Trip Detail Screen
@@ -48,8 +48,8 @@
 - [ ] Swipe-Aktionen
 
 ## Planner Screen
-- [x] Liste der Tagespläne
-- [x] Plan erstellen Modal
+- [ ] Liste der Tagespläne (migriert zu Supabase, day_plans Tabelle fehlt noch)
+- [ ] Plan erstellen Modal (Code fertig, day_plans Tabelle fehlt noch)
 - [x] Plan-Karten
 
 ## Planner Detail Screen
@@ -68,7 +68,7 @@
 
 ## Settings Screens
 - [x] Sprache-Auswahl (DE, EN, FR, IT)
-- [x] Erscheinungsbild (Hell/Dunkel/System)
+- [ ] Erscheinungsbild (Hell/Dunkel/System) - Theme Toggle funktioniert nicht richtig
 - [x] Benachrichtigungen
 
 ## Zusätzliche Screens
@@ -114,7 +114,7 @@
 
 ## Neue Verbesserungen
 - [x] Testdaten für Ausflugsziele importieren
-- [x] Kartenansicht mit react-native-maps im Explore-Tab
+- [ ] Kartenansicht mit react-native-maps im Explore-Tab (nur Fallback in Expo Go)
 - [x] Push-Benachrichtigungen mit Expo Notifications
 - [x] Vorschau-Screenshots erstellen
 
@@ -173,7 +173,7 @@
 - [ ] Keine Titelbilder - Benutzer lädt Bilder manuell in Supabase Storage hoch
 
 ## Aktuelles Problem
-- [ ] Detail-Seite zeigt "Ausflug nicht gefunden" obwohl Ausflug existiert
+- [x] Detail-Seite zeigt "Ausflug nicht gefunden" obwohl Ausflug existiert (behoben mit Supabase API)
 
 ## Aktuelle Probleme (vom Benutzer bestätigt)
 - [x] Header-Buttons sollen Glass-Design haben (Glassmorphismus implementiert)

@@ -167,9 +167,18 @@ export default function ExploreScreen() {
   const [selectedCost, setSelectedCost] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+  const [sortBy, setSortBy] = useState<"name" | "cost_asc" | "cost_desc" | "region">("name");
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [trips, setTrips] = useState<Ausflug[]>([]);
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const SORT_OPTIONS = [
+    { key: "name", label: "Name (A-Z)" },
+    { key: "cost_asc", label: "Preis (aufsteigend)" },
+    { key: "cost_desc", label: "Preis (absteigend)" },
+    { key: "region", label: "Region" },
+  ] as const;
 
   // Fetch trips with filters and photos
   const fetchTrips = useCallback(async () => {
@@ -191,6 +200,22 @@ export default function ExploreScreen() {
     setTrips(tripsWithPhotos as any);
     setIsLoading(false);
   }, [keyword, selectedCost]);
+
+  // Sort trips based on selected sort option
+  const sortedTrips = [...trips].sort((a, b) => {
+    switch (sortBy) {
+      case "name":
+        return (a.name || "").localeCompare(b.name || "");
+      case "cost_asc":
+        return (a.kosten_stufe ?? 0) - (b.kosten_stufe ?? 0);
+      case "cost_desc":
+        return (b.kosten_stufe ?? 0) - (a.kosten_stufe ?? 0);
+      case "region":
+        return (a.region || "").localeCompare(b.region || "");
+      default:
+        return 0;
+    }
+  });
 
   // Fetch statistics
   const fetchStats = useCallback(async () => {
@@ -243,17 +268,62 @@ export default function ExploreScreen() {
             {stats?.totalActivities || 0} Ausflugsziele warten auf dich
           </ThemedText>
         </View>
-        <Pressable
-          onPress={() => setViewMode(viewMode === "grid" ? "map" : "grid")}
-          style={[styles.viewModeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <IconSymbol
-            name={viewMode === "grid" ? "map" : "square.grid.2x2"}
-            size={20}
-            color={colors.primary}
-          />
-        </Pressable>
+        <View style={styles.headerButtons}>
+          {/* Sort Button */}
+          <Pressable
+            onPress={() => setShowSortMenu(!showSortMenu)}
+            style={[styles.viewModeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <IconSymbol
+              name="line.3.horizontal.decrease"
+              size={20}
+              color={colors.primary}
+            />
+          </Pressable>
+          {/* View Mode Button */}
+          <Pressable
+            onPress={() => setViewMode(viewMode === "grid" ? "map" : "grid")}
+            style={[styles.viewModeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <IconSymbol
+              name={viewMode === "grid" ? "map" : "square.grid.2x2"}
+              size={20}
+              color={colors.primary}
+            />
+          </Pressable>
+        </View>
       </View>
+
+      {/* Sort Menu Dropdown */}
+      {showSortMenu && (
+        <View style={[styles.sortMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {SORT_OPTIONS.map((option) => (
+            <Pressable
+              key={option.key}
+              onPress={() => {
+                setSortBy(option.key);
+                setShowSortMenu(false);
+              }}
+              style={[
+                styles.sortMenuItem,
+                sortBy === option.key && { backgroundColor: colors.primary + "15" },
+              ]}
+            >
+              <ThemedText
+                style={[
+                  styles.sortMenuItemText,
+                  sortBy === option.key && { color: colors.primary, fontWeight: "600" },
+                ]}
+              >
+                {option.label}
+              </ThemedText>
+              {sortBy === option.key && (
+                <IconSymbol name="checkmark" size={16} color={colors.primary} />
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -314,7 +384,7 @@ export default function ExploreScreen() {
         </View>
       ) : (
         <FlatList
-          data={trips}
+          data={sortedTrips}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={styles.tripRow}
@@ -356,6 +426,33 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+  },
+  sortMenu: {
+    position: "absolute",
+    top: 110,
+    right: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    minWidth: 180,
+  },
+  sortMenuItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: Spacing.md,
+  },
+  sortMenuItemText: {
+    fontSize: 14,
   },
   headerTitle: {
     fontSize: 28,

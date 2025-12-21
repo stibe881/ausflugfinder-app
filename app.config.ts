@@ -1,5 +1,5 @@
 // Load environment variables with proper priority (system > .env)
-import "./scripts/load-env.js";
+require("./scripts/load-env.js");
 import type { ExpoConfig } from "expo/config";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
@@ -40,8 +40,14 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
+    config: {
+      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+    },
     infoPlist: {
-      UIBackgroundModes: ["audio"],
+      UIBackgroundModes: ["audio", "location", "fetch", "remote-notification"],
+      NSLocationWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort, um Ausflugsziele in deiner Nähe anzuzeigen und dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
+      NSLocationAlwaysAndWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
+      NSLocationAlwaysUsageDescription: "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
     },
   },
   android: {
@@ -54,7 +60,12 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS"],
+    config: {
+      googleMaps: {
+        apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+      },
+    },
+    permissions: ["POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
     intentFilters: [
       {
         action: "VIEW",
@@ -87,7 +98,18 @@ const config: ExpoConfig = {
         },
       },
     ],
-    "react-native-maps",
+    [
+      "expo-location",
+      {
+        locationAlwaysAndWhenInUsePermission: "AusflugFinder benötigt deinen Standort, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
+      },
+    ],
+    [
+      "react-native-maps",
+      {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
