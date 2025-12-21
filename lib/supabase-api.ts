@@ -424,10 +424,22 @@ export async function getDayPlans(): Promise<DayPlan[]> {
         return [];
     }
 
+    // Get the integer user ID from the users table via open_id (which stores the auth UUID)
+    const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (userError || !userData) {
+        console.error("[Supabase] Error fetching user:", userError);
+        return [];
+    }
+
     const { data, error } = await supabase
         .from("day_plans")
         .select("*")
-        .eq("user_id", user.id) // user_id is UUID in day_plans table
+        .eq("user_id", userData.id) // Use integer ID from users table
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -451,10 +463,22 @@ export async function createDayPlan(params: {
         return { success: false, error: "Nicht angemeldet" };
     }
 
+    // Get the integer user ID from the users table via open_id (which stores the auth UUID)
+    const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (userError || !userData) {
+        console.error("[Supabase] Error fetching user:", userError);
+        return { success: false, error: "Benutzer nicht gefunden" };
+    }
+
     const { data, error } = await supabase
         .from("day_plans")
         .insert({
-            user_id: user.id, // user_id is UUID in day_plans table
+            user_id: userData.id, // Use integer ID from users table
             title: params.title,
             description: params.description || null,
             start_date: params.startDate.toISOString(),
