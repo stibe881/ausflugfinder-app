@@ -20,7 +20,7 @@
                 "XDG_CACHE_HOME": "/tmp/.cache"
             },
             "ios": {
-                "image": "latest",
+                "image": "stable",
                 "resourceClass": "m-medium"
             }
         }
