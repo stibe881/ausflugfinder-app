@@ -15,6 +15,10 @@
             "autoIncrement": true,
             "node": "20.18.0",
             "pnpm": "9.12.0",
+            "env": {
+                "TMPDIR": "/tmp",
+                "XDG_CACHE_HOME": "/tmp/.cache"
+            },
             "ios": {
                 "image": "latest",
                 "resourceClass": "m-medium"
