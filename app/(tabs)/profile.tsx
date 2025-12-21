@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: 48,
+    paddingTop: 16,
     paddingBottom: Spacing.sm,
   },
   headerTitle: {

@@ -14,6 +14,8 @@ type Trip = {
   lat: string | null;
   lng: string | null;
   kosten_stufe: number | null;
+  region: string | null;
+  primaryPhotoUrl?: string | null;
 };
 
 type MapViewComponentProps = {

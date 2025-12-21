@@ -161,7 +161,7 @@ export default function HomeScreen() {
         style={[
           styles.heroSection,
           {
-            paddingTop: insets.top + 48,
+            paddingTop: insets.top + 16,
             backgroundColor: colors.surface,
           },
         ]}
@@ -379,6 +379,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     marginBottom: Spacing.xs,
+    paddingTop: 4,
   },
   statLabel: {
     fontSize: 12,

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import { Loader } from "@googlemaps/js-api-loader";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 import { ThemedText } from "./themed-text";
-import { Colors, Spacing } from "@/constants/theme";
+import { Colors, BrandColors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type Trip = {
@@ -11,6 +12,9 @@ type Trip = {
   name: string;
   lat: string | null;
   lng: string | null;
+  kosten_stufe: number | null;
+  region: string | null;
+  primaryPhotoUrl?: string | null;
 };
 
 type GoogleMapsWebProps = {
@@ -18,11 +22,68 @@ type GoogleMapsWebProps = {
   onMarkerPress?: (tripId: number) => void;
 };
 
+// Cost level colors and labels
+const CostInfo: Record<number, { color: string; label: string }> = {
+  0: { color: BrandColors.primary, label: "Gratis" },
+  1: { color: "#22C55E", label: "Günstig" },
+  2: { color: BrandColors.secondary, label: "Mittel" },
+  3: { color: "#EF4444", label: "Teuer" },
+  4: { color: "#7C3AED", label: "Sehr teuer" },
+};
+
+function createInfoWindowTemplate(trip: Trip): string {
+  const costInfo = CostInfo[trip.kosten_stufe ?? 0];
+  const imageHtml = trip.primaryPhotoUrl
+    ? `<img src="${trip.primaryPhotoUrl}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px 8px 0 0;" />`
+    : "";
+
+  return `
+    <div style="
+      max-width: 280px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      cursor: pointer;
+    ">
+      ${imageHtml}
+      <div style="padding: 12px;">
+        <h3 style="
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #1a1a1a;
+          line-height: 1.3;
+        ">${trip.name}</h3>
+        
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: ${costInfo.color}20;
+            color: ${costInfo.color};
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+          ">${costInfo.label}</span>
+        </div>
+        
+        ${trip.region ? `<p style="margin: 4px 0 0 0; font-size: 13px; color: #666;">📍 ${trip.region}</p>` : ""}
+        
+        <p style="
+          margin: 8px 0 0 0;
+          font-size: 12px;
+          color: #999;
+          font-style: italic;
+        ">Antippen für Details →</p>
+      </div>
+    </div>
+  `;
+}
+
 export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<any>(null);
+  const clustererRef = useRef<MarkerClusterer | null>(null);
   const markersRef = useRef<any[]>([]);
 
   // Filter trips with valid coordinates
@@ -66,46 +127,128 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
           mapTypeControl: true,
           streetViewControl: false,
           fullscreenControl: true,
+          styles: colorScheme === "dark" ? [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+          ] : [],
         });
 
         googleMapRef.current = map;
 
-        // Clear old markers
+        // Clear old markers and clusterer
+        if (clustererRef.current) {
+          clustererRef.current.clearMarkers();
+        }
         markersRef.current.forEach((marker) => marker.setMap(null));
         markersRef.current = [];
 
-        // Add markers
-        tripsWithCoords.forEach((trip) => {
+        // Create markers with info windows
+        const markers = tripsWithCoords.map((trip) => {
           const lat = parseFloat(trip.lat!);
           const lng = parseFloat(trip.lng!);
+          const costInfo = CostInfo[trip.kosten_stufe ?? 0];
 
           const marker = new google.maps.Marker({
             position: { lat, lng },
-            map,
             title: trip.name,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              fillColor: costInfo.color,
+              fillOpacity: 0.9,
+              strokeColor: "#ffffff",
+              strokeWeight: 2,
+              scale: 10,
+            },
           });
 
-          // Info window
+          // Create custom info window
           const infoWindow = new google.maps.InfoWindow({
-            content: `
-              <div style="padding: 8px; font-family: system-ui;">
-                <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">${trip.name}</h3>
-                <p style="margin: 0; font-size: 12px; color: #666;">${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
-              </div>
-            `,
+            content: createInfoWindowTemplate(trip),
           });
 
+          // Open info window on marker click
           marker.addListener("click", () => {
+            // Close all other info windows
+            markersRef.current.forEach((m) => {
+              if (m.infoWindow && m.infoWindow !== infoWindow) {
+                m.infoWindow.close();
+              }
+            });
+
             infoWindow.open(map, marker);
-            if (onMarkerPress) {
-              onMarkerPress(trip.id);
+          });
+
+          // Navigate to trip details when info window content is clicked
+          google.maps.event.addListener(infoWindow, "domready", () => {
+            const content = document.querySelector(`[data-trip-id="${trip.id}"]`) as HTMLElement;
+            if (content) {
+              content.style.cursor = "pointer";
+              content.onclick = () => {
+                if (onMarkerPress) {
+                  onMarkerPress(trip.id);
+                }
+              };
             }
           });
 
-          markersRef.current.push(marker);
+          // Store info window reference
+          (marker as any).infoWindow = infoWindow;
+
+          return marker;
         });
 
-        // Fit bounds
+        markersRef.current = markers;
+
+        // Create marker clusterer
+        clustererRef.current = new MarkerClusterer({
+          map,
+          markers,
+          algorithm: new (MarkerClusterer as any).GridAlgorithm({ gridSize: 60 }),
+          renderer: {
+            render: ({ count, position }: any) => {
+              const color = count > 20 ? "#EF4444" : count > 10 ? BrandColors.secondary : BrandColors.primary;
+
+              return new google.maps.Marker({
+                position,
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: color,
+                  fillOpacity: 0.8,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 3,
+                  scale: 20,
+                },
+                label: {
+                  text: String(count),
+                  color: "#ffffff",
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                },
+                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+              });
+            },
+          },
+          onClusterClick: (_, cluster: any) => {
+            // Zoom into cluster
+            const bounds = new google.maps.LatLngBounds();
+            cluster.markers.forEach((marker: any) => {
+              bounds.extend(marker.getPosition());
+            });
+            map.fitBounds(bounds);
+
+            // Zoom in a bit more to separate markers
+            const listener = google.maps.event.addListener(map, "idle", () => {
+              const currentZoom = map.getZoom();
+              if (currentZoom < 15) {
+                map.setZoom(Math.min(currentZoom + 2, 15));
+              }
+              google.maps.event.removeListener(listener);
+            });
+          },
+        });
+
+        // Initial fit bounds
         map.fitBounds(bounds);
       })
       .catch((error: any) => {
@@ -113,11 +256,19 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
       });
 
     return () => {
-      // Cleanup markers
-      markersRef.current.forEach((marker) => marker.setMap(null));
+      // Cleanup
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+      }
+      markersRef.current.forEach((marker) => {
+        if ((marker as any).infoWindow) {
+          (marker as any).infoWindow.close();
+        }
+        marker.setMap(null);
+      });
       markersRef.current = [];
     };
-  }, [tripsWithCoords, onMarkerPress]);
+  }, [tripsWithCoords, onMarkerPress, colorScheme]);
 
   if (tripsWithCoords.length === 0) {
     return (
