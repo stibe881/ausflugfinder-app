@@ -429,10 +429,16 @@ export async function getDayPlans(): Promise<DayPlan[]> {
         .from("users")
         .select("id")
         .eq("open_id", user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle case where user doesn't exist in users table yet
 
-    if (userError || !userData) {
+    if (userError) {
         console.error("[Supabase] Error fetching user:", userError);
+        return [];
+    }
+
+    // If no user found in users table, return empty array (user hasn't been created yet)
+    if (!userData) {
+        console.log("[Supabase] No user found in users table for auth user", user.id);
         return [];
     }
 
@@ -468,11 +474,17 @@ export async function createDayPlan(params: {
         .from("users")
         .select("id")
         .eq("open_id", user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle case where user doesn't exist in users table yet
 
-    if (userError || !userData) {
+    if (userError) {
         console.error("[Supabase] Error fetching user:", userError);
-        return { success: false, error: "Benutzer nicht gefunden" };
+        return { success: false, error: "Datenbankfehler beim Laden des Benutzers" };
+    }
+
+    // If no user found in users table, return error
+    if (!userData) {
+        console.log("[Supabase] No user found in users table for auth user", user.id);
+        return { success: false, error: "Benutzer noch nicht in der Datenbank registriert" };
     }
 
     const { data, error } = await supabase
