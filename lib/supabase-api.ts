@@ -490,7 +490,7 @@ export async function createDayPlan(params: {
     const { data, error } = await supabase
         .from("day_plans")
         .insert({
-            user_id: userData.id, // Use integer ID from users table
+            user_id: userId, // Use integer ID from users table
             title: params.title,
             description: params.description || null,
             start_date: params.startDate.toISOString(),
