@@ -87,18 +87,19 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    [
-      "expo-splash-screen",
-      {
-        image: "./assets/images/splash-icon.png",
-        imageWidth: 200,
-        resizeMode: "contain",
-        backgroundColor: "#ffffff",
-        dark: {
-          backgroundColor: "#000000",
-        },
-      },
-    ],
+    // Temporarily disabled to fix EAS build EACCES error during splash screen generation
+    // [
+    //   "expo-splash-screen",
+    //   {
+    //     image: "./assets/images/splash-icon.png",
+    //     imageWidth: 200,
+    //     resizeMode: "contain",
+    //     backgroundColor: "#ffffff",
+    //     dark: {
+    //       backgroundColor: "#000000",
+    //     },
+    //   },
+    // ],
     [
       "expo-location",
       {
