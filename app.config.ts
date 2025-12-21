@@ -87,14 +87,13 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    // Splash screen plugin disabled - causes EACCES errors during asset generation on EAS
-    // [
-    //   "expo-splash-screen",
-    //   {
-    //     resizeMode: "contain",
-    //     backgroundColor: "#ffffff",
-    //   },
-    // ],
+    [
+      "expo-splash-screen",
+      {
+        backgroundColor: "#ffffff",
+        // No image specified to avoid EACCES caching errors on EAS
+      },
+    ],
     [
       "expo-location",
       {
