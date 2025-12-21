@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
+import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -268,9 +269,17 @@ export default function ProfileScreen() {
               ]}
             >
               <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
-                <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                  {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
-                </ThemedText>
+                {supabaseUser?.user_metadata?.avatar_url ? (
+                  <Image
+                    source={{ uri: supabaseUser.user_metadata.avatar_url }}
+                    style={styles.userAvatarImage}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
+                    {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
+                  </ThemedText>
+                )}
               </View>
               <View style={styles.userInfo}>
                 <ThemedText style={styles.userName}>
@@ -498,11 +507,16 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   userAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  userAvatarImage: {
+    width: "100%",
+    height: "100%",
   },
   userAvatarText: {
     fontSize: 28,
