@@ -1,7 +1,6 @@
-import { Platform, StyleSheet, View, Text, TouchableOpacity, Alert, Dimensions } from "react-native";
+import { Platform, StyleSheet, View, Text, Dimensions } from "react-native";
 import Constants from "expo-constants";
-import { useState, useRef } from "react";
-import * as Clipboard from 'expo-clipboard';
+import { useState, useRef, useEffect } from "react";
 import { Image } from "expo-image";
 
 import { ThemedText } from "./themed-text";
@@ -49,6 +48,7 @@ let MapView: any = null;
 let Marker: any = null;
 let Callout: any = null;
 let PROVIDER_DEFAULT: any = null;
+let ClusteredMapView: any = null;
 
 if (Platform.OS !== 'web' && !isExpoGo) {
   try {
@@ -57,6 +57,9 @@ if (Platform.OS !== 'web' && !isExpoGo) {
     Marker = Maps.Marker;
     Callout = Maps.Callout;
     PROVIDER_DEFAULT = Platform.OS === 'android' ? Maps.PROVIDER_GOOGLE : undefined;
+
+    // Import clustering
+    ClusteredMapView = require('react-native-map-clustering').default;
   } catch (e) {
     console.error('[MapView] Failed to load react-native-maps:', e);
   }
@@ -66,6 +69,22 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const mapRef = useRef<any>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+
+  // Get user location
+  useEffect(() => {
+    if (Platform.OS !== 'web' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => console.log('[MapView] Geolocation error:', error)
+      );
+    }
+  }, []);
 
   // Filter trips with valid coordinates
   const tripsWithCoords = trips.filter(
@@ -112,18 +131,32 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     );
   }
 
-  // Calculate initial region
-  const latitudes = tripsWithCoords.map((t) => parseFloat(t.lat!));
-  const longitudes = tripsWithCoords.map((t) => parseFloat(t.lng!));
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
+  // Calculate initial region - prioritize user location
+  let centerLat: number;
+  let centerLng: number;
+  let latDelta: number;
+  let lngDelta: number;
 
-  const centerLat = (minLat + maxLat) / 2;
-  const centerLng = (minLng + maxLng) / 2;
-  const latDelta = Math.max(0.1, (maxLat - minLat) * 1.5);
-  const lngDelta = Math.max(0.1, (maxLng - minLng) * 1.5);
+  if (userLocation) {
+    // Center on user location with closer zoom
+    centerLat = userLocation.latitude;
+    centerLng = userLocation.longitude;
+    latDelta = 0.05; // Closer zoom (was 0.1 minimum)
+    lngDelta = 0.05;
+  } else {
+    // Fallback to trips bounds
+    const latitudes = tripsWithCoords.map((t) => parseFloat(t.lat!));
+    const longitudes = tripsWithCoords.map((t) => parseFloat(t.lng!));
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+
+    centerLat = (minLat + maxLat) / 2;
+    centerLng = (minLng + maxLng) / 2;
+    latDelta = Math.max(0.1, (maxLat - minLat) * 1.5);
+    lngDelta = Math.max(0.1, (maxLng - minLng) * 1.5);
+  }
 
   // Render marker with custom callout
   const renderMarker = (trip: Trip) => {
@@ -138,6 +171,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
           longitude: parseFloat(trip.lng!),
         }}
         pinColor={costColor}
+        zIndex={1}
       >
         <Callout tooltip onPress={() => onMarkerPress?.(trip.id)}>
           <View style={[styles.callout, { backgroundColor: colors.card }]}>
@@ -204,7 +238,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
 
   return (
     <View style={styles.container}>
-      <MapView
+      <ClusteredMapView
         ref={mapRef}
         style={styles.map}
         initialRegion={{
@@ -216,9 +250,27 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
         provider={PROVIDER_DEFAULT}
         showsUserLocation
         showsMyLocationButton
+        clusterColor={BrandColors.primary}
+        clusterTextColor="#FFFFFF"
+        clusterFontSize={16}
+        spiralEnabled={false}
       >
         {tripsWithCoords.map((trip) => renderMarker(trip))}
-      </MapView>
+
+        {/* Custom User Location Marker - always on top */}
+        {userLocation && (
+          <Marker
+            coordinate={userLocation}
+            title="Mein Standort"
+            zIndex={999}
+            tracksViewChanges={false}
+          >
+            <View style={styles.userLocationMarker}>
+              <View style={styles.userLocationDot} />
+            </View>
+          </Marker>
+        )}
+      </ClusteredMapView>
     </View>
   );
 }
@@ -324,5 +376,22 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  // User Location Marker Styles
+  userLocationMarker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(66, 133, 244, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userLocationDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#4285F4",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
   },
 });
