@@ -1325,8 +1325,8 @@ export async function sendBroadcastNotification(
 
 // ========== WEATHER ==========
 
-// OpenWeatherMap API key - replace with environment variable in production
-const OPENWEATHER_API_KEY = 'YOUR_API_KEY_HERE'; // TODO: Add to environment variables
+// OpenWeatherMap API key
+const OPENWEATHER_API_KEY = 'fd150cd2a400b2c86aaeeffc8deb8245';
 
 export type CurrentWeather = {
     temp: number;
