@@ -13,7 +13,12 @@ export const BrandColors = {
 };
 
 // Cost Badge Colors
-export const CostColors = {
+export const CostColors: { [key: string]: string;[key: number]: string } = {
+  0: "#22C55E",
+  1: "#84CC16",
+  2: "#F59E0B",
+  3: "#F97316",
+  4: "#EF4444",
   free: "#22C55E",
   low: "#84CC16",
   medium: "#F59E0B",

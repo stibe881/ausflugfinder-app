@@ -65,6 +65,11 @@ type Translations = {
   success: string;
   loginRequired: string;
   loginToAccess: string;
+  // Seasons
+  spring: string;
+  summer: string;
+  autumn: string;
+  winter: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -130,6 +135,11 @@ const translations: Record<Language, Translations> = {
     success: "Erfolg",
     loginRequired: "Anmeldung erforderlich",
     loginToAccess: "Melde dich an, um diese Funktion zu nutzen",
+    // Seasons
+    spring: "Frühling",
+    summer: "Sommer",
+    autumn: "Herbst",
+    winter: "Winter",
   },
   en: {
     // Navigation
@@ -193,6 +203,11 @@ const translations: Record<Language, Translations> = {
     success: "Success",
     loginRequired: "Login required",
     loginToAccess: "Please login to access this feature",
+    // Seasons
+    spring: "Spring",
+    summer: "Summer",
+    autumn: "Autumn",
+    winter: "Winter",
   },
   fr: {
     // Navigation
@@ -256,6 +271,11 @@ const translations: Record<Language, Translations> = {
     success: "Succès",
     loginRequired: "Connexion requise",
     loginToAccess: "Connectez-vous pour accéder à cette fonction",
+    // Seasons
+    spring: "Printemps",
+    summer: "Été",
+    autumn: "Automne",
+    winter: "Hiver",
   },
   it: {
     // Navigation
@@ -319,6 +339,11 @@ const translations: Record<Language, Translations> = {
     success: "Successo",
     loginRequired: "Accesso richiesto",
     loginToAccess: "Accedi per utilizzare questa funzione",
+    // Seasons
+    spring: "Primavera",
+    summer: "Estate",
+    autumn: "Autunno",
+    winter: "Inverno",
   },
 };
 

@@ -86,6 +86,18 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     }
   }, []);
 
+  // Auto-zoom to user location when available
+  useEffect(() => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.1,
+        longitudeDelta: 0.1,
+      }, 1000);
+    }
+  }, [userLocation]);
+
   // Filter trips with valid coordinates
   const tripsWithCoords = trips.filter(
     (trip) => trip.lat && trip.lng && !isNaN(parseFloat(trip.lat)) && !isNaN(parseFloat(trip.lng))
@@ -254,10 +266,11 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
         clusterTextColor="#FFFFFF"
         clusterFontSize={16}
         spiralEnabled={false}
+        zIndex={1}
       >
         {tripsWithCoords.map((trip) => renderMarker(trip))}
 
-        {/* Custom User Location Marker - always on top */}
+        {/* User Location Marker - highest z-index */}
         {userLocation && (
           <Marker
             coordinate={userLocation}

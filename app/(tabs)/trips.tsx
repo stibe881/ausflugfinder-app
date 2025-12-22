@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import { useState, useCallback, useEffect } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,9 +9,11 @@ import {
   View,
   Dimensions,
   Alert,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -55,77 +57,104 @@ function TripListItem({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const costColor = CostColors[trip.cost as keyof typeof CostColors] || CostColors.free;
+  const swipeableRef = useRef<Swipeable>(null);
+
+  const renderRightActions = (progress: Animated.AnimatedInterpolation<number>, dragX: Animated.AnimatedInterpolation<number>) => {
+    const opacity = dragX.interpolate({
+      inputRange: [-80, -20, 0],
+      outputRange: [1, 0.8, 0],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <View style={styles.deleteAction}>
+        <Pressable
+          onPress={() => {
+            swipeableRef.current?.close();
+            onDelete();
+          }}
+          style={styles.deleteButton}
+        >
+          <View style={styles.deleteIconContainer}>
+            <IconSymbol name="trash.fill" size={22} color="#FFFFFF" />
+          </View>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.tripItem,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          opacity: pressed ? 0.9 : 1,
-        },
-      ]}
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      containerStyle={{ marginBottom: Spacing.md }}
     >
-      {/* Image */}
-      <View style={styles.tripImageContainer}>
-        {trip.image ? (
-          <Image
-            source={{ uri: trip.image }}
-            style={styles.tripImage}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
-            <IconSymbol name="mountain.2.fill" size={24} color={colors.textSecondary} />
-          </View>
-        )}
-        {trip.is_done && (
-          <View style={styles.doneOverlay}>
-            <IconSymbol name="checkmark.circle.fill" size={24} color="#FFFFFF" />
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <View style={styles.tripItemContent}>
-        <ThemedText style={styles.tripItemTitle} numberOfLines={1}>
-          {trip.title}
-        </ThemedText>
-        <View style={styles.tripItemLocation}>
-          <IconSymbol name="mappin.and.ellipse" size={12} color={colors.textSecondary} />
-          <ThemedText style={[styles.tripItemLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {trip.destination}
-          </ThemedText>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.tripItem,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            opacity: pressed ? 0.9 : 1,
+          },
+        ]}
+      >
+        {/* Image */}
+        <View style={styles.tripImageContainer}>
+          {trip.image ? (
+            <Image
+              source={{ uri: trip.image }}
+              style={styles.tripImage}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
+              <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
+            </View>
+          )}
         </View>
-        <View style={styles.tripItemFooter}>
-          <View style={[styles.tripCostBadge, { backgroundColor: CostColors[trip.kosten_stufe ?? 0] + "20" }]}>
-            <ThemedText style={[styles.tripItemCost, { color: CostColors[trip.kosten_stufe ?? 0] }]}>
-              {COST_LABELS[trip.kosten_stufe ?? 0] || trip.cost}
+
+        {/* Content */}
+        <View style={styles.tripItemContent}>
+          <ThemedText style={styles.tripItemTitle} numberOfLines={1}>
+            {trip.title}
+          </ThemedText>
+          <View style={styles.tripItemLocation}>
+            <IconSymbol name="mappin.and.ellipse" size={12} color={colors.textSecondary} />
+            <ThemedText style={[styles.tripItemLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
+              {trip.destination}
             </ThemedText>
           </View>
+          <View style={styles.tripItemFooter}>
+            <View style={[styles.tripCostBadge, { backgroundColor: CostColors[trip.kosten_stufe ?? 0] + "20" }]}>
+              <ThemedText style={[styles.tripItemCost, { color: CostColors[trip.kosten_stufe ?? 0] }]}>
+                {COST_LABELS[trip.kosten_stufe ?? 0] || trip.cost}
+              </ThemedText>
+            </View>
+          </View>
         </View>
-      </View>
 
-      {/* Actions */}
-      <View style={styles.tripItemActions}>
-        <Pressable hitSlop={8} onPress={onToggleFavorite}>
-          <IconSymbol
-            name={trip.is_favorite ? "star.fill" : "star"}
-            size={20}
-            color={trip.is_favorite ? BrandColors.primary : colors.textSecondary}
-          />
-        </Pressable>
-        <Pressable hitSlop={8} onPress={onToggleDone}>
-          <IconSymbol
-            name="checkmark.circle.fill"
-            size={20}
-            color={trip.is_done ? BrandColors.primary : colors.textSecondary}
-          />
-        </Pressable>
-      </View>
-    </Pressable>
+        {/* Actions */}
+        <View style={styles.tripItemActions}>
+          <Pressable hitSlop={8} onPress={onToggleFavorite}>
+            <IconSymbol
+              name={trip.is_favorite ? "heart.fill" : "heart"}
+              size={20}
+              color={trip.is_favorite ? "#EF4444" : colors.textSecondary}
+            />
+          </Pressable>
+          <Pressable hitSlop={8} onPress={onToggleDone}>
+            <IconSymbol
+              name="checkmark.circle.fill"
+              size={20}
+              color={trip.is_done ? BrandColors.primary : colors.textSecondary}
+            />
+          </Pressable>
+        </View>
+      </Pressable>
+    </Swipeable>
   );
 }
 
@@ -200,6 +229,13 @@ export default function TripsScreen() {
     setIsLoading(true);
     const data = await getUserTrips();
 
+    console.log('[Trips] getUserTrips returned:', data.length, 'trips');
+    if (data.length > 0) {
+      console.log('[Trips] First trip data:', data[0]);
+      console.log('[Trips] First trip primaryPhotoUrl:', data[0].primaryPhotoUrl);
+      console.log('[Trips] First trip image:', (data[0] as any).image);
+    }
+
     // Map to Trip type
     const mappedTrips: Trip[] = data.map(ut => ({
       ...ut,
@@ -209,6 +245,7 @@ export default function TripsScreen() {
       image: ut.primaryPhotoUrl ?? null,
     }));
 
+    console.log('[Trips] Mapped trips, first image:', mappedTrips[0]?.image);
     setTrips(mappedTrips);
     setIsLoading(false);
   }, [isAuthenticated]);
@@ -216,6 +253,13 @@ export default function TripsScreen() {
   useEffect(() => {
     fetchTrips();
   }, [fetchTrips]);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchTrips();
+    }, [fetchTrips])
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -229,19 +273,19 @@ export default function TripsScreen() {
 
   const handleDelete = (tripId: number, title: string) => {
     Alert.alert(
-      "Trip löschen",
-      `Möchtest du "${title}" wirklich löschen?`,
+      "Aus Trips entfernen",
+      `Möchtest du "${title}" wirklich aus deinen Trips entfernen?`,
       [
         { text: "Abbrechen", style: "cancel" },
         {
-          text: "Löschen",
+          text: "Entfernen",
           style: "destructive",
           onPress: async () => {
             const result = await removeUserTrip(tripId);
             if (result.success) {
               fetchTrips();
             } else {
-              Alert.alert("Fehler", result.error || "Löschen fehlgeschlagen");
+              Alert.alert("Fehler", result.error || "Entfernen fehlgeschlagen");
             }
           },
         },
@@ -402,6 +446,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
+    marginTop: Spacing.sm,
+    lineHeight: 36,
   },
   headerSubtitle: {
     fontSize: 14,
@@ -482,14 +528,15 @@ const styles = StyleSheet.create({
   },
   tripItem: {
     flexDirection: "row",
+    height: 120,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     marginBottom: Spacing.md,
     overflow: "hidden",
   },
   tripImageContainer: {
-    width: 80,
-    height: 80,
+    width: 120,
+    height: "100%",
     position: "relative",
   },
   tripImage: {
@@ -550,9 +597,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     gap: Spacing.sm,
   },
+  tripItemFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: Spacing.xs,
+  },
+  tripCostBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  tripItemCost: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
   actionButton: {
     width: 36,
     height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteAction: {
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 80,
+    marginLeft: 8,
+    borderRadius: BorderRadius.md,
+  },
+  deleteButton: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+  },
+  deleteIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     justifyContent: "center",
     alignItems: "center",
   },

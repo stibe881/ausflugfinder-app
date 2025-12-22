@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +22,7 @@ import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
+import { supabase } from "@/lib/supabase";
 import { useAdmin } from "@/contexts/admin-context";
 import { getLoginUrl } from "@/constants/oauth";
 import { trpc } from "@/lib/trpc";
@@ -170,6 +171,34 @@ export default function ProfileScreen() {
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Load avatar from users table
+  useEffect(() => {
+    async function loadAvatar() {
+      if (!supabaseUser) {
+        console.log('[Profile] No supabase user, cannot load avatar');
+        return;
+      }
+      console.log('[Profile] Loading avatar for user:', supabaseUser.id);
+      const { data, error } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('open_id', supabaseUser.id)
+        .single();
+
+      console.log('[Profile] Avatar query result:', { data, error });
+
+      if (data?.avatar_url) {
+        console.log('[Profile] Setting avatar URL:', data.avatar_url);
+        setAvatarUrl(data.avatar_url);
+      } else {
+        console.log('[Profile] No avatar URL found in users table');
+        setAvatarUrl(null);
+      }
+    }
+    loadAvatar();
+  }, [supabaseUser, showEditModal]); // Reload when modal closes
 
   const user = supabaseUser || manusUser;
   const isAuthenticated = !!supabaseUser || manusAuth;
@@ -269,17 +298,29 @@ export default function ProfileScreen() {
               ]}
             >
               <View style={[styles.userAvatar, { backgroundColor: colors.primary + "20" }]}>
-                {supabaseUser?.user_metadata?.avatar_url ? (
-                  <Image
-                    source={{ uri: supabaseUser.user_metadata.avatar_url }}
-                    style={styles.userAvatarImage}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
-                    {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
-                  </ThemedText>
-                )}
+                {(() => {
+                  console.log('[Profile] Rendering avatar. avatarUrl:', avatarUrl);
+                  if (avatarUrl) {
+                    console.log('[Profile] Rendering Image with URL:', avatarUrl);
+                    return (
+                      <Image
+                        key={avatarUrl}
+                        source={{ uri: avatarUrl }}
+                        style={styles.userAvatarImage}
+                        contentFit="cover"
+                        onError={(error) => console.error('[Profile] Image load error:', error)}
+                        onLoad={() => console.log('[Profile] Image loaded successfully')}
+                      />
+                    );
+                  } else {
+                    console.log('[Profile] No avatarUrl, showing initials');
+                    return (
+                      <ThemedText style={[styles.userAvatarText, { color: colors.primary }]}>
+                        {(supabaseUser?.user_metadata?.name || supabaseUser?.email || (manusUser as any)?.name || (manusUser as any)?.email || "U").charAt(0).toUpperCase()}
+                      </ThemedText>
+                    );
+                  }
+                })()}
               </View>
               <View style={styles.userInfo}>
                 <ThemedText style={styles.userName}>
@@ -353,6 +394,13 @@ export default function ProfileScreen() {
             {/* Admin Section - Only visible for admins */}
             {isAdmin && (
               <SettingSection title="ADMINISTRATION">
+                <SettingItem
+                  icon="paperplane.fill"
+                  iconColor="#FF6B35"
+                  title="Push-Benachrichtigungen"
+                  subtitle="Broadcast an alle User senden"
+                  onPress={() => router.push("/broadcast" as any)}
+                />
                 <SettingItem
                   icon="wrench.fill"
                   iconColor={BrandColors.primary}
@@ -432,6 +480,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
+    marginTop: Spacing.sm,
+    lineHeight: 36,
   },
   loadingContainer: {
     flex: 1,

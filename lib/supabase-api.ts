@@ -1,5 +1,6 @@
 // Supabase API functions for direct database access (no backend needed)
 import { supabase } from "./supabase";
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Types matching the database schema
 export type Ausflug = {
@@ -580,6 +581,7 @@ export type UserTrip = {
     is_favorite: boolean;
     is_done: boolean;
     primaryPhotoUrl?: string | null;
+    image?: string | null; // Trip image URL
 };
 
 // Get all user trips with details
@@ -629,6 +631,10 @@ export async function getUserTrips(): Promise<UserTrip[]> {
     const tripIds = data?.map((ut: any) => ut.ausfluege.id) || [];
     const photos = await getPrimaryPhotosForTrips(tripIds);
 
+    console.log('[getUserTrips] Trip IDs:', tripIds);
+    console.log('[getUserTrips] Photos map keys:', Object.keys(photos));
+    console.log('[getUserTrips] Photos map sample:', photos[tripIds[0]]);
+
     // Map to UserTrip type
     return (data || []).map((ut: any) => ({
         id: ut.ausfluege.id,
@@ -640,11 +646,12 @@ export async function getUserTrips(): Promise<UserTrip[]> {
         is_favorite: ut.is_favorite,
         is_done: ut.is_done,
         primaryPhotoUrl: photos[ut.ausfluege.id] || null,
+        image: photos[ut.ausfluege.id] || null, // Also provide as 'image' for compatibility
     }));
 }
 
 // Add a trip to user's collection
-export async function addUserTrip(tripId: number): Promise<{ success: boolean; error?: string }> {
+export async function addUserTrip(tripId: number, isFavorite: boolean = false): Promise<{ success: boolean; error?: string }> {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -683,6 +690,7 @@ export async function addUserTrip(tripId: number): Promise<{ success: boolean; e
         .insert({
             user_id: userData.id,
             trip_id: tripId,
+            is_favorite: isFavorite,
         });
 
     if (error) {
@@ -819,21 +827,104 @@ export async function removeUserTrip(tripId: number): Promise<{ success: boolean
     return { success: true };
 }
 
+// Upload profile photo to Supabase Storage
+export async function uploadProfilePhoto(fileUri: string): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "Nicht angemeldet" };
+        }
+
+        console.log('[uploadProfilePhoto] Starting upload for user:', user.id);
+        console.log('[uploadProfilePhoto] File URI:', fileUri);
+
+        // Read file as Base64
+        const base64 = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: 'base64',
+        });
+
+        console.log('[uploadProfilePhoto] File read as Base64, length:', base64.length);
+
+        // Convert Base64 to ArrayBuffer
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const arrayBuffer = bytes.buffer;
+
+        console.log('[uploadProfilePhoto] Converted to ArrayBuffer, size:', arrayBuffer.byteLength);
+
+        // Generate unique filename
+        const fileName = `${user.id}/avatar.jpg`;
+
+        // Upload to Supabase Storage using ArrayBuffer
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, arrayBuffer, {
+                contentType: 'image/jpeg',
+                upsert: true,
+            });
+
+        if (uploadError) {
+            console.error("[uploadProfilePhoto] Upload error:", uploadError);
+            return { success: false, error: uploadError.message };
+        }
+
+        console.log('[uploadProfilePhoto] Upload successful:', uploadData);
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+        const publicUrl = urlData.publicUrl;
+        // Add cache-busting timestamp to force reload
+        const cachedBustedUrl = `${publicUrl}?t=${Date.now()}`;
+        console.log('[uploadProfilePhoto] Public URL with cache buster:', cachedBustedUrl);
+
+        // Update users table
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ avatar_url: cachedBustedUrl })
+            .eq('open_id', user.id);
+
+        if (updateError) {
+            console.error("[uploadProfilePhoto] User update error:", updateError);
+            return { success: false, error: updateError.message };
+        }
+
+        // Also update auth metadata for immediate reflection
+        await supabase.auth.updateUser({
+            data: { avatar_url: cachedBustedUrl }
+        });
+
+        console.log('[uploadProfilePhoto] Upload complete, URL saved to database');
+        return { success: true, url: cachedBustedUrl };
+    } catch (error: any) {
+        console.error("[uploadProfilePhoto] Unexpected error:", error);
+        return { success: false, error: error.message || "Unbekannter Fehler" };
+    }
+}
+
 // Helper function to get primary photos for multiple trips
 async function getPrimaryPhotosForTrips(tripIds: number[]): Promise<Record<number, string>> {
     if (tripIds.length === 0) return {};
 
-    const { data } = await supabase
-        .from("ausflug_photos")
-        .select("ausflug_id, image_url")
+    const { data, error } = await supabase
+        .from("ausfluege_fotos")
+        .select("ausflug_id, full_url")  // Fixed: was bild_url, should be full_url
         .in("ausflug_id", tripIds)
         .eq("is_primary", true);
 
+    console.log('[getPrimaryPhotosForTrips] Query result:', { data, error, tripIds: tripIds.slice(0, 5) });
+
     const photoMap: Record<number, string> = {};
     (data || []).forEach((photo: any) => {
-        photoMap[photo.ausflug_id] = photo.image_url;
+        photoMap[photo.ausflug_id] = photo.full_url;  // Fixed: was bild_url, should be full_url
     });
 
+    console.log('[getPrimaryPhotosForTrips] PhotoMap:', photoMap);
     return photoMap;
 }
 
@@ -1063,4 +1154,119 @@ export async function updatePlanNotes(planId: number, notes: string): Promise<{ 
     }
 
     return { success: true };
+}
+
+// ========== PUSH NOTIFICATIONS ==========
+
+/**
+ * Save or update push notification token for the current user
+ */
+export async function savePushToken(token: string, deviceType?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        // Get user ID from users table
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('open_id', user.id)
+            .single();
+
+        if (userError || !userData) {
+            return { success: false, error: "User not found" };
+        }
+
+        // Upsert push token
+        const { error } = await supabase
+            .from('push_tokens')
+            .upsert({
+                user_id: userData.id,
+                token,
+                device_type: deviceType || 'unknown',
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'token'
+            });
+
+        if (error) {
+            console.error('[savePushToken] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        console.log('[savePushToken] Token saved successfully');
+        return { success: true };
+    } catch (error: any) {
+        console.error('[savePushToken] Unexpected error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get all push tokens (admin only)
+ */
+export async function getAllPushTokens(): Promise<{ success: boolean; tokens?: string[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('push_tokens')
+            .select('token');
+
+        if (error) {
+            console.error('[getAllPushTokens] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        const tokens = data?.map(row => row.token) || [];
+        return { success: true, tokens };
+    } catch (error: any) {
+        console.error('[getAllPushTokens] Unexpected error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Send broadcast notification to all users (admin only)
+ */
+export async function sendBroadcastNotification(
+    title: string,
+    body: string
+): Promise<{ success: boolean; sent?: number; error?: string }> {
+    try {
+        // Get all push tokens
+        const { success, tokens, error } = await getAllPushTokens();
+        if (!success || !tokens || tokens.length === 0) {
+            return { success: false, error: error || "No tokens found" };
+        }
+
+        // Send to Expo Push Notification service
+        const messages = tokens.map(token => ({
+            to: token,
+            sound: 'default',
+            title,
+            body,
+            data: { type: 'broadcast' },
+        }));
+
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messages),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('[sendBroadcastNotification] Expo API error:', errorData);
+            return { success: false, error: 'Failed to send notifications' };
+        }
+
+        console.log(`[sendBroadcastNotification] Sent to ${tokens.length} devices`);
+        return { success: true, sent: tokens.length };
+    } catch (error: any) {
+        console.error('[sendBroadcastNotification] Unexpected error:', error);
+        return { success: false, error: error.message };
+    }
 }

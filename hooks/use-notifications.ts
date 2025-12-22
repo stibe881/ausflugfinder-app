@@ -17,9 +17,40 @@ export function useNotifications() {
   const [permissionGranted, setPermissionGranted] = useState(false);
 
   useEffect(() => {
-    // Request permissions on mount
-    requestPermissions();
+    // Request permissions and register push token on mount
+    (async () => {
+      const granted = await requestPermissions();
+      if (granted) {
+        await registerPushToken();
+      }
+    })();
   }, []);
+
+  const registerPushToken = async () => {
+    if (Platform.OS === "web") {
+      return; // Push notifications not supported on web
+    }
+
+    try {
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: 'your-project-id', // This will be auto-detected from app.json
+      });
+
+      console.log('[useNotifications] Push token:', token.data);
+
+      // Save token to backend
+      const { savePushToken } = await import("@/lib/supabase-api");
+      const result = await savePushToken(token.data, Platform.OS);
+
+      if (result.success) {
+        console.log('[useNotifications] Push token saved successfully');
+      } else {
+        console.error('[useNotifications] Failed to save push token:', result.error);
+      }
+    } catch (error) {
+      console.error('[useNotifications] Error registering push token:', error);
+    }
+  };
 
   const requestPermissions = async () => {
     if (Platform.OS === "web") {

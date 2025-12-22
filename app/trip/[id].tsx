@@ -19,8 +19,10 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips } from "@/lib/supabase-api";
 import { useAdmin } from "@/contexts/admin-context";
+import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/contexts/language-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -51,6 +53,29 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
   );
 }
 
+// Helper function to translate seasons
+function translateSeasons(seasons: string, t: any): string {
+  if (!seasons) return '';
+
+  const seasonMap: Record<string, string> = {
+    'Frühling': t.spring,
+    'Sommer': t.summer,
+    'Herbst': t.autumn,
+    'Winter': t.winter,
+    'Spring': t.spring,
+    'Summer': t.summer,
+    'Autumn': t.autumn,
+    'Fall': t.autumn,
+  };
+
+  // Split by comma and translate each season
+  return seasons
+    .split(',')
+    .map(s => s.trim())
+    .map(s => seasonMap[s] || s)
+    .join(', ');
+}
+
 export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -63,6 +88,11 @@ export default function TripDetailScreen() {
   const [trip, setTrip] = useState<Ausflug | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   // Fetch trip data and photo from Supabase
   useEffect(() => {
@@ -78,10 +108,25 @@ export default function TripDetailScreen() {
         setPhotoUrl(photo);
       }
 
+      // Check if trip is saved and get its status
+      if (isAuthenticated) {
+        const userTrips = await getUserTrips();
+        const savedTrip = userTrips.find(t => t.id === Number(id));
+        if (savedTrip) {
+          setIsSaved(true);
+          setIsFavorite(savedTrip.is_favorite);
+          setIsDone(savedTrip.is_done);
+        } else {
+          setIsSaved(false);
+          setIsFavorite(false);
+          setIsDone(false);
+        }
+      }
+
       setIsLoading(false);
     }
     loadTrip();
-  }, [id]);
+  }, [id, isAuthenticated]);
 
   const handleShare = async () => {
     try {
@@ -139,6 +184,66 @@ export default function TripDetailScreen() {
     router.push(`/trip/edit/${id}` as any);
   };
 
+  const handleAddToTrips = async () => {
+    if (!trip || !isAuthenticated) {
+      Alert.alert("Anmeldung erforderlich", "Bitte melde dich an, um Trips zu speichern.");
+      return;
+    }
+
+    const result = await addUserTrip(trip.id);
+    if (result.success) {
+      setIsSaved(true);
+    } else {
+      Alert.alert("Fehler", result.error || "Konnte nicht gespeichert werden");
+    }
+  };
+
+  const handleRemoveFromTrips = async () => {
+    if (!trip) return;
+
+    Alert.alert(
+      "Aus Trips entfernen",
+      `Möchtest du "${trip.name}" wirklich aus deinen Trips entfernen?`,
+      [
+        { text: "Abbrechen", style: "cancel" },
+        {
+          text: "Entfernen",
+          style: "destructive",
+          onPress: async () => {
+            const result = await removeUserTrip(trip.id);
+            if (result.success) {
+              setIsSaved(false);
+              setIsFavorite(false);
+              setIsDone(false);
+            } else {
+              Alert.alert("Fehler", result.error || "Konnte nicht entfernt werden");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!trip || !isSaved) return;
+    const result = await toggleTripFavorite(trip.id);
+    if (result.success) {
+      setIsFavorite(!isFavorite);
+    } else {
+      Alert.alert("Fehler", result.error || "Fehler beim Favorisieren");
+    }
+  };
+
+  const handleToggleDone = async () => {
+    if (!trip || !isSaved) return;
+    const result = await toggleTripDone(trip.id);
+    if (result.success) {
+      setIsDone(!isDone);
+    } else {
+      Alert.alert("Fehler", result.error || "Fehler beim Markieren");
+    }
+  };
+
   if (isLoading) {
     return (
       <ThemedView style={styles.loadingContainer}>
@@ -179,7 +284,16 @@ export default function TripDetailScreen() {
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}
-              style={styles.headerButton}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+                marginLeft: 16,
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
               <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
             </Pressable>
@@ -187,9 +301,18 @@ export default function TripDetailScreen() {
           headerRight: () => (
             <Pressable
               onPress={handleShare}
-              style={styles.headerButton}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                justifyContent: "center",
+                alignItems: "center",
+                marginRight: 16,
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              <IconSymbol name="square.and.arrow.up" size={24} color="#FFFFFF" />
+              <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
             </Pressable>
           ),
         }}
@@ -232,6 +355,26 @@ export default function TripDetailScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
+            {isAuthenticated && (
+              isSaved ? (
+                <Pressable
+                  onPress={handleRemoveFromTrips}
+                  style={[styles.actionButtonLarge, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                >
+                  <IconSymbol name="trash.fill" size={20} color="#EF4444" />
+                  <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Aus Trips entfernen</ThemedText>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={handleAddToTrips}
+                  style={[styles.actionButtonLarge, { backgroundColor: colors.primary }]}
+                >
+                  <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.actionButtonLargeText}>Zu Trips hinzufügen</ThemedText>
+                </Pressable>
+              )
+            )}
+
             {(trip.lat && trip.lng) || trip.adresse ? (
               <Pressable
                 onPress={handleOpenMap}
@@ -252,6 +395,30 @@ export default function TripDetailScreen() {
               </Pressable>
             ) : null}
           </View>
+
+          {/* User Trip Actions */}
+          {isAuthenticated && (
+            <View style={styles.userTripActions}>
+              <Pressable
+                onPress={handleToggleFavorite}
+                style={[styles.userTripButton, { backgroundColor: isFavorite ? "#EF4444" : colors.surface, borderWidth: 1, borderColor: isFavorite ? "#EF4444" : colors.border }]}
+              >
+                <IconSymbol name={isFavorite ? "heart.fill" : "heart"} size={20} color={isFavorite ? "#FFFFFF" : colors.text} />
+                <ThemedText style={[styles.userTripButtonText, { color: isFavorite ? "#FFFFFF" : colors.text }]}>
+                  {isFavorite ? "Favorit" : "Als Favorit"}
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={handleToggleDone}
+                style={[styles.userTripButton, { backgroundColor: isDone ? "#10B981" : colors.surface, borderWidth: 1, borderColor: isDone ? "#10B981" : colors.border }]}
+              >
+                <IconSymbol name="checkmark.circle.fill" size={20} color={isDone ? "#FFFFFF" : colors.text} />
+                <ThemedText style={[styles.userTripButtonText, { color: isDone ? "#FFFFFF" : colors.text }]}>
+                  {isDone ? "Gemacht" : "Als gemacht"}
+                </ThemedText>
+              </Pressable>
+            </View>
+          )}
 
           {/* Description */}
           {trip.beschreibung ? (
@@ -284,7 +451,11 @@ export default function TripDetailScreen() {
             ) : null}
 
             {trip.jahreszeiten ? (
-              <InfoRow icon="calendar" label="Jahreszeiten" value={trip.jahreszeiten} />
+              <InfoRow
+                icon="calendar"
+                label="Jahreszeiten"
+                value={translateSeasons(trip.jahreszeiten, t)}
+              />
             ) : null}
           </View>
 
@@ -366,13 +537,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 8,
-    overflow: "hidden",
   },
   heroContainer: {
     height: 300,
@@ -410,7 +578,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
+    marginTop: Spacing.sm,
     marginBottom: Spacing.sm,
+    lineHeight: 36,
   },
   locationRow: {
     flexDirection: "row",
@@ -422,18 +592,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   actionButtons: {
-    flexDirection: "row",
     gap: Spacing.md,
     marginBottom: Spacing.xl,
   },
   actionButtonLarge: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: Spacing.sm,
   },
   actionButtonLargeText: {
     color: "#FFFFFF",
@@ -505,6 +680,24 @@ const styles = StyleSheet.create({
   adminButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  userTripActions: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginBottom: Spacing.xl,
+  },
+  userTripButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  userTripButtonText: {
+    fontSize: 14,
     fontWeight: "600",
   },
 });

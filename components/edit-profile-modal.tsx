@@ -106,17 +106,23 @@ export function EditProfileModal({
                 }
             }
 
-            // TODO: Upload profile photo to storage
-            // This requires setting up Supabase Storage bucket
+            // Upload profile photo to storage
             if (photoUri && photoUri !== currentPhotoUrl) {
-                console.log("[EditProfile] Photo upload not yet implemented:", photoUri);
-                // const { error: photoError } = await uploadProfilePhoto(photoUri);
-                // if (photoError) throw photoError;
+                const { uploadProfilePhoto } = await import("@/lib/supabase-api");
+                const uploadResult = await uploadProfilePhoto(photoUri);
+
+                if (!uploadResult.success) {
+                    throw new Error(`Foto Upload fehlgeschlagen: ${uploadResult.error}`);
+                }
             }
 
             Alert.alert("Erfolg", "Profil wurde aktualisiert");
             onSuccess();
-            onClose();
+
+            // Delay closing to allow avatar state to update
+            setTimeout(() => {
+                onClose();
+            }, 300);
         } catch (error: any) {
             Alert.alert("Fehler", error.message || "Profil konnte nicht aktualisiert werden");
         } finally {

@@ -58,7 +58,7 @@ function AnimatedIcon({
 
   return (
     <Animated.View style={animatedStyle}>
-      <IconSymbol name={name} size={40} color={color} />
+      <IconSymbol name={name} size={32} color={color} />
     </Animated.View>
   );
 }
@@ -172,11 +172,14 @@ export default function HomeScreen() {
         style={[
           styles.heroSection,
           {
-            paddingTop: insets.top + 16,
+            paddingTop: insets.top + 32,
             backgroundColor: colors.surface,
           },
         ]}
       >
+        {/* App Title */}
+        <ThemedText style={styles.heroTitle}>AusflugFinder</ThemedText>
+
         {/* Animated Icons */}
         <View style={styles.iconRow}>
           <AnimatedIcon name="mountain.2.fill" color={BrandColors.primary} delay={0} />
@@ -184,8 +187,6 @@ export default function HomeScreen() {
           <AnimatedIcon name="mappin.and.ellipse" color={BrandColors.accent} delay={1000} />
         </View>
 
-        {/* App Title */}
-        <ThemedText style={styles.heroTitle}>AusflugFinder</ThemedText>
         <ThemedText style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
           Entdecke die schönsten Ausflugsziele in der Schweiz und Umgebung
         </ThemedText>
@@ -248,19 +249,19 @@ export default function HomeScreen() {
               value={stats?.totalActivities ?? 0}
               label="Aktivitäten"
               color={BrandColors.primary}
-              onPress={() => router.push("/(tabs)/explore")}
+              onPress={() => router.push("/(tabs)/explore?view=list" as any)}
             />
             <StatCard
               value={stats?.freeActivities ?? 0}
               label="Kostenlos"
               color={BrandColors.secondary}
-              onPress={() => router.push("/(tabs)/explore?cost=free")}
+              onPress={() => router.push("/(tabs)/explore?view=list&cost=free" as any)}
             />
             <StatCard
               value={stats?.totalRegions ?? 0}
               label="Regionen"
               color={BrandColors.accent}
-              onPress={() => router.push("/(tabs)/explore")}
+              onPress={() => router.push("/(tabs)/explore?view=map" as any)}
             />
           </View>
         )}
@@ -278,7 +279,7 @@ export default function HomeScreen() {
             icon="magnifyingglass"
             title="Ausflüge entdecken"
             description="Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget"
-            onPress={() => router.push("/(tabs)/explore")}
+            onPress={() => router.push("/(tabs)/explore?view=list" as any)}
           />
           <FeatureItem
             icon="calendar"
@@ -296,7 +297,7 @@ export default function HomeScreen() {
             icon="map.fill"
             title="Kartenansicht"
             description="Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte"
-            onPress={() => router.push("/(tabs)/explore")}
+            onPress={() => router.push("/(tabs)/explore?view=map" as any)}
           />
         </View>
       </View>
@@ -321,13 +322,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: Spacing.lg,
+    marginTop: Spacing.sm,
     marginBottom: Spacing.lg,
   },
   heroTitle: {
     fontSize: 40,
     fontWeight: "bold",
     textAlign: "center",
+    marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
+    lineHeight: 48,
   },
   heroSubtitle: {
     fontSize: 16,

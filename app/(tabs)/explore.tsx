@@ -1,7 +1,8 @@
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -69,14 +70,32 @@ function TripCard({
   onPress,
   onFavoriteToggle,
   onAddToTrips,
+  isSaved,
+  isFavorite,
 }: {
   trip: Trip;
   onPress: () => void;
   onFavoriteToggle: () => void;
   onAddToTrips: () => void;
+  isSaved?: boolean;
+  isFavorite?: boolean;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+
+  // Local state for immediate feedback
+  const [localIsFavorite, setLocalIsFavorite] = useState(isFavorite || false);
+  const [localIsSaved, setLocalIsSaved] = useState(isSaved || false);
+
+  const handleFavoritePress = () => {
+    setLocalIsFavorite(!localIsFavorite);
+    onFavoriteToggle();
+  };
+
+  const handleAddPress = () => {
+    setLocalIsSaved(!localIsSaved);
+    onAddToTrips();
+  };
 
   // Debug log
   console.log(`[TripCard] ${trip.name} - Photo URL:`, trip.primaryPhotoUrl);
@@ -112,21 +131,11 @@ function TripCard({
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
-              onFavoriteToggle();
+              handleFavoritePress();
             }}
-            style={[styles.tripActionButton, { backgroundColor: colors.surface + "CC" }]}
+            style={[styles.tripActionButton, { backgroundColor: localIsFavorite ? "#EF4444" : colors.surface + "CC" }]}
           >
-            <IconSymbol name="heart.fill" size={20} color="#EF4444" />
-          </Pressable>
-
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              onAddToTrips();
-            }}
-            style={[styles.tripActionButton, { backgroundColor: colors.surface + "CC" }]}
-          >
-            <IconSymbol name="plus.circle.fill" size={20} color={BrandColors.primary} />
+            <IconSymbol name="heart.fill" size={20} color={localIsFavorite ? "#FFFFFF" : "#EF4444"} />
           </Pressable>
         </View>
 
@@ -194,7 +203,7 @@ export default function ExploreScreen() {
   const colors = Colors[colorScheme ?? "light"];
 
   const [keyword, setKeyword] = useState("");
-  const [selectedCost, setSelectedCost] = useState<string>("");
+  const [selectedCost, setSelectedCost] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [sortBy, setSortBy] = useState<"name" | "cost_asc" | "cost_desc" | "region">("name");
@@ -202,6 +211,18 @@ export default function ExploreScreen() {
   const [trips, setTrips] = useState<Ausflug[]>([]);
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const params = useLocalSearchParams();
+
+  // Handle URL params for view mode and cost filter
+  useEffect(() => {
+    if (params.view === 'map') {
+      setViewMode('map');
+    }
+    if (params.cost === 'free') {
+      setSelectedCost('free');
+    }
+  }, [params]);
 
   const SORT_OPTIONS = [
     { key: "name", label: "Name (A-Z)" },
@@ -275,17 +296,14 @@ export default function ExploreScreen() {
     router.push(`/trip/${tripId}` as any);
   };
 
-  const handleFavoriteToggle = (tripId: number) => {
-    console.log("Toggle favorite for trip:", tripId);
+  const handleFavoriteToggle = async (tripId: number) => {
+    await addUserTrip(tripId, true);
+    // Silentfeedback - status updates happen in parent
   };
 
   const handleAddToTrips = async (tripId: number) => {
-    const result = await addUserTrip(tripId);
-    if (result.success) {
-      Alert.alert("Erfolg!", "Trip zu deiner Liste hinzugefügt");
-    } else {
-      Alert.alert("Fehler", result.error || "Konnte Trip nicht hinzufügen");
-    }
+    await addUserTrip(tripId);
+    // Silent feedback - status updates happen in parent
   };
 
   const costFilters = [
@@ -496,6 +514,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
+    marginTop: Spacing.sm,
+    lineHeight: 36,
   },
   headerSubtitle: {
     fontSize: 14,

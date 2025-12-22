@@ -460,6 +460,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
+    marginTop: Spacing.sm,
+    lineHeight: 36,
   },
   headerSubtitle: {
     fontSize: 14,
