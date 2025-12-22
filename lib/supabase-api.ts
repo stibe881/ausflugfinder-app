@@ -568,3 +568,271 @@ export async function deleteDayPlan(planId: number): Promise<{ success: boolean;
     return { success: true };
 }
 
+// ============ USER TRIPS ============
+
+export type UserTrip = {
+    id: number;
+    name: string;
+    beschreibung: string | null;
+    adresse: string;
+    region: string | null;
+    kosten_stufe: number | null;
+    is_favorite: boolean;
+    is_done: boolean;
+    primaryPhotoUrl?: string | null;
+};
+
+// Get all user trips with details
+export async function getUserTrips(): Promise<UserTrip[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        console.log("[Supabase] User not authenticated for getUserTrips");
+        return [];
+    }
+
+    // Get user's integer ID
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .maybeSingle();
+
+    if (!userData) {
+        console.log("[Supabase] User not found in users table");
+        return [];
+    }
+
+    // Get user trips with ausflug details
+    const { data, error } = await supabase
+        .from("user_trips")
+        .select(`
+            is_favorite,
+            is_done,
+            ausfluege (
+                id,
+                name,
+                beschreibung,
+                adresse,
+                region,
+                kosten_stufe
+            )
+        `)
+        .eq("user_id", userData.id);
+
+    if (error) {
+        console.error("[Supabase] Error fetching user trips:", error);
+        return [];
+    }
+
+    // Get primary photos for each trip
+    const tripIds = data?.map((ut: any) => ut.ausfluege.id) || [];
+    const photos = await getPrimaryPhotosForTrips(tripIds);
+
+    // Map to UserTrip type
+    return (data || []).map((ut: any) => ({
+        id: ut.ausfluege.id,
+        name: ut.ausfluege.name,
+        beschreibung: ut.ausfluege.beschreibung,
+        adresse: ut.ausfluege.adresse,
+        region: ut.ausfluege.region,
+        kosten_stufe: ut.ausfluege.kosten_stufe,
+        is_favorite: ut.is_favorite,
+        is_done: ut.is_done,
+        primaryPhotoUrl: photos[ut.ausfluege.id] || null,
+    }));
+}
+
+// Add a trip to user's collection
+export async function addUserTrip(tripId: number): Promise<{ success: boolean; error?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, error: "Nicht angemeldet" };
+    }
+
+    // Get or create user
+    let { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .maybeSingle();
+
+    if (!userData) {
+        // Auto-create user
+        const { data: newUser, error: createError } = await supabase
+            .from("users")
+            .insert({
+                open_id: user.id,
+                email: user.email,
+                name: user.user_metadata?.name || user.email?.split('@')[0],
+                login_method: "supabase",
+            })
+            .select("id")
+            .single();
+
+        if (createError || !newUser) {
+            return { success: false, error: "Fehler beim Erstellen des Benutzers" };
+        }
+        userData = newUser;
+    }
+
+    // Add trip
+    const { error } = await supabase
+        .from("user_trips")
+        .insert({
+            user_id: userData.id,
+            trip_id: tripId,
+        });
+
+    if (error) {
+        // Check if already exists
+        if (error.code === "23505") {
+            return { success: false, error: "Trip bereits in deiner Liste" };
+        }
+        console.error("[Supabase] Error adding user trip:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Toggle favorite status
+export async function toggleTripFavorite(tripId: number): Promise<{ success: boolean; error?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, error: "Nicht angemeldet" };
+    }
+
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (!userData) {
+        return { success: false, error: "Benutzer nicht gefunden" };
+    }
+
+    // Get current state
+    const { data: userTrip } = await supabase
+        .from("user_trips")
+        .select("is_favorite")
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId)
+        .single();
+
+    if (!userTrip) {
+        return { success: false, error: "Trip nicht in deiner Liste" };
+    }
+
+    // Toggle
+    const { error } = await supabase
+        .from("user_trips")
+        .update({ is_favorite: !userTrip.is_favorite })
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId);
+
+    if (error) {
+        console.error("[Supabase] Error toggling favorite:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Toggle done status
+export async function toggleTripDone(tripId: number): Promise<{ success: boolean; error?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, error: "Nicht angemeldet" };
+    }
+
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (!userData) {
+        return { success: false, error: "Benutzer nicht gefunden" };
+    }
+
+    // Get current state
+    const { data: userTrip } = await supabase
+        .from("user_trips")
+        .select("is_done")
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId)
+        .single();
+
+    if (!userTrip) {
+        return { success: false, error: "Trip nicht in deiner Liste" };
+    }
+
+    // Toggle
+    const { error } = await supabase
+        .from("user_trips")
+        .update({ is_done: !userTrip.is_done })
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId);
+
+    if (error) {
+        console.error("[Supabase] Error toggling done:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Remove trip from user's collection
+export async function removeUserTrip(tripId: number): Promise<{ success: boolean; error?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, error: "Nicht angemeldet" };
+    }
+
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (!userData) {
+        return { success: false, error: "Benutzer nicht gefunden" };
+    }
+
+    const { error } = await supabase
+        .from("user_trips")
+        .delete()
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId);
+
+    if (error) {
+        console.error("[Supabase] Error removing user trip:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Helper function to get primary photos for multiple trips
+async function getPrimaryPhotosForTrips(tripIds: number[]): Promise<Record<number, string>> {
+    if (tripIds.length === 0) return {};
+
+    const { data } = await supabase
+        .from("ausflug_photos")
+        .select("ausflug_id, image_url")
+        .in("ausflug_id", tripIds)
+        .eq("is_primary", true);
+
+    const photoMap: Record<number, string> = {};
+    (data || []).forEach((photo: any) => {
+        photoMap[photo.ausflug_id] = photo.image_url;
+    });
+
+    return photoMap;
+}

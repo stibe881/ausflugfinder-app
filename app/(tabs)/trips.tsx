@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,29 +19,24 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
-import { trpc } from "@/lib/trpc";
+import { getUserTrips, toggleTripFavorite, toggleTripDone, removeUserTrip, type UserTrip } from "@/lib/supabase-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-type Trip = {
-  id: number;
+// Map UserTrip from API to display type
+type Trip = UserTrip & {
   title: string;
-  description: string | null;
   destination: string;
   cost: string;
-  region: string | null;
   image: string | null;
-  isFavorite: number;
-  isDone: number;
-  status: string;
 };
 
-const COST_LABELS: Record<string, string> = {
-  free: "Kostenlos",
-  low: "Günstig",
-  medium: "Mittel",
-  high: "Teuer",
-  very_high: "Sehr teuer",
+const COST_LABELS: Record<number, string> = {
+  0: "Kostenlos",
+  1: "Günstig",
+  2: "Mittel",
+  3: "Teuer",
+  4: "Sehr teuer",
 };
 
 function TripListItem({
@@ -191,28 +186,42 @@ export default function TripsScreen() {
 
   const [filter, setFilter] = useState<"all" | "favorites" | "done">("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user trips
-  const { data: trips, isLoading, refetch } = trpc.trips.userTrips.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const fetchTrips = useCallback(async () => {
+    if (!isAuthenticated) {
+      setTrips([]);
+      setIsLoading(false);
+      return;
+    }
 
-  // Mutations
-  const toggleFavoriteMutation = trpc.trips.toggleFavorite.useMutation({
-    onSuccess: () => refetch(),
-  });
-  const toggleDoneMutation = trpc.trips.toggleDone.useMutation({
-    onSuccess: () => refetch(),
-  });
-  const deleteTripMutation = trpc.trips.delete.useMutation({
-    onSuccess: () => refetch(),
-  });
+    setIsLoading(true);
+    const data = await getUserTrips();
+
+    // Map to Trip type
+    const mappedTrips: Trip[] = data.map(ut => ({
+      ...ut,
+      title: ut.name,
+      destination: ut.adresse,
+      cost: COST_LABELS[ut.kosten_stufe ?? 0],
+      image: ut.primaryPhotoUrl,
+    }));
+
+    setTrips(mappedTrips);
+    setIsLoading(false);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    await fetchTrips();
     setRefreshing(false);
-  }, [refetch]);
+  }, [fetchTrips]);
 
   const handleTripPress = (tripId: number) => {
     router.push(`/trip/${tripId}` as any);
@@ -227,23 +236,48 @@ export default function TripsScreen() {
         {
           text: "Löschen",
           style: "destructive",
-          onPress: () => deleteTripMutation.mutate({ id: tripId }),
+          onPress: async () => {
+            const result = await removeUserTrip(tripId);
+            if (result.success) {
+              fetchTrips();
+            } else {
+              Alert.alert("Fehler", result.error || "Löschen fehlgeschlagen");
+            }
+          },
         },
       ]
     );
   };
 
+  const handleToggleFavorite = async (tripId: number) => {
+    const result = await toggleTripFavorite(tripId);
+    if (result.success) {
+      fetchTrips();
+    } else {
+      Alert.alert("Fehler", result.error || "Fehler beim Favorisieren");
+    }
+  };
+
+  const handleToggleDone = async (tripId: number) => {
+    const result = await toggleTripDone(tripId);
+    if (result.success) {
+      fetchTrips();
+    } else {
+      Alert.alert("Fehler", result.error || "Fehler beim Markieren");
+    }
+  };
+
   // Filter trips
-  const filteredTrips = (trips || []).filter((trip) => {
-    if (filter === "favorites") return trip.isFavorite;
-    if (filter === "done") return trip.isDone;
+  const filteredTrips = trips.filter((trip) => {
+    if (filter === "favorites") return trip.is_favorite;
+    if (filter === "done") return trip.is_done;
     return true;
   });
 
   const filterOptions = [
-    { key: "all", label: "Alle", count: trips?.length || 0 },
-    { key: "favorites", label: "Favoriten", count: trips?.filter(t => t.isFavorite).length || 0 },
-    { key: "done", label: "Erledigt", count: trips?.filter(t => t.isDone).length || 0 },
+    { key: "all", label: "Alle", count: trips.length },
+    { key: "favorites", label: "Favoriten", count: trips.filter(t => t.is_favorite).length },
+    { key: "done", label: "Erledigt", count: trips.filter(t => t.is_done).length },
   ];
 
   if (authLoading) {
@@ -342,10 +376,11 @@ export default function TripsScreen() {
           }
           renderItem={({ item }) => (
             <TripListItem
-              trip={item as any}
+              key={item.id}
+              trip={item}
               onPress={() => handleTripPress(item.id)}
-              onToggleFavorite={() => toggleFavoriteMutation.mutate({ id: item.id })}
-              onToggleDone={() => toggleDoneMutation.mutate({ id: item.id })}
+              onToggleFavorite={() => handleToggleFavorite(item.id)}
+              onToggleDone={() => handleToggleDone(item.id)}
               onDelete={() => handleDelete(item.id, item.title)}
             />
           )}
