@@ -408,45 +408,27 @@ export default function TripDetailScreen() {
 
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            {isAuthenticated && (
-              isSaved ? (
+            <View style={styles.actionButtonRow}>
+              {(trip.lat && trip.lng) || trip.adresse ? (
                 <Pressable
-                  onPress={handleRemoveFromTrips}
-                  style={[styles.actionButtonLarge, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                  onPress={handleOpenMap}
+                  style={[styles.actionButtonHalf, { backgroundColor: colors.primary }]}
                 >
-                  <IconSymbol name="trash.fill" size={20} color="#EF4444" />
-                  <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Aus Trips entfernen</ThemedText>
+                  <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
+                  <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
                 </Pressable>
-              ) : (
+              ) : null}
+
+              {trip.website_url ? (
                 <Pressable
-                  onPress={handleAddToTrips}
-                  style={[styles.actionButtonLarge, { backgroundColor: colors.primary }]}
+                  onPress={handleOpenWebsite}
+                  style={[styles.actionButtonHalf, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
                 >
-                  <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                  <ThemedText style={styles.actionButtonLargeText}>Zu Trips hinzufügen</ThemedText>
+                  <IconSymbol name="globe" size={20} color={colors.primary} />
+                  <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
                 </Pressable>
-              )
-            )}
-
-            {(trip.lat && trip.lng) || trip.adresse ? (
-              <Pressable
-                onPress={handleOpenMap}
-                style={[styles.actionButtonLarge, { backgroundColor: colors.primary }]}
-              >
-                <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
-              </Pressable>
-            ) : null}
-
-            {trip.website_url ? (
-              <Pressable
-                onPress={handleOpenWebsite}
-                style={[styles.actionButtonLarge, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
-              >
-                <IconSymbol name="globe" size={20} color={colors.primary} />
-                <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
-              </Pressable>
-            ) : null}
+              ) : null}
+            </View>
           </View>
 
           {/* User Trip Actions */}
@@ -742,6 +724,25 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  actionButtonRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  actionButtonHalf: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   section: {
     marginBottom: Spacing.xl,
