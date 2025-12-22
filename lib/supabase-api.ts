@@ -836,3 +836,231 @@ async function getPrimaryPhotosForTrips(tripIds: number[]): Promise<Record<numbe
 
     return photoMap;
 }
+
+// ============ PLAN DETAILS ============
+
+export type PlanActivity = {
+    id: number;
+    plan_id: number;
+    ausflug_id: number;
+    sort_order: number;
+    scheduled_time: string | null;
+    notes: string | null;
+    // Joined fields from ausfluege
+    name: string;
+    adresse: string;
+    region: string | null;
+    kosten_stufe: number | null;
+    primaryPhotoUrl?: string | null;
+};
+
+export type ChecklistItem = {
+    id: number;
+    plan_id: number;
+    title: string;
+    is_done: boolean;
+    category: string;
+    sort_order: number;
+    created_at: string;
+};
+
+// Get all activities for a plan
+export async function getPlanActivities(planId: number): Promise<PlanActivity[]> {
+    const { data, error } = await supabase
+        .from("day_plan_activities")
+        .select(`
+            id,
+            plan_id,
+            ausflug_id,
+            sort_order,
+            scheduled_time,
+            notes,
+            ausfluege (
+                name,
+                adresse,
+                region,
+                kosten_stufe
+            )
+        `)
+        .eq("plan_id", planId)
+        .order("sort_order", { ascending: true });
+
+    if (error) {
+        console.error("[Supabase] Error fetching plan activities:", error);
+        return [];
+    }
+
+    // Get primary photos
+    const ausflugIds = data?.map((a: any) => a.ausflug_id) || [];
+    const photos = await getPrimaryPhotosForTrips(ausflugIds);
+
+    return (data || []).map((activity: any) => ({
+        id: activity.id,
+        plan_id: activity.plan_id,
+        ausflug_id: activity.ausflug_id,
+        sort_order: activity.sort_order,
+        scheduled_time: activity.scheduled_time,
+        notes: activity.notes,
+        name: activity.ausfluege.name,
+        adresse: activity.ausfluege.adresse,
+        region: activity.ausfluege.region,
+        kosten_stufe: activity.ausfluege.kosten_stufe,
+        primaryPhotoUrl: photos[activity.ausflug_id] || null,
+    }));
+}
+
+// Add activity to plan
+export async function addActivityToPlan(planId: number, ausflugId: number): Promise<{ success: boolean; error?: string }> {
+    // Get current max sort_order
+    const { data: existing } = await supabase
+        .from("day_plan_activities")
+        .select("sort_order")
+        .eq("plan_id", planId)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    const nextSortOrder = (existing?.sort_order ?? -1) + 1;
+
+    const { error } = await supabase
+        .from("day_plan_activities")
+        .insert({
+            plan_id: planId,
+            ausflug_id: ausflugId,
+            sort_order: nextSortOrder,
+        });
+
+    if (error) {
+        if (error.code === "23505") {
+            return { success: false, error: "Aktivität bereits im Plan" };
+        }
+        console.error("[Supabase] Error adding activity to plan:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Remove activity from plan
+export async function removeActivityFromPlan(planId: number, ausflugId: number): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+        .from("day_plan_activities")
+        .delete()
+        .eq("plan_id", planId)
+        .eq("ausflug_id", ausflugId);
+
+    if (error) {
+        console.error("[Supabase] Error removing activity from plan:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Get checklist for a plan
+export async function getPlanChecklist(planId: number): Promise<ChecklistItem[]> {
+    const { data, error } = await supabase
+        .from("day_plan_checklist")
+        .select("*")
+        .eq("plan_id", planId)
+        .order("sort_order", { ascending: true });
+
+    if (error) {
+        console.error("[Supabase] Error fetching plan checklist:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+// Add checklist item
+export async function addChecklistItem(
+    planId: number,
+    title: string,
+    category: string = "general"
+): Promise<{ success: boolean; error?: string; item?: ChecklistItem }> {
+    // Get current max sort_order
+    const { data: existing } = await supabase
+        .from("day_plan_checklist")
+        .select("sort_order")
+        .eq("plan_id", planId)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    const nextSortOrder = (existing?.sort_order ?? -1) + 1;
+
+    const { data, error } = await supabase
+        .from("day_plan_checklist")
+        .insert({
+            plan_id: planId,
+            title,
+            category,
+            sort_order: nextSortOrder,
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("[Supabase] Error adding checklist item:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true, item: data };
+}
+
+// Toggle checklist item
+export async function toggleChecklistItem(itemId: number): Promise<{ success: boolean; error?: string }> {
+    // Get current state
+    const { data: item } = await supabase
+        .from("day_plan_checklist")
+        .select("is_done")
+        .eq("id", itemId)
+        .single();
+
+    if (!item) {
+        return { success: false, error: "Item not found" };
+    }
+
+    const { error } = await supabase
+        .from("day_plan_checklist")
+        .update({ is_done: !item.is_done })
+        .eq("id", itemId);
+
+    if (error) {
+        console.error("[Supabase] Error toggling checklist item:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Delete checklist item
+export async function deleteChecklistItem(itemId: number): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+        .from("day_plan_checklist")
+        .delete()
+        .eq("id", itemId);
+
+    if (error) {
+        console.error("[Supabase] Error deleting checklist item:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+// Update plan notes
+export async function updatePlanNotes(planId: number, notes: string): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+        .from("day_plans")
+        .update({ notes })
+        .eq("id", planId);
+
+    if (error) {
+        console.error("[Supabase] Error updating plan notes:", error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
