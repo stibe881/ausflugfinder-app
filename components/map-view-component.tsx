@@ -6,11 +6,7 @@ import { Image } from "expo-image";
 
 import { ThemedText } from "./themed-text";
 import { GoogleMapsWeb } from "./google-maps-web";
-import {
-  Colors, BrandColors, Spacing, Border
-
-Radius
-} from "@/constants/theme";
+import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type Trip = {
