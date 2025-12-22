@@ -1,11 +1,16 @@
-import { Platform, StyleSheet, View, Text, TouchableOpacity, Alert } from "react-native";
+import { Platform, StyleSheet, View, Text, TouchableOpacity, Alert, Dimensions } from "react-native";
 import Constants from "expo-constants";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import * as Clipboard from 'expo-clipboard';
+import { Image } from "expo-image";
 
 import { ThemedText } from "./themed-text";
 import { GoogleMapsWeb } from "./google-maps-web";
-import { Colors, BrandColors, Spacing } from "@/constants/theme";
+import {
+  Colors, BrandColors, Spacing, Border
+
+Radius
+} from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 type Trip = {
@@ -23,50 +28,53 @@ type MapViewComponentProps = {
   onMarkerPress?: (tripId: number) => void;
 };
 
-// Check if we're running in Expo Go (which doesn't support native modules like react-native-maps)
+// Check if we're running in Expo Go
 const isExpoGo = Constants.appOwnership === 'expo';
 
-// Cost level colors for markers
+// Cost level colors and labels
 const CostMarkerColors: Record<number, string> = {
-  0: BrandColors.primary, // Free - green
+  0: BrandColors.primary, // Free
   1: "#22C55E", // Low
-  2: BrandColors.secondary, // Medium - orange
-  3: "#EF4444", // High - red
-  4: "#7C3AED", // Very high - purple
+  2: BrandColors.secondary, // Medium
+  3: "#EF4444", // High
+  4: "#7C3AED", // Very high
 };
 
-// Collect debug info
-const debugInfo = {
-  appOwnership: Constants.appOwnership,
-  isExpoGo,
-  platform: Platform.OS,
-  mapLoadError: null as string | null,
-  mapViewAvailable: false,
+const CostLabels: Record<number, string> = {
+  0: "Gratis",
+  1: "Günstig",
+  2: "Mittel",
+  3: "Teuer",
+  4: "Sehr teuer",
 };
 
-// Dynamically import react-native-maps only when not in Expo Go and not on web
+// Dynamically import react-native-maps
 let MapView: any = null;
 let Marker: any = null;
+let Callout: any = null;
 let PROVIDER_DEFAULT: any = null;
+let ClusteredMapView: any = null;
 
-// Only try to load react-native-maps on native platforms in production builds
 if (Platform.OS !== 'web' && !isExpoGo) {
   try {
     const Maps = require('react-native-maps');
     MapView = Maps.default;
     Marker = Maps.Marker;
-    // Use default provider (Apple Maps on iOS, Google Maps on Android)
+    Callout = Maps.Callout;
     PROVIDER_DEFAULT = Platform.OS === 'android' ? Maps.PROVIDER_GOOGLE : undefined;
-    debugInfo.mapViewAvailable = true;
-  } catch (e: any) {
-    debugInfo.mapLoadError = e?.message || String(e);
+
+    // Import super-cluster
+    const SuperCluster = require('react-native-maps-super-cluster');
+    ClusteredMapView = SuperCluster.default;
+  } catch (e) {
+    console.error('[MapView] Failed to load react-native-maps:', e);
   }
 }
 
 export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
-  const [renderError, setRenderError] = useState<string | null>(null);
+  const mapRef = useRef<any>(null);
 
   // Filter trips with valid coordinates
   const tripsWithCoords = trips.filter(
@@ -78,27 +86,8 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
   }
 
-  // Copy debug info to clipboard
-  const handleCopyDebugInfo = async () => {
-    const info = {
-      ...debugInfo,
-      renderError,
-      tripsCount: trips.length,
-      tripsWithCoordsCount: tripsWithCoords.length,
-      timestamp: new Date().toISOString(),
-    };
-    const text = JSON.stringify(info, null, 2);
-
-    try {
-      await Clipboard.setStringAsync(text);
-      Alert.alert("Kopiert!", "Debug-Info wurde in die Zwischenablage kopiert.");
-    } catch (e) {
-      Alert.alert("Debug Info", text);
-    }
-  };
-
-  // For Expo Go or when native maps aren't available, show a fallback with info
-  if (isExpoGo || !MapView) {
+  // Expo Go fallback
+  if (isExpoGo || !MapView || !ClusteredMapView) {
     return (
       <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
         <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
@@ -113,25 +102,6 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
             : `${tripsWithCoords.length} Ausflüge mit Standort`
           }
         </ThemedText>
-
-        {/* Debug Info Box */}
-        <View style={[styles.debugBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <ThemedText style={[styles.debugTitle, { color: colors.text }]}>Debug Info:</ThemedText>
-          <Text style={[styles.debugText, { color: colors.textSecondary }]} selectable>
-            appOwnership: {String(debugInfo.appOwnership)}{"\n"}
-            isExpoGo: {String(debugInfo.isExpoGo)}{"\n"}
-            platform: {debugInfo.platform}{"\n"}
-            mapViewAvailable: {String(debugInfo.mapViewAvailable)}{"\n"}
-            {debugInfo.mapLoadError && `loadError: ${debugInfo.mapLoadError}\n`}
-            {renderError && `renderError: ${renderError}\n`}
-          </Text>
-          <TouchableOpacity
-            onPress={handleCopyDebugInfo}
-            style={[styles.copyButton, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.copyButtonText}>📋 Debug-Info kopieren</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     );
   }
@@ -143,9 +113,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
         <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
           <ThemedText style={styles.fallbackEmoji}>📍</ThemedText>
         </View>
-        <ThemedText style={styles.fallbackTitle}>
-          Keine Standorte
-        </ThemedText>
+        <ThemedText style={styles.fallbackTitle}>Keine Standorte</ThemedText>
         <ThemedText style={[styles.fallbackText, { color: colors.textSecondary }]}>
           Keine Ausflugsziele mit Standort gefunden
         </ThemedText>
@@ -153,7 +121,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     );
   }
 
-  // Calculate initial region from trips
+  // Calculate initial region
   const latitudes = tripsWithCoords.map((t) => parseFloat(t.lat!));
   const longitudes = tripsWithCoords.map((t) => parseFloat(t.lng!));
   const minLat = Math.min(...latitudes);
@@ -166,48 +134,115 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
   const latDelta = Math.max(0.1, (maxLat - minLat) * 1.5);
   const lngDelta = Math.max(0.1, (maxLng - minLng) * 1.5);
 
+  // Render marker with custom callout
+  const renderMarker = (trip: Trip) => {
+    const costColor = CostMarkerColors[trip.kosten_stufe ?? 0];
+    const costLabel = CostLabels[trip.kosten_stufe ?? 0];
+
+    return (
+      <Marker
+        key={trip.id}
+        coordinate={{
+          latitude: parseFloat(trip.lat!),
+          longitude: parseFloat(trip.lng!),
+        }}
+        pinColor={costColor}
+      >
+        <Callout tooltip onPress={() => onMarkerPress?.(trip.id)}>
+          <View style={[styles.callout, { backgroundColor: colors.card }]}>
+            {/* Photo */}
+            {trip.primaryPhotoUrl ? (
+              <Image
+                source={{ uri: trip.primaryPhotoUrl }}
+                style={styles.calloutImage}
+                contentFit="cover"
+              />
+            ) : (
+              <View style={[styles.calloutImagePlaceholder, { backgroundColor: colors.surface }]}>
+                <Text style={{ fontSize: 24 }}>🏔️</Text>
+              </View>
+            )}
+
+            {/* Content */}
+            <View style={styles.calloutContent}>
+              <Text style={[styles.calloutTitle, { color: colors.text }]} numberOfLines={2}>
+                {trip.name}
+              </Text>
+
+              <View style={styles.calloutRow}>
+                {trip.region && (
+                  <Text style={[styles.calloutRegion, { color: colors.textSecondary }]}>
+                    📍 {trip.region}
+                  </Text>
+                )}
+              </View>
+
+              <View style={[styles.calloutCostBadge, { backgroundColor: costColor + "20" }]}>
+                <Text style={[styles.calloutCostText, { color: costColor }]}>
+                  {costLabel}
+                </Text>
+              </View>
+
+              <Text style={[styles.calloutTap, { color: colors.primary }]}>
+                👆 Antippen für Details
+              </Text>
+            </View>
+          </View>
+        </Callout>
+      </Marker>
+    );
+  };
+
+  // Render cluster marker
+  const renderCluster = (cluster: any, onPress: any) => {
+    const { pointCount, coordinate } = cluster;
+    const color = pointCount > 20 ? "#EF4444" : pointCount > 10 ? BrandColors.secondary : BrandColors.primary;
+
+    return (
+      <Marker
+        key={`cluster-${cluster.clusterId}`}
+        coordinate={coordinate}
+        onPress={onPress}
+      >
+        <View style={[styles.clusterMarker, { backgroundColor: color }]}>
+          <Text style={styles.clusterText}>{pointCount}</Text>
+        </View>
+      </Marker>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <MapView
+      <ClusteredMapView
+        ref={mapRef}
         style={styles.map}
-        provider={PROVIDER_DEFAULT}
+        data={tripsWithCoords.map(trip => ({
+          location: {
+            latitude: parseFloat(trip.lat!),
+            longitude: parseFloat(trip.lng!),
+          },
+          ...trip,
+        }))}
         initialRegion={{
           latitude: centerLat,
           longitude: centerLng,
           latitudeDelta: latDelta,
           longitudeDelta: lngDelta,
         }}
+        renderMarker={renderMarker}
+        renderCluster={renderCluster}
+        radius={Dimensions.get('window').width * 0.06}
+        maxZoom={20}
+        minZoom={3}
+        extent={512}
+        nodeSize={64}
+        provider={PROVIDER_DEFAULT}
         showsUserLocation
         showsMyLocationButton
-        onError={(e: any) => setRenderError(e?.nativeEvent?.error || "Unknown map error")}
-      >
-        {tripsWithCoords.map((trip) => (
-          <Marker
-            key={trip.id}
-            coordinate={{
-              latitude: parseFloat(trip.lat!),
-              longitude: parseFloat(trip.lng!),
-            }}
-            title={trip.name}
-            pinColor={CostMarkerColors[trip.kosten_stufe ?? 0] || BrandColors.primary}
-            onPress={() => onMarkerPress?.(trip.id)}
-          />
-        ))}
-      </MapView>
-
-      {/* Show error overlay if there's a render error */}
-      {renderError && (
-        <View style={[styles.errorOverlay, { backgroundColor: 'rgba(255,0,0,0.9)' }]}>
-          <Text style={styles.errorTitle}>Karten-Fehler</Text>
-          <Text style={styles.errorText} selectable>{renderError}</Text>
-          <TouchableOpacity
-            onPress={handleCopyDebugInfo}
-            style={styles.copyButtonError}
-          >
-            <Text style={styles.copyButtonText}>📋 Debug-Info kopieren</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        clusterColor={BrandColors.primary}
+        clusterTextColor="#FFFFFF"
+        clusterFontFamily="System"
+      />
     </View>
   );
 }
@@ -218,8 +253,6 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
-    width: "100%",
-    height: "100%",
   },
   fallback: {
     flex: 1,
@@ -239,71 +272,81 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   fallbackTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "600",
-    textAlign: "center",
     marginBottom: Spacing.sm,
+    textAlign: "center",
   },
   fallbackText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
-    marginBottom: Spacing.lg,
+    lineHeight: 20,
   },
-  debugBox: {
-    marginTop: Spacing.lg,
-    padding: Spacing.md,
-    borderRadius: 8,
-    borderWidth: 1,
+  // Custom Callout Styles
+  callout: {
+    width: 250,
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  calloutImage: {
     width: "100%",
-    maxWidth: 320,
+    height: 120,
   },
-  debugTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: Spacing.sm,
-  },
-  debugText: {
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginBottom: Spacing.md,
-  },
-  copyButton: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 8,
+  calloutImagePlaceholder: {
+    width: "100%",
+    height: 120,
+    justifyContent: "center",
     alignItems: "center",
   },
-  copyButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  errorOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  calloutContent: {
     padding: Spacing.md,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
   },
-  errorTitle: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+  calloutTitle: {
     fontSize: 16,
-    marginBottom: Spacing.sm,
+    fontWeight: "600",
+    marginBottom: Spacing.xs,
   },
-  errorText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginBottom: Spacing.md,
-  },
-  copyButtonError: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 8,
+  calloutRow: {
+    flexDirection: "row",
     alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  calloutRegion: {
+    fontSize: 13,
+  },
+  calloutCostBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.xs,
+  },
+  calloutCostText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  calloutTap: {
+    fontSize: 12,
+    fontStyle: "italic",
+  },
+  // Cluster Marker Styles
+  clusterMarker: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+  },
+  clusterText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
