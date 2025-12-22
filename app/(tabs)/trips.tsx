@@ -81,7 +81,7 @@ function TripListItem({
             <IconSymbol name="mountain.2.fill" size={24} color={colors.textSecondary} />
           </View>
         )}
-        {trip.isDone && (
+        {trip.is_done && (
           <View style={styles.doneOverlay}>
             <IconSymbol name="checkmark.circle.fill" size={24} color="#FFFFFF" />
           </View>
@@ -99,10 +99,10 @@ function TripListItem({
             {trip.destination}
           </ThemedText>
         </View>
-        <View style={styles.tripItemMeta}>
-          <View style={[styles.costTag, { backgroundColor: costColor + "20" }]}>
-            <ThemedText style={[styles.costTagText, { color: costColor }]}>
-              {COST_LABELS[trip.cost] || trip.cost}
+        <View style={styles.tripItemFooter}>
+          <View style={[styles.tripCostBadge, { backgroundColor: CostColors[trip.kosten_stufe ?? 0] + "20" }]}>
+            <ThemedText style={[styles.tripItemCost, { color: CostColors[trip.kosten_stufe ?? 0] }]}>
+              {COST_LABELS[trip.kosten_stufe ?? 0] || trip.cost}
             </ThemedText>
           </View>
         </View>
@@ -110,18 +110,18 @@ function TripListItem({
 
       {/* Actions */}
       <View style={styles.tripItemActions}>
-        <Pressable onPress={onToggleFavorite} style={styles.actionButton}>
+        <Pressable hitSlop={8} onPress={onToggleFavorite}>
           <IconSymbol
-            name="heart.fill"
+            name={trip.is_favorite ? "star.fill" : "star"}
             size={20}
-            color={trip.isFavorite ? "#EF4444" : colors.textSecondary}
+            color={trip.is_favorite ? BrandColors.primary : colors.textSecondary}
           />
         </Pressable>
-        <Pressable onPress={onToggleDone} style={styles.actionButton}>
+        <Pressable hitSlop={8} onPress={onToggleDone}>
           <IconSymbol
             name="checkmark.circle.fill"
             size={20}
-            color={trip.isDone ? BrandColors.primary : colors.textSecondary}
+            color={trip.is_done ? BrandColors.primary : colors.textSecondary}
           />
         </Pressable>
       </View>
@@ -206,7 +206,7 @@ export default function TripsScreen() {
       title: ut.name,
       destination: ut.adresse,
       cost: COST_LABELS[ut.kosten_stufe ?? 0],
-      image: ut.primaryPhotoUrl,
+      image: ut.primaryPhotoUrl ?? null,
     }));
 
     setTrips(mappedTrips);
