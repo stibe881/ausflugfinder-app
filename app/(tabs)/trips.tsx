@@ -11,6 +11,7 @@ import {
   Alert,
   Animated,
 } from "react-native";
+import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -213,10 +214,18 @@ export default function TripsScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  const sortOptions: Array<{ key: "name" | "distance"; label: string }> = [
+    { key: "name", label: "Name" },
+    { key: "distance", label: "Entfernung" },
+  ];
+
   const [filter, setFilter] = useState<"all" | "favorites" | "done">("all");
+  const [sortBy, setSortBy] = useState<"name" | "distance">("name");
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   // Fetch user trips
   const fetchTrips = useCallback(async () => {
@@ -249,6 +258,20 @@ export default function TripsScreen() {
     setTrips(mappedTrips);
     setIsLoading(false);
   }, [isAuthenticated]);
+
+  // Get user location for distance sorting
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     fetchTrips();
@@ -311,12 +334,44 @@ export default function TripsScreen() {
     }
   };
 
-  // Filter trips
-  const filteredTrips = trips.filter((trip) => {
-    if (filter === "favorites") return trip.is_favorite;
-    if (filter === "done") return trip.is_done;
-    return true;
-  });
+  // Calculate distance using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Filter and sort trips
+  const filteredTrips = trips
+    .filter((trip) => {
+      if (filter === "favorites") return trip.is_favorite;
+      if (filter === "done") return trip.is_done;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") {
+        return a.title.localeCompare(b.title);
+      } else if (sortBy === "distance" && userLocation) {
+        const latA = parseFloat((a as any).lat || "0");
+        const lngA = parseFloat((a as any).lng || "0");
+        const latB = parseFloat((b as any).lat || "0");
+        const lngB = parseFloat((b as any).lng || "0");
+
+        if (!latA || !lngA) return 1;
+        if (!latB || !lngB) return -1;
+
+        const distA = calculateDistance(userLocation.latitude, userLocation.longitude, latA, lngA);
+        const distB = calculateDistance(userLocation.latitude, userLocation.longitude, latB, lngB);
+        return distA - distB;
+      }
+      return 0;
+    });
 
   const filterOptions = [
     { key: "all", label: "Alle", count: trips.length },
@@ -349,11 +404,51 @@ export default function TripsScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.headerTitle}>Meine Trips</ThemedText>
-        <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-          {trips?.length || 0} gespeicherte Ausflüge
-        </ThemedText>
+        <View>
+          <ThemedText style={styles.headerTitle}>Meine Trips</ThemedText>
+          <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {trips?.length || 0} gespeicherte Ausflüge
+          </ThemedText>
+        </View>
+        {/* Sort Button */}
+        <Pressable
+          onPress={() => setShowSortMenu(!showSortMenu)}
+          style={[styles.sortButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <IconSymbol name="line.3.horizontal.decrease" size={20} color={colors.primary} />
+        </Pressable>
       </View>
+
+      {/* Sort Menu Dropdown */}
+      {showSortMenu && (
+        <View style={[styles.sortMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {sortOptions.map((option) => (
+            <Pressable
+              key={option.key}
+              onPress={() => {
+                setSortBy(option.key);
+                setShowSortMenu(false);
+              }}
+              style={[
+                styles.sortMenuItem,
+                sortBy === option.key && { backgroundColor: colors.primary + "15" },
+              ]}
+            >
+              <ThemedText
+                style={[
+                  styles.sortMenuItemText,
+                  sortBy === option.key && { color: colors.primary, fontWeight: "600" },
+                ]}
+              >
+                {option.label}
+              </ThemedText>
+              {sortBy === option.key && (
+                <IconSymbol name="checkmark" size={16} color={colors.primary} />
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {/* Filter Tabs */}
       <View style={styles.filterTabs}>
@@ -638,5 +733,39 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.2)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  sortButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sortMenu: {
+    position: "absolute",
+    top: 100,
+    right: Spacing.lg,
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.xs,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  sortMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
+    minWidth: 150,
+  },
+  sortMenuItemText: {
+    fontSize: 14,
   },
 });

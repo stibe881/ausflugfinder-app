@@ -23,6 +23,7 @@ import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/consta
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip, getUserTrips } from "@/lib/supabase-api";
 import { useAuth } from "@/hooks/use-auth";
+import * as Location from "expo-location";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2;
@@ -197,6 +198,14 @@ function CategoryChip({
   );
 }
 
+const SORT_OPTIONS: Array<{ key: "name" | "cost_asc" | "cost_desc" | "region" | "distance"; label: string }> = [
+  { key: "name", label: "Name" },
+  { key: "cost_asc", label: "Preis aufsteigend" },
+  { key: "cost_desc", label: "Preis absteigend" },
+  { key: "region", label: "Region" },
+  { key: "distance", label: "Entfernung" },
+];
+
 export default function ExploreScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -207,7 +216,7 @@ export default function ExploreScreen() {
   const [selectedCost, setSelectedCost] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
-  const [sortBy, setSortBy] = useState<"name" | "cost_asc" | "cost_desc" | "region">("name");
+  const [sortBy, setSortBy] = useState<"name" | "cost_asc" | "cost_desc" | "region" | "distance">("name");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [trips, setTrips] = useState<Ausflug[]>([]);
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
@@ -215,6 +224,7 @@ export default function ExploreScreen() {
   const [userTripIds, setUserTripIds] = useState<Set<number>>(new Set());
   const [favoriteTripIds, setFavoriteTripIds] = useState<Set<number>>(new Set());
   const { isAuthenticated } = useAuth();
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const params = useLocalSearchParams();
 
@@ -258,6 +268,33 @@ export default function ExploreScreen() {
     setIsLoading(false);
   }, [keyword, selectedCost]);
 
+  // Get user location for distance sorting
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    })();
+  }, []);
+
+  // Calculate distance using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km   
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
   // Sort trips based on selected sort option
   const sortedTrips = [...trips].sort((a, b) => {
     switch (sortBy) {
@@ -269,6 +306,17 @@ export default function ExploreScreen() {
         return (b.kosten_stufe ?? 0) - (a.kosten_stufe ?? 0);
       case "region":
         return (a.region || "").localeCompare(b.region || "");
+      case "distance":
+        if (!userLocation) return 0;
+        const latA = parseFloat(a.lat || "0");
+        const lngA = parseFloat(a.lng || "0");
+        const latB = parseFloat(b.lat || "0");
+        const lngB = parseFloat(b.lng || "0");
+        if (!latA || !lngA) return 1;
+        if (!latB || !lngB) return -1;
+        const distA = calculateDistance(userLocation.latitude, userLocation.longitude, latA, lngA);
+        const distB = calculateDistance(userLocation.latitude, userLocation.longitude, latB, lngB);
+        return distA - distB;
       default:
         return 0;
     }
