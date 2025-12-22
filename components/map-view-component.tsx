@@ -49,7 +49,6 @@ let MapView: any = null;
 let Marker: any = null;
 let Callout: any = null;
 let PROVIDER_DEFAULT: any = null;
-let ClusteredMapView: any = null;
 
 if (Platform.OS !== 'web' && !isExpoGo) {
   try {
@@ -58,10 +57,6 @@ if (Platform.OS !== 'web' && !isExpoGo) {
     Marker = Maps.Marker;
     Callout = Maps.Callout;
     PROVIDER_DEFAULT = Platform.OS === 'android' ? Maps.PROVIDER_GOOGLE : undefined;
-
-    // Import super-cluster
-    const SuperCluster = require('react-native-maps-super-cluster');
-    ClusteredMapView = SuperCluster.default;
   } catch (e) {
     console.error('[MapView] Failed to load react-native-maps:', e);
   }
@@ -83,7 +78,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
   }
 
   // Expo Go fallback
-  if (isExpoGo || !MapView || !ClusteredMapView) {
+  if (isExpoGo || !MapView) {
     return (
       <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
         <View style={[styles.fallbackIcon, { backgroundColor: colors.primary + "15" }]}>
@@ -209,36 +204,21 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
 
   return (
     <View style={styles.container}>
-      <ClusteredMapView
+      <MapView
         ref={mapRef}
         style={styles.map}
-        data={tripsWithCoords.map(trip => ({
-          location: {
-            latitude: parseFloat(trip.lat!),
-            longitude: parseFloat(trip.lng!),
-          },
-          ...trip,
-        }))}
         initialRegion={{
           latitude: centerLat,
           longitude: centerLng,
           latitudeDelta: latDelta,
           longitudeDelta: lngDelta,
         }}
-        renderMarker={renderMarker}
-        renderCluster={renderCluster}
-        radius={Dimensions.get('window').width * 0.06}
-        maxZoom={20}
-        minZoom={3}
-        extent={512}
-        nodeSize={64}
         provider={PROVIDER_DEFAULT}
         showsUserLocation
         showsMyLocationButton
-        clusterColor={BrandColors.primary}
-        clusterTextColor="#FFFFFF"
-        clusterFontFamily="System"
-      />
+      >
+        {tripsWithCoords.map((trip) => renderMarker(trip))}
+      </MapView>
     </View>
   );
 }
