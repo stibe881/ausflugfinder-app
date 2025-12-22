@@ -841,20 +841,22 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   weatherIcon: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
+    flexShrink: 0,
   },
   weatherCurrentInfo: {
     flex: 1,
-    marginLeft: Spacing.md,
+    marginLeft: Spacing.sm,
   },
   weatherTemp: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
+    lineHeight: 34,
   },
   weatherDescription: {
-    fontSize: 16,
-    marginTop: Spacing.xs,
+    fontSize: 14,
+    marginTop: 4,
     textTransform: "capitalize",
   },
   forecastButton: {
