@@ -1352,7 +1352,7 @@ export type DailyForecast = {
 export async function getCurrentWeather(lat: number, lng: number): Promise<{ success: boolean; weather?: CurrentWeather; error?: string }> {
     try {
         const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}`
+            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&lang=de&appid=${OPENWEATHER_API_KEY}`
         );
 
         if (!response.ok) {
@@ -1383,7 +1383,7 @@ export async function getCurrentWeather(lat: number, lng: number): Promise<{ suc
 export async function getWeatherForecast(lat: number, lng: number): Promise<{ success: boolean; forecast?: DailyForecast[]; error?: string }> {
     try {
         const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}`
+            `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=de&appid=${OPENWEATHER_API_KEY}`
         );
 
         if (!response.ok) {
