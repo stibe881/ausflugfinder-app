@@ -137,16 +137,25 @@ export default function TripDetailScreen() {
   // Fetch weather data
   useEffect(() => {
     async function loadWeather() {
-      if (!trip?.lat || !trip?.lng) return;
+      if (!trip?.lat || !trip?.lng) {
+        console.log('[Weather] No coordinates available:', { lat: trip?.lat, lng: trip?.lng });
+        return;
+      }
 
+      console.log('[Weather] Loading weather for:', { lat: trip.lat, lng: trip.lng });
       setWeatherLoading(true);
       const lat = parseFloat(trip.lat);
       const lng = parseFloat(trip.lng);
 
       // Get current weather
       const weatherResult = await getCurrentWeather(lat, lng);
+      console.log('[Weather] API Result:', weatherResult);
+
       if (weatherResult.success && weatherResult.weather) {
+        console.log('[Weather] Setting current weather:', weatherResult.weather);
         setCurrentWeather(weatherResult.weather);
+      } else {
+        console.error('[Weather] Failed to load weather:', weatherResult.error);
       }
 
       setWeatherLoading(false);
