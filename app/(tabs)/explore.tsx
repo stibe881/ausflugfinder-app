@@ -20,7 +20,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { MapViewComponent } from "@/components/map-view-component";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto } from "@/lib/supabase-api";
+import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip } from "@/lib/supabase-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2;
@@ -64,10 +64,16 @@ function CostBadge({ cost }: { cost: string }) {
   );
 }
 
-function TripCard({ trip, onPress, onFavoriteToggle }: {
+function TripCard({
+  trip,
+  onPress,
+  onFavoriteToggle,
+  onAddToTrips,
+}: {
   trip: Trip;
   onPress: () => void;
   onFavoriteToggle: () => void;
+  onAddToTrips: () => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -100,6 +106,29 @@ function TripCard({ trip, onPress, onFavoriteToggle }: {
             <IconSymbol name="mountain.2.fill" size={32} color={colors.textSecondary} />
           </View>
         )}
+
+        {/* Actions Overlay */}
+        <View style={styles.tripCardActions}>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onFavoriteToggle();
+            }}
+            style={[styles.tripActionButton, { backgroundColor: colors.surface + "CC" }]}
+          >
+            <IconSymbol name="heart.fill" size={20} color="#EF4444" />
+          </Pressable>
+
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              onAddToTrips();
+            }}
+            style={[styles.tripActionButton, { backgroundColor: colors.surface + "CC" }]}
+          >
+            <IconSymbol name="plus.circle.fill" size={20} color={BrandColors.primary} />
+          </Pressable>
+        </View>
 
         {/* Cost Badge */}
         <View style={styles.costBadgeContainer}>
@@ -247,8 +276,16 @@ export default function ExploreScreen() {
   };
 
   const handleFavoriteToggle = (tripId: number) => {
-    // TODO: Implement favorite toggle with Supabase
     console.log("Toggle favorite for trip:", tripId);
+  };
+
+  const handleAddToTrips = async (tripId: number) => {
+    const result = await addUserTrip(tripId);
+    if (result.success) {
+      Alert.alert("Erfolg!", "Trip zu deiner Liste hinzugefügt");
+    } else {
+      Alert.alert("Fehler", result.error || "Konnte Trip nicht hinzufügen");
+    }
   };
 
   const costFilters = [
@@ -403,6 +440,7 @@ export default function ExploreScreen() {
               trip={item as any}
               onPress={() => handleTripPress(item.id)}
               onFavoriteToggle={() => handleFavoriteToggle(item.id)}
+              onAddToTrips={() => handleAddToTrips(item.id)}
             />
           )}
         />
@@ -548,6 +586,25 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
+  },
+  tripCardActions: {
+    position: "absolute",
+    top: Spacing.sm,
+    right: Spacing.sm,
+    flexDirection: "row",
+    gap: Spacing.xs,
+  },
+  tripActionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   favoriteButton: {
     position: "absolute",
