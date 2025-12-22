@@ -230,59 +230,55 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
             },
           },
           onClusterClick: (_, cluster: any) => {
-            const currentZoom = map.getZoom();
-            if (currentZoom < 15) {
-              map.setZoom(Math.min(currentZoom + 2, 15));
-            }
-            google.maps.event.removeListener(listener);
-          });
-      },
+            map.panTo(cluster.position);
+            map.setZoom((map.getZoom() || 10) + 2);
+          },
         });
 
-  // Initial fit bounds
-  map.fitBounds(bounds);
-})
-      .catch ((error: any) => {
-  console.error("[GoogleMaps] Error loading Google Maps:", error);
-});
+        // Initial fit bounds
+        map.fitBounds(bounds);
+      })
+      .catch((error: any) => {
+        console.error("[GoogleMaps] Error loading Google Maps:", error);
+      });
 
-return () => {
-  // Cleanup
-  if (clustererRef.current) {
-    clustererRef.current.clearMarkers();
-  }
-  markersRef.current.forEach((marker) => {
-    if ((marker as any).infoWindow) {
-      (marker as any).infoWindow.close();
-    }
-    marker.setMap(null);
-  });
-  markersRef.current = [];
-};
+    return () => {
+      // Cleanup
+      if (clustererRef.current) {
+        clustererRef.current.clearMarkers();
+      }
+      markersRef.current.forEach((marker) => {
+        if ((marker as any).infoWindow) {
+          (marker as any).infoWindow.close();
+        }
+        marker.setMap(null);
+      });
+      markersRef.current = [];
+    };
   }, [tripsWithCoords, onMarkerPress, colorScheme]);
 
-if (tripsWithCoords.length === 0) {
+  if (tripsWithCoords.length === 0) {
+    return (
+      <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+        <ThemedText style={styles.emptyText}>
+          📍 Keine Ausflugsziele mit Standort gefunden
+        </ThemedText>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-      <ThemedText style={styles.emptyText}>
-        📍 Keine Ausflugsziele mit Standort gefunden
-      </ThemedText>
+    <View style={styles.container}>
+      <div
+        ref={mapRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: 12,
+        }}
+      />
     </View>
   );
-}
-
-return (
-  <View style={styles.container}>
-    <div
-      ref={mapRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        borderRadius: 12,
-      }}
-    />
-  </View>
-);
 }
 
 const styles = StyleSheet.create({
