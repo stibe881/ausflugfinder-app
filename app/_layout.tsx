@@ -21,6 +21,7 @@ import { LanguageProvider } from "@/contexts/language-context";
 import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 import { AdminProvider } from "@/contexts/admin-context";
 import { ProximityTrackingInitializer } from "@/components/proximity-tracking-initializer";
+import { NotificationInitializer } from "@/components/notification-initializer";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -101,6 +102,7 @@ export default function RootLayout() {
                       <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
                     </Stack>
                     <ProximityTrackingInitializer />
+                    <NotificationInitializer />
                     <StatusBar style="auto" />
                   </ThemeProvider>
                 </LanguageProvider>

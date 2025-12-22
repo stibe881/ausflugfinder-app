@@ -218,6 +218,60 @@ export async function searchAusfluegWithPhotos(params?: {
 
 // ========== ADMIN FUNCTIONS ==========
 
+// Create a new ausflug (admin only)
+export async function createAusflug(data: {
+    name: string;
+    beschreibung?: string;
+    adresse: string;
+    land?: string;
+    region?: string;
+    kosten_stufe?: number;
+    jahreszeiten?: string;
+    website_url?: string;
+    lat?: string;
+    lng?: string;
+    nice_to_know?: string;
+    altersempfehlung?: string;
+    parkplatz?: string;
+    parkplatz_kostenlos?: boolean;
+    dauer_min?: string;
+    dauer_max?: string;
+    distanz_min?: string;
+    distanz_max?: string;
+    dauer_stunden?: string;
+    distanz_km?: string;
+    is_rundtour?: boolean;
+    is_von_a_nach_b?: boolean;
+}): Promise<{ success: boolean; id?: number; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "Not authenticated" };
+        }
+
+        const { data: result, error } = await supabase
+            .from("ausfluege")
+            .insert({
+                ...data,
+                user_id: null, // Admin trips have no specific user
+                created_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
+
+        if (error) {
+            console.error("[Supabase] Error creating ausflug:", error);
+            return { success: false, error: error.message };
+        }
+
+        console.log("[createAusflug] Created successfully:", result.id);
+        return { success: true, id: result.id };
+    } catch (error: any) {
+        console.error("[createAusflug] Unexpected error:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 // Update an ausflug
 export async function updateAusflug(id: number, updates: Partial<Ausflug>): Promise<{ success: boolean; error?: string }> {
     const { error } = await supabase
@@ -684,21 +738,19 @@ export async function addUserTrip(tripId: number, isFavorite: boolean = false): 
         userData = newUser;
     }
 
-    // Add trip
+    // Add or update trip
     const { error } = await supabase
         .from("user_trips")
-        .insert({
+        .upsert({
             user_id: userData.id,
             trip_id: tripId,
             is_favorite: isFavorite,
+        }, {
+            onConflict: 'user_id,trip_id'
         });
 
     if (error) {
-        // Check if already exists
-        if (error.code === "23505") {
-            return { success: false, error: "Trip bereits in deiner Liste" };
-        }
-        console.error("[Supabase] Error adding user trip:", error);
+        console.error("[Supabase] Error adding/updating user trip:", error);
         return { success: false, error: error.message };
     }
 
@@ -1269,4 +1321,121 @@ export async function sendBroadcastNotification(
         console.error('[sendBroadcastNotification] Unexpected error:', error);
         return { success: false, error: error.message };
     }
+}
+
+// ========== WEATHER ==========
+
+// OpenWeatherMap API key - replace with environment variable in production
+const OPENWEATHER_API_KEY = 'YOUR_API_KEY_HERE'; // TODO: Add to environment variables
+
+export type CurrentWeather = {
+    temp: number;
+    feels_like: number;
+    description: string;
+    icon: string;
+    humidity: number;
+    wind_speed: number;
+};
+
+export type DailyForecast = {
+    date: string;
+    temp_min: number;
+    temp_max: number;
+    description: string;
+    icon: string;
+    pop: number; // Probability of precipitation
+};
+
+/**
+ * Get current weather for given coordinates
+ */
+export async function getCurrentWeather(lat: number, lng: number): Promise<{ success: boolean; weather?: CurrentWeather; error?: string }> {
+    try {
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}`
+        );
+
+        if (!response.ok) {
+            return { success: false, error: 'Weather service unavailable' };
+        }
+
+        const data = await response.json();
+
+        const weather: CurrentWeather = {
+            temp: Math.round(data.main.temp),
+            feels_like: Math.round(data.main.feels_like),
+            description: data.weather[0].description,
+            icon: data.weather[0].icon,
+            humidity: data.main.humidity,
+            wind_speed: data.wind.speed,
+        };
+
+        return { success: true, weather };
+    } catch (error: any) {
+        console.error('[getCurrentWeather] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get 7-day weather forecast for given coordinates
+ */
+export async function getWeatherForecast(lat: number, lng: number): Promise<{ success: boolean; forecast?: DailyForecast[]; error?: string }> {
+    try {
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${OPENWEATHER_API_KEY}`
+        );
+
+        if (!response.ok) {
+            return { success: false, error: 'Weather service unavailable' };
+        }
+
+        const data = await response.json();
+
+        // Group forecast by day and get min/max temps
+        const dailyData: Record<string, any> = {};
+
+        data.list.forEach((item: any) => {
+            const date = item.dt_txt.split(' ')[0];
+
+            if (!dailyData[date]) {
+                dailyData[date] = {
+                    date,
+                    temps: [],
+                    descriptions: [],
+                    icons: [],
+                    pops: [],
+                };
+            }
+
+            dailyData[date].temps.push(item.main.temp);
+            dailyData[date].descriptions.push(item.weather[0].description);
+            dailyData[date].icons.push(item.weather[0].icon);
+            dailyData[date].pops.push(item.pop || 0);
+        });
+
+        // Convert to DailyForecast array (take first 7 days)
+        const forecast: DailyForecast[] = Object.values(dailyData)
+            .slice(0, 7)
+            .map((day: any) => ({
+                date: day.date,
+                temp_min: Math.round(Math.min(...day.temps)),
+                temp_max: Math.round(Math.max(...day.temps)),
+                description: day.descriptions[Math.floor(day.descriptions.length / 2)],
+                icon: day.icons[Math.floor(day.icons.length / 2)],
+                pop: Math.round(Math.max(...day.pops) * 100),
+            }));
+
+        return { success: true, forecast };
+    } catch (error: any) {
+        console.error('[getWeatherForecast] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get weather icon URL from OpenWeatherMap code
+ */
+export function getWeatherIconUrl(iconCode: string): string {
+    return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 }

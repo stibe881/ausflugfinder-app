@@ -19,7 +19,7 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
 import { useAdmin } from "@/contexts/admin-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
@@ -94,6 +94,12 @@ export default function TripDetailScreen() {
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
+  // Weather state
+  const [currentWeather, setCurrentWeather] = useState<CurrentWeather | null>(null);
+  const [forecast, setForecast] = useState<DailyForecast[]>([]);
+  const [showForecast, setShowForecast] = useState(false);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
   // Fetch trip data and photo from Supabase
   useEffect(() => {
     async function loadTrip() {
@@ -127,6 +133,44 @@ export default function TripDetailScreen() {
     }
     loadTrip();
   }, [id, isAuthenticated]);
+
+  // Fetch weather data
+  useEffect(() => {
+    async function loadWeather() {
+      if (!trip?.lat || !trip?.lng) return;
+
+      setWeatherLoading(true);
+      const lat = parseFloat(trip.lat);
+      const lng = parseFloat(trip.lng);
+
+      // Get current weather
+      const weatherResult = await getCurrentWeather(lat, lng);
+      if (weatherResult.success && weatherResult.weather) {
+        setCurrentWeather(weatherResult.weather);
+      }
+
+      setWeatherLoading(false);
+    }
+
+    loadWeather();
+  }, [trip]);
+
+  // Load forecast when user expands the forecast section
+  const handleShowForecast = async () => {
+    if (!showForecast && forecast.length === 0 && trip?.lat && trip?.lng) {
+      setWeatherLoading(true);
+      const lat = parseFloat(trip.lat);
+      const lng = parseFloat(trip.lng);
+
+      const forecastResult = await getWeatherForecast(lat, lng);
+      if (forecastResult.success && forecastResult.forecast) {
+        setForecast(forecastResult.forecast);
+      }
+
+      setWeatherLoading(false);
+    }
+    setShowForecast(!showForecast);
+  };
 
   const handleShare = async () => {
     try {
@@ -420,6 +464,81 @@ export default function TripDetailScreen() {
             </View>
           )}
 
+          {/* Weather */}
+          {currentWeather && (
+            <View style={styles.section}>
+              <ThemedText style={styles.sectionTitle}>Wetter</ThemedText>
+
+              {/* Current Weather */}
+              <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={styles.weatherCurrent}>
+                  {currentWeather.icon && (
+                    <Image
+                      source={{ uri: getWeatherIconUrl(currentWeather.icon) }}
+                      style={styles.weatherIcon}
+                      contentFit="contain"
+                    />
+                  )}
+                  <View style={styles.weatherCurrentInfo}>
+                    <ThemedText style={styles.weatherTemp}>{currentWeather.temp}°C</ThemedText>
+                    <ThemedText style={[styles.weatherDescription, { color: colors.textSecondary }]}>
+                      {currentWeather.description}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                {/* Forecast Toggle Button */}
+                <Pressable
+                  onPress={handleShowForecast}
+                  style={({ pressed }) => [
+                    styles.forecastButton,
+                    { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }
+                  ]}
+                  disabled={weatherLoading}
+                >
+                  {weatherLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <ThemedText style={styles.forecastButtonText}>
+                        {showForecast ? "7-Tage Vorhersage ausblenden" : "7-Tage Vorhersage anzeigen"}
+                      </ThemedText>
+                      <IconSymbol
+                        name={showForecast ? "chevron.up" : "chevron.down"}
+                        size={16}
+                        color="#FFFFFF"
+                      />
+                    </>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* 7-Day Forecast */}
+              {showForecast && forecast.length > 0 && (
+                <View style={[styles.forecastContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  {forecast.map((day, index) => (
+                    <View key={day.date} style={[styles.forecastDay, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                      <ThemedText style={[styles.forecastDate, { color: colors.textSecondary }]}>
+                        {new Date(day.date).toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                      <Image
+                        source={{ uri: getWeatherIconUrl(day.icon) }}
+                        style={styles.forecastIcon}
+                        contentFit="contain"
+                      />
+                      <ThemedText style={styles.forecastTemp}>
+                        {day.temp_max}° / {day.temp_min}°
+                      </ThemedText>
+                      <ThemedText style={[styles.forecastDescription, { color: colors.textSecondary }]}>
+                        {day.description}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Description */}
           {trip.beschreibung ? (
             <View style={styles.section}>
@@ -699,5 +818,79 @@ const styles = StyleSheet.create({
   userTripButtonText: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  // Weather styles
+  weatherCard: {
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  weatherCurrent: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
+  weatherIcon: {
+    width: 80,
+    height: 80,
+  },
+  weatherCurrentInfo: {
+    flex: 1,
+    marginLeft: Spacing.md,
+  },
+  weatherTemp: {
+    fontSize: 32,
+    fontWeight: "bold",
+  },
+  weatherDescription: {
+    fontSize: 16,
+    marginTop: Spacing.xs,
+    textTransform: "capitalize",
+  },
+  forecastButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.sm,
+  },
+  forecastButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  forecastContainer: {
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    marginTop: Spacing.md,
+    overflow: "hidden",
+  },
+  forecastDay: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: Spacing.md,
+  },
+  forecastDate: {
+    fontSize: 14,
+    width: 80,
+  },
+  forecastIcon: {
+    width: 40,
+    height: 40,
+  },
+  forecastTemp: {
+    fontSize: 14,
+    fontWeight: "600",
+    width: 70,
+    textAlign: "center",
+  },
+  forecastDescription: {
+    fontSize: 12,
+    flex: 1,
+    textAlign: "right",
+    textTransform: "capitalize",
   },
 });

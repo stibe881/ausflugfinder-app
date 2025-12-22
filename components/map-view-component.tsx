@@ -89,12 +89,18 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
   // Auto-zoom to user location when available
   useEffect(() => {
     if (userLocation && mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      }, 1000);
+      // ClusteredMapView requires getMapRef() to access underlying MapView
+      const map = mapRef.current.getMapRef?.() || mapRef.current;
+      if (map && map.animateToRegion) {
+        setTimeout(() => {
+          map.animateToRegion({
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            latitudeDelta: 0.1,
+            longitudeDelta: 0.1,
+          }, 1000);
+        }, 500); // Small delay to ensure map is ready
+      }
     }
   }, [userLocation]);
 
@@ -266,23 +272,8 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
         clusterTextColor="#FFFFFF"
         clusterFontSize={16}
         spiralEnabled={false}
-        zIndex={1}
       >
         {tripsWithCoords.map((trip) => renderMarker(trip))}
-
-        {/* User Location Marker - highest z-index */}
-        {userLocation && (
-          <Marker
-            coordinate={userLocation}
-            title="Mein Standort"
-            zIndex={999}
-            tracksViewChanges={false}
-          >
-            <View style={styles.userLocationMarker}>
-              <View style={styles.userLocationDot} />
-            </View>
-          </Marker>
-        )}
       </ClusteredMapView>
     </View>
   );

@@ -21,7 +21,8 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { MapViewComponent } from "@/components/map-view-component";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip } from "@/lib/supabase-api";
+import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip, getUserTrips } from "@/lib/supabase-api";
+import { useAuth } from "@/hooks/use-auth";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.md) / 2;
@@ -135,7 +136,7 @@ function TripCard({
             }}
             style={[styles.tripActionButton, { backgroundColor: localIsFavorite ? "#EF4444" : colors.surface + "CC" }]}
           >
-            <IconSymbol name="heart.fill" size={20} color={localIsFavorite ? "#FFFFFF" : "#EF4444"} />
+            <IconSymbol name="heart.fill" size={20} color={localIsFavorite ? "#FFFFFF" : "#D1D1D6"} />
           </Pressable>
         </View>
 
@@ -211,6 +212,9 @@ export default function ExploreScreen() {
   const [trips, setTrips] = useState<Ausflug[]>([]);
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userTripIds, setUserTripIds] = useState<Set<number>>(new Set());
+  const [favoriteTripIds, setFavoriteTripIds] = useState<Set<number>>(new Set());
+  const { isAuthenticated } = useAuth();
 
   const params = useLocalSearchParams();
 
@@ -218,11 +222,13 @@ export default function ExploreScreen() {
   useEffect(() => {
     if (params.view === 'map') {
       setViewMode('map');
+    } else if (params.view === 'list') {
+      setViewMode('grid');
     }
     if (params.cost === 'free') {
       setSelectedCost('free');
     }
-  }, [params]);
+  }, [params.view, params.cost]); // React to URL parameter changes
 
   const SORT_OPTIONS = [
     { key: "name", label: "Name (A-Z)" },
@@ -274,10 +280,26 @@ export default function ExploreScreen() {
     setStats(result);
   }, []);
 
+  // Load user trips status
+  const loadUserTrips = useCallback(async () => {
+    if (!isAuthenticated) {
+      setUserTripIds(new Set());
+      setFavoriteTripIds(new Set());
+      return;
+    }
+
+    const userTrips = await getUserTrips();
+    const savedIds = new Set(userTrips.filter((t: any) => !t.is_favorite).map((t: any) => t.id));
+    const favoriteIds = new Set(userTrips.filter((t: any) => t.is_favorite).map((t: any) => t.id));
+    setUserTripIds(savedIds);
+    setFavoriteTripIds(favoriteIds);
+  }, [isAuthenticated]);
+
   // Initial load
   useEffect(() => {
     fetchTrips();
     fetchStats();
+    loadUserTrips();
   }, []);
 
   // Refetch when filters change
@@ -285,12 +307,18 @@ export default function ExploreScreen() {
     fetchTrips();
   }, [keyword, selectedCost, fetchTrips]);
 
+  // Reload user trips when authentication changes
+  useEffect(() => {
+    loadUserTrips();
+  }, [isAuthenticated, loadUserTrips]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchTrips();
     await fetchStats();
+    await loadUserTrips();
     setRefreshing(false);
-  }, [fetchTrips, fetchStats]);
+  }, [fetchTrips, fetchStats, loadUserTrips]);
 
   const handleTripPress = (tripId: number) => {
     router.push(`/trip/${tripId}` as any);
@@ -298,12 +326,14 @@ export default function ExploreScreen() {
 
   const handleFavoriteToggle = async (tripId: number) => {
     await addUserTrip(tripId, true);
-    // Silentfeedback - status updates happen in parent
+    // Reload user trips to update UI
+    await loadUserTrips();
   };
 
   const handleAddToTrips = async (tripId: number) => {
     await addUserTrip(tripId);
-    // Silent feedback - status updates happen in parent
+    // Reload user trips to update UI
+    await loadUserTrips();
   };
 
   const costFilters = [
@@ -459,6 +489,8 @@ export default function ExploreScreen() {
               onPress={() => handleTripPress(item.id)}
               onFavoriteToggle={() => handleFavoriteToggle(item.id)}
               onAddToTrips={() => handleAddToTrips(item.id)}
+              isSaved={userTripIds.has(item.id)}
+              isFavorite={favoriteTripIds.has(item.id)}
             />
           )}
         />

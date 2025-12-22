@@ -32,10 +32,7 @@ export function useNotifications() {
     }
 
     try {
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: 'your-project-id', // This will be auto-detected from app.json
-      });
-
+      const token = await Notifications.getExpoPushTokenAsync();
       console.log('[useNotifications] Push token:', token.data);
 
       // Save token to backend

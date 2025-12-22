@@ -395,6 +395,13 @@ export default function ProfileScreen() {
             {isAdmin && (
               <SettingSection title="ADMINISTRATION">
                 <SettingItem
+                  icon="plus.circle.fill"
+                  iconColor="#10B981"
+                  title="Neuer Ausflug"
+                  subtitle="Ausflug hinzufügen"
+                  onPress={() => router.push("/admin/create-trip" as any)}
+                />
+                <SettingItem
                   icon="paperplane.fill"
                   iconColor="#FF6B35"
                   title="Push-Benachrichtigungen"
