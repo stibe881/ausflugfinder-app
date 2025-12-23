@@ -20,6 +20,7 @@ import { TaskItem } from "@/components/planning/TaskItem";
 import { AddTaskDialog } from "@/components/planning/AddTaskDialog";
 import { AddCostDialog } from "@/components/planning/AddCostDialog";
 import { BudgetSummary } from "@/components/planning/BudgetSummary";
+import { TripPickerModal } from "@/components/planning/TripPickerModal";
 import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, type Plan, type PlanTask } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 import { getAllAusfluege } from "@/lib/supabase-api";
