@@ -15,7 +15,7 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
 
-    console.log('[TripPickerModal] Rendering with trips:', trips?.length || 0, trips);
+    console.log('[TripPickerModal] Rendering with trips:', trips?.length || 0);
 
     return (
         <Modal
@@ -43,28 +43,34 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                                 Keine Ausflüge verfügbar
                             </ThemedText>
                         }
-                        renderItem={({ item }) => (
-                            <Pressable
-                                onPress={() => onSelectTrip(item.id)}
-                                style={[
-                                    styles.tripItem,
-                                    { borderBottomColor: colors.border },
-                                ]}
-                            >
-                                <View style={{ flex: 1 }}>
-                                    <ThemedText style={styles.tripTitle}>{item.title}</ThemedText>
-                                    {item.kurzbeschrieb && (
-                                        <ThemedText
-                                            style={[styles.tripDescription, { color: colors.textSecondary }]}
-                                            numberOfLines={1}
-                                        >
-                                            {item.kurzbeschrieb}
-                                        </ThemedText>
-                                    )}
-                                </View>
-                                <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
-                            </Pressable>
-                        )}
+                        renderItem={({ item, index }) => {
+                            if (index === 0) console.log('[TripPickerModal] Rendering first item:', item);
+                            return (
+                                <Pressable
+                                    onPress={() => {
+                                        console.log('[TripPickerModal] Selected trip:', item.id, item.title);
+                                        onSelectTrip(item.id);
+                                    }}
+                                    style={[
+                                        styles.tripItem,
+                                        { borderBottomColor: colors.border },
+                                    ]}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText style={styles.tripTitle}>{item.title || 'Unbenannt'}</ThemedText>
+                                        {item.kurzbeschrieb && (
+                                            <ThemedText
+                                                style={[styles.tripDescription, { color: colors.textSecondary }]}
+                                                numberOfLines={1}
+                                            >
+                                                {item.kurzbeschrieb}
+                                            </ThemedText>
+                                        )}
+                                    </View>
+                                    <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+                                </Pressable>
+                            );
+                        }}
                     />
                 </View>
             </View>
@@ -79,7 +85,7 @@ const styles = StyleSheet.create({
         justifyContent: "flex-end",
     },
     modalContent: {
-        height: "70%",
+        height: "80%",
         borderTopLeftRadius: BorderRadius.xl,
         borderTopRightRadius: BorderRadius.xl,
         padding: Spacing.lg,
