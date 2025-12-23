@@ -430,7 +430,8 @@ export async function addParticipant(
                 plan_id: planId,
                 ...data,
                 invitation_status: data.user_id ? 'accepted' : 'pending',
-                invitation_token: data.user_id ? undefined : crypto.randomUUID(),
+                // Simple UUID alternative for React Native
+                invitation_token: data.user_id ? undefined : `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             })
             .select()
             .single();
