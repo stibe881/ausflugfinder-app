@@ -280,7 +280,7 @@ export default function CreatePlanScreen() {
                                         style={styles.tripPickerItem}
                                     >
                                         <ThemedText style={styles.tripPickerTitle}>
-                                            {ausflug.title}
+                                            {ausflug.name}
                                         </ThemedText>
                                         <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
                                     </Pressable>
