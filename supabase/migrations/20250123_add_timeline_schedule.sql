@@ -32,7 +32,7 @@ CREATE POLICY "Users can view trip activities for accessible plans"
       JOIN plans p ON p.id = pt.plan_id
       JOIN plan_participants pp ON pp.plan_id = p.id
       WHERE pt.id = plan_trip_id
-        AND (p.created_by = auth.uid() OR pp.user_id = auth.uid())
+        AND (p.creator_id IN (SELECT id FROM users WHERE open_id = auth.uid()::text) OR pp.user_id = auth.uid())
     )
   );
 
@@ -44,7 +44,7 @@ CREATE POLICY "Users can insert trip activities for their plans"
       SELECT 1 FROM plan_trips pt
       JOIN plans p ON p.id = pt.plan_id
       WHERE pt.id = plan_trip_id
-        AND p.created_by = auth.uid()
+        AND p.creator_id IN (SELECT id FROM users WHERE open_id = auth.uid()::text)
     )
   );
 
@@ -56,7 +56,7 @@ CREATE POLICY "Users can update trip activities for their plans"
       SELECT 1 FROM plan_trips pt
       JOIN plans p ON p.id = pt.plan_id
       WHERE pt.id = plan_trip_id
-        AND p.created_by = auth.uid()
+        AND p.creator_id IN (SELECT id FROM users WHERE open_id = auth.uid()::text)
     )
   );
 
@@ -68,7 +68,7 @@ CREATE POLICY "Users can delete trip activities for their plans"
       SELECT 1 FROM plan_trips pt
       JOIN plans p ON p.id = pt.plan_id
       WHERE pt.id = plan_trip_id
-        AND p.created_by = auth.uid()
+        AND p.creator_id IN (SELECT id FROM users WHERE open_id = auth.uid()::text)
     )
   );
 
