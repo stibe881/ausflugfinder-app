@@ -20,6 +20,8 @@ interface SwipeablePlanCardProps {
 }
 
 const SWIPE_THRESHOLD = -80;
+const DELETE_BUTTON_WIDTH = 80;
+const GAP = 8; // Spacing between card and button
 
 export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCardProps) {
     const colorScheme = useColorScheme();
@@ -37,14 +39,14 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
         .activeOffsetX([-10, 10])
         .onUpdate((event) => {
             if (event.translationX < 0) {
-                // Limit swipe to just reveal the button, not go past it
-                translateX.value = Math.max(event.translationX, -120);
+                // Limit swipe to reveal button + gap
+                translateX.value = Math.max(event.translationX, -(DELETE_BUTTON_WIDTH + GAP + 20));
             }
         })
         .onEnd(() => {
             // Snap to either open or closed
             if (translateX.value < SWIPE_THRESHOLD) {
-                translateX.value = withTiming(-100);
+                translateX.value = withTiming(-(DELETE_BUTTON_WIDTH + GAP));
             } else {
                 translateX.value = withTiming(0);
             }
@@ -124,10 +126,10 @@ const styles = StyleSheet.create({
     },
     deleteBackground: {
         position: "absolute",
-        right: Spacing.sm,
+        right: 0,
         top: 0,
         bottom: 0,
-        width: 100,
+        width: DELETE_BUTTON_WIDTH,
         backgroundColor: "#FF3B30",
         borderRadius: BorderRadius.lg,
         justifyContent: "center",
@@ -143,6 +145,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: BorderRadius.lg,
         padding: Spacing.md,
+        marginRight: GAP, // This creates the gap
     },
     header: {
         flexDirection: "row",
