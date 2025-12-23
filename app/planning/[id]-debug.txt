@@ -1,0 +1,38 @@
+    const handleAddTrip = async (tripId: number) => {
+        console.log('[handleAddTrip] CALLED with tripId:', tripId);
+        console.log('[handleAddTrip] plan:', plan?.id);
+        
+        if (!plan) {
+            console.log('[handleAddTrip] ERROR: No plan found!');
+            return;
+        }
+
+        console.log('[handleAddTrip] Calling addPlanTrip API...');
+        const result = await addPlanTrip(plan.id, {
+            trip_id: tripId,
+            planned_date: new Date().toISOString(),
+        });
+
+        console.log('[handleAddTrip] API result:', result);
+
+        if (result.success) {
+            console.log('[handleAddTrip] Success! Reloading trips from database...');
+            const { data: trips, error } = await supabase
+                .from("plan_trips")
+                .select(`*, trip:ausfluege(id, name, kurzbeschrieb)`)
+                .eq("plan_id", plan.id)
+                .order("sequence");
+
+            console.log('[handleAddTrip] Supabase query result:', { trips: trips?.length, error });
+
+            if (trips) {
+                console.log('[handleAddTrip] Setting planTrips state with', trips.length, 'trips');
+                setPlanTrips(trips as any);
+            }
+            setShowTripPicker(false);
+            Alert.alert("Erfolg", "Ausflug wurde hinzugefügt");
+        } else {
+            console.log('[handleAddTrip] FAILED:', result.error);
+            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
+        }
+    };

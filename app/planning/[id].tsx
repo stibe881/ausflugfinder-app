@@ -187,24 +187,36 @@ export default function PlanDetailScreen() {
     };
 
     const handleAddTrip = async (tripId: number) => {
-        if (!plan) return;
+        console.log('[handleAddTrip] CALLED! tripId:', tripId, 'plan.id:', plan?.id);
 
+        if (!plan) {
+            console.log('[handleAddTrip] ERROR: No plan!');
+            return;
+        }
+
+        console.log('[handleAddTrip] Calling addPlanTrip...');
         const result = await addPlanTrip(plan.id, {
             trip_id: tripId,
             planned_date: new Date().toISOString(),
         });
 
+        console.log('[handleAddTrip] Result:', result);
+
         if (result.success) {
-            const { data: trips } = await supabase
+            console.log('[handleAddTrip] Success! Reloading trips...');
+            const { data: trips, error } = await supabase
                 .from("plan_trips")
                 .select(`*, trip:ausfluege(id, name, kurzbeschrieb)`)
                 .eq("plan_id", plan.id)
                 .order("sequence");
 
+            console.log('[handleAddTrip] Loaded', trips?.length, 'trips, error:', error);
+
             if (trips) setPlanTrips(trips as any);
             setShowTripPicker(false);
             Alert.alert("Erfolg", "Ausflug wurde hinzugefügt");
         } else {
+            console.log('[handleAddTrip] FAILED:', result.error);
             Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
         }
     };
