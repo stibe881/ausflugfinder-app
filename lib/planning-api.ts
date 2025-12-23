@@ -674,3 +674,237 @@ export async function getCostSummary(planId: string): Promise<{ success: boolean
         return { success: false, error: error.message };
     }
 }
+
+// ============================================================================
+// TIMELINE & SCHEDULE
+// ============================================================================
+
+export interface TripActivity {
+    id: string;
+    plan_trip_id: string;
+    name: string;
+    description?: string;
+    start_time: string;
+    end_time: string;
+    location?: string;
+    category: 'activity' | 'meal' | 'transport' | 'break';
+    sequence: number;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Update trip times (departure, arrival, notes, buffer)
+ */
+export async function updatePlanTripTimes(
+    planTripId: string,
+    times: {
+        departure_time?: string;
+        arrival_time?: string;
+        notes?: string;
+        buffer_time_minutes?: number;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .update(times)
+            .eq('id', planTripId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[updatePlanTripTimes] Error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to update trip times'
+        };
+    }
+}
+
+/**
+ * Add activity to trip
+ */
+export async function addTripActivity(
+    planTripId: string,
+    activity: {
+        name: string;
+        description?: string;
+        start_time: string;
+        end_time: string;
+        location?: string;
+        category: 'activity' | 'meal' | 'transport' | 'break';
+        sequence?: number;
+    }
+): Promise<{ success: boolean; activity?: TripActivity; error?: string }> {
+    try {
+        // Get current max sequence
+        const { data: existingActivities } = await supabase
+            .from('trip_activities')
+            .select('sequence')
+            .eq('plan_trip_id', planTripId)
+            .order('sequence', { ascending: false })
+            .limit(1);
+
+        const nextSequence = existingActivities && existingActivities.length > 0
+            ? existingActivities[0].sequence + 1
+            : 0;
+
+        const { data, error } = await supabase
+            .from('trip_activities')
+            .insert({
+                plan_trip_id: planTripId,
+                ...activity,
+                sequence: activity.sequence ?? nextSequence
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return { success: true, activity: data };
+    } catch (error: any) {
+        console.error('[addTripActivity] Error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to add activity'
+        };
+    }
+}
+
+/**
+ * Update trip activity
+ */
+export async function updateTripActivity(
+    activityId: string,
+    updates: Partial<{
+        name: string;
+        description: string;
+        start_time: string;
+        end_time: string;
+        location: string;
+        category: 'activity' | 'meal' | 'transport' | 'break';
+        sequence: number;
+    }>
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('trip_activities')
+            .update(updates)
+            .eq('id', activityId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[updateTripActivity] Error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to update activity'
+        };
+    }
+}
+
+/**
+ * Delete trip activity
+ */
+export async function deleteTripActivity(
+    activityId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('trip_activities')
+            .delete()
+            .eq('id', activityId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deleteTripActivity] Error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to delete activity'
+        };
+    }
+}
+
+/**
+ * Get activities for a trip
+ */
+export async function getTripActivities(
+    planTripId: string
+): Promise<{ success: boolean; activities?: TripActivity[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('trip_activities')
+            .select('*')
+            .eq('plan_trip_id', planTripId)
+            .order('start_time', { ascending: true });
+
+        if (error) throw error;
+
+        return { success: true, activities: data || [] };
+    } catch (error: any) {
+        console.error('[getTripActivities] Error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to fetch activities'
+        };
+    }
+}
+
+/**
+ * Calculate total trip duration including buffer time
+ */
+export function calculateTripDuration(
+    departureTime: string,
+    arrivalTime: string,
+    bufferMinutes: number = 0
+): { hours: number; minutes: number; totalMinutes: number } {
+    const departure = new Date(departureTime);
+    const arrival = new Date(arrivalTime);
+
+    const diffMs = arrival.getTime() - departure.getTime();
+    const totalMinutes = Math.floor(diffMs / 60000) + bufferMinutes;
+
+    return {
+        hours: Math.floor(totalMinutes / 60),
+        minutes: totalMinutes % 60,
+        totalMinutes
+    };
+}
+
+/**
+ * Check for time conflicts in activities
+ */
+export function detectTimeConflicts(activities: TripActivity[]): {
+    hasConflicts: boolean;
+    conflicts: Array<{ activity1: TripActivity; activity2: TripActivity }>;
+} {
+    const conflicts: Array<{ activity1: TripActivity; activity2: TripActivity }> = [];
+
+    for (let i = 0; i < activities.length; i++) {
+        for (let j = i + 1; j < activities.length; j++) {
+            const a1Start = new Date(activities[i].start_time).getTime();
+            const a1End = new Date(activities[i].end_time).getTime();
+            const a2Start = new Date(activities[j].start_time).getTime();
+            const a2End = new Date(activities[j].end_time).getTime();
+
+            // Check if times overlap
+            if ((a1Start < a2End && a1End > a2Start) ||
+                (a2Start < a1End && a2End > a1Start)) {
+                conflicts.push({
+                    activity1: activities[i],
+                    activity2: activities[j]
+                });
+            }
+        }
+    }
+
+    return {
+        hasConflicts: conflicts.length > 0,
+        conflicts
+    };
+}
