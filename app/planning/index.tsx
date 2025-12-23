@@ -12,11 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { PlanCard } from "@/components/planning/PlanCard";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuth } from "@/hooks/use-auth";
-import { getPlans, type Plan } from "@/lib/planning-api";
+import { SwipeablePlanCard } from "@/components/planning/SwipeablePlanCard";
+import { getPlans, deletePlan, type Plan } from "@/lib/planning-api";
 
 type FilterType = "all" | "upcoming" | "past";
 
@@ -163,7 +160,11 @@ export default function PlanningIndexScreen() {
                         data={filteredPlans}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) => (
-                            <PlanCard plan={item} onPress={() => handlePlanPress(item.id)} />
+                            <SwipeablePlanCard
+                                plan={item}
+                                onPress={() => handlePlanPress(item.id)}
+                                onDelete={handleDeletePlan}
+                            />
                         )}
                         contentContainerStyle={styles.list}
                         refreshControl={
