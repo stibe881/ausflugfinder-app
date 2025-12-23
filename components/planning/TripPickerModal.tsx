@@ -58,12 +58,12 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                                 >
                                     <View style={{ flex: 1 }}>
                                         <ThemedText style={styles.tripTitle}>{item.name || 'Unbenannt'}</ThemedText>
-                                        {item.kurzbeschrieb && (
+                                        {item.beschreibung && (
                                             <ThemedText
                                                 style={[styles.tripDescription, { color: colors.textSecondary }]}
                                                 numberOfLines={1}
                                             >
-                                                {item.kurzbeschrieb}
+                                                {item.beschreibung}
                                             </ThemedText>
                                         )}
                                     </View>
