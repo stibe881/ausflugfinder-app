@@ -21,7 +21,9 @@ import { AddTaskDialog } from "@/components/planning/AddTaskDialog";
 import { AddCostDialog } from "@/components/planning/AddCostDialog";
 import { BudgetSummary } from "@/components/planning/BudgetSummary";
 import { TripPickerModal } from "@/components/planning/TripPickerModal";
-import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, type Plan, type PlanTask } from "@/lib/planning-api";
+import { TripTimeEditor } from "@/components/planning/TripTimeEditor";
+import { ActivityEditor } from "@/components/planning/ActivityEditor";
+import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, type Plan, type PlanTask, type TripActivity } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 import { getAllAusfluege } from "@/lib/supabase-api";
 
@@ -537,161 +539,187 @@ export default function PlanDetailScreen() {
                         </Pressable>
                     </View>
                 </View>
-            </ScrollView>
+                {/* Trip Picker Modal */}
+                <TripPickerModal
+                    visible={showTripPicker}
+                    trips={availableTrips}
+                    onSelectTrip={handleAddTrip}
+                    onClose={() => setShowTripPicker(false)}
+                />
 
-            <TripPickerModal
-                visible={showTripPicker}
-                trips={availableTrips}
-                onSelectTrip={handleAddTrip}
-                onClose={() => setShowTripPicker(false)}
-            />
-        </ThemedView>
-    );
+                {/* Trip Time Editor */}
+                {editingTripTimeId && (
+                    <TripTimeEditor
+                        visible={!!editingTripTimeId}
+                        tripId={editingTripTimeId}
+                        currentTimes={planTrips.find(t => t.id === editingTripTimeId)}
+                        onSave={handleSaveTripTimes}
+                        onClose={() => setEditingTripTimeId(null)}
+                    />
+                )}
+
+                {/* Activity Editor */}
+                {editingActivitiesTripId && (
+                    <ActivityEditor
+                        visible={!!editingActivitiesTripId}
+                        planTripId={editingActivitiesTripId}
+                        activities={tripActivities[editingActivitiesTripId] || []}
+                        onAddActivity={handleAddActivity}
+                        onUpdateActivity={handleUpdateActivity}
+                        onDeleteActivity={handleDeleteActivity}
+                        onClose={() => setEditingActivitiesTripId(null)}
+                    />
+                )}
+            </ScrollView>
+            );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+            const styles = StyleSheet.create({
+                container: {
+                flex: 1,
     },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
+            header: {
+                flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: Spacing.md,
+            paddingVertical: Spacing.sm,
     },
-    backButton: {
-        width: 44,
-        height: 44,
-        justifyContent: "center",
-        alignItems: "center",
+            backButton: {
+                width: 44,
+            height: 44,
+            justifyContent: "center",
+            alignItems: "center",
     },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: "600",
+            headerTitle: {
+                fontSize: 20,
+            fontWeight: "600",
     },
-    menuButton: {
-        width: 44,
-        height: 44,
-        justifyContent: "center",
-        alignItems: "center",
+            menuButton: {
+                width: 44,
+            height: 44,
+            justifyContent: "center",
+            alignItems: "center",
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+            loadingContainer: {
+                flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
     },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        gap: Spacing.lg,
+            emptyContainer: {
+                flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            gap: Spacing.lg,
     },
-    scrollView: {
-        flex: 1,
+            scrollView: {
+                flex: 1,
     },
-    section: {
-        padding: Spacing.lg,
-        gap: Spacing.md,
+            section: {
+                padding: Spacing.lg,
+            gap: Spacing.md,
     },
-    planTitle: {
-        fontSize: 28,
-        fontWeight: "bold",
+            planTitle: {
+                fontSize: 28,
+            fontWeight: "bold",
     },
-    statusRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.md,
+            statusRow: {
+                flexDirection: "row",
+            alignItems: "center",
+            gap: Spacing.md,
     },
-    createdDate: {
-        fontSize: 12,
+            createdDate: {
+                fontSize: 12,
     },
-    description: {
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: Spacing.sm,
+            description: {
+                fontSize: 14,
+            lineHeight: 20,
+            marginTop: Spacing.sm,
     },
-    sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+            sectionHeader: {
+                flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "600",
+            sectionTitle: {
+                fontSize: 18,
+            fontWeight: "600",
     },
-    tripCard: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        gap: Spacing.sm,
+            tripCard: {
+                padding: Spacing.md,
+            borderRadius: BorderRadius.md,
+            borderWidth: 1,
+            gap: Spacing.sm,
     },
-    tripHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.sm,
+            tripHeader: {
+                flexDirection: "row",
+            alignItems: "center",
+            gap: Spacing.sm,
     },
-    tripTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        flex: 1,
+            tripTitle: {
+                fontSize: 16,
+            fontWeight: "600",
+            flex: 1,
     },
-    tripMeta: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.xs,
+            tripMeta: {
+                flexDirection: "row",
+            alignItems: "center",
+            gap: Spacing.xs,
     },
-    tripDate: {
-        fontSize: 12,
+            tripDate: {
+                fontSize: 12,
     },
-    tripDescription: {
-        fontSize: 13,
-        lineHeight: 18,
+            tripDescription: {
+                fontSize: 13,
+            lineHeight: 18,
     },
-    addTaskButton: {
-        width: 32,
-        height: 32,
-        borderRadius: BorderRadius.full,
-        justifyContent: "center",
-        alignItems: "center",
+            addTaskButton: {
+                width: 32,
+            height: 32,
+            borderRadius: BorderRadius.full,
+            justifyContent: "center",
+            alignItems: "center",
     },
-    emptyText: {
-        fontSize: 14,
-        fontStyle: "italic",
-        textAlign: "center",
-        padding: Spacing.lg,
+            emptyText: {
+                fontSize: 14,
+            fontStyle: "italic",
+            textAlign: "center",
+            padding: Spacing.lg,
     },
-    quickActions: {
-        flexDirection: "row",
-        gap: Spacing.md,
+            quickActions: {
+                flexDirection: "row",
+            gap: Spacing.md,
     },
-    actionCard: {
-        flex: 1,
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        borderWidth: 1,
-        alignItems: "center",
-        gap: Spacing.sm,
+            actionCard: {
+                flex: 1,
+            padding: Spacing.lg,
+            borderRadius: BorderRadius.lg,
+            borderWidth: 1,
+            alignItems: "center",
+            gap: Spacing.sm,
     },
-    actionLabel: {
-        fontSize: 14,
-        fontWeight: "600",
+            actionLabel: {
+                fontSize: 14,
+            fontWeight: "600",
     },
-    actionCount: {
-        fontSize: 12,
+            actionCount: {
+                fontSize: 12,
     },
-    button: {
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.md,
+            button: {
+                paddingHorizontal: Spacing.xl,
+            paddingVertical: Spacing.md,
+            borderRadius: BorderRadius.md,
     },
-    buttonText: {
-        color: "#FFFFFF",
-        fontSize: 16,
-        fontWeight: "600",
+            buttonText: {
+                color: "#FFFFFF",
+            fontSize: 16,
+            fontWeight: "600",
     },
-    deleteTripButton: {
-        padding: Spacing.sm,
-        marginLeft: Spacing.sm,
+            tripActionButton: {
+                padding: Spacing.sm,
+    },
+            deleteTripButton: {
+                padding: Spacing.sm,
+            marginLeft: Spacing.sm,
     },
 });
