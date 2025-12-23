@@ -55,13 +55,10 @@ export default function PlanningIndexScreen() {
     }, [loadPlans]);
 
     const filteredPlans = plans.filter((plan) => {
-        const now = new Date();
-        const startDate = new Date(plan.start_date);
-
         if (filter === "upcoming") {
-            return startDate >= now && plan.status !== "completed" && plan.status !== "cancelled";
+            return plan.status !== "completed" && plan.status !== "cancelled";
         } else if (filter === "past") {
-            return startDate < now || plan.status === "completed" || plan.status === "cancelled";
+            return plan.status === "completed" || plan.status === "cancelled";
         }
         return true;
     });
