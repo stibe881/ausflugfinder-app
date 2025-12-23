@@ -20,8 +20,9 @@ import { TaskItem } from "@/components/planning/TaskItem";
 import { AddTaskDialog } from "@/components/planning/AddTaskDialog";
 import { AddCostDialog } from "@/components/planning/AddCostDialog";
 import { BudgetSummary } from "@/components/planning/BudgetSummary";
-import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, type Plan, type PlanTask } from "@/lib/planning-api";
+import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, type Plan, type PlanTask } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
+import { getAllAusfluege } from "@/lib/supabase-api";
 
 interface PlanTrip {
     id: string;
@@ -49,6 +50,8 @@ export default function PlanDetailScreen() {
     const [showAddTask, setShowAddTask] = useState(false);
     const [showAddCost, setShowAddCost] = useState(false);
     const [budgetSummary, setBudgetSummary] = useState({ total: 0, perPerson: 0, participantCount: 1 });
+    const [showTripPicker, setShowTripPicker] = useState(false);
+    const [availableTrips, setAvailableTrips] = useState<any[]>([]);
 
     useEffect(() => {
         loadPlan();
@@ -99,6 +102,10 @@ export default function PlanDetailScreen() {
                 participantCount: 1,
             });
         }
+
+        // Load available trips for adding
+        const allTrips = await getAllAusfluege();
+        setAvailableTrips(allTrips || []);
 
         setIsLoading(false);
     };
@@ -177,6 +184,38 @@ export default function PlanDetailScreen() {
         }
     };
 
+    const handleAddTrip = async (tripId: number) => {
+        if (!plan) return;
+
+        const result = await addPlanTrip(plan.id, {
+            trip_id: tripId,
+            planned_date: new Date().toISOString(),
+        });
+
+        if (result.success) {
+            const { data: trips } = await supabase
+                .from("plan_trips")
+                .select(`*, trip:ausfluege(id, title, kurzbeschrieb)`)
+                .eq("plan_id", plan.id)
+                .order("sequence");
+
+            if (trips) setPlanTrips(trips as any);
+            setShowTripPicker(false);
+            Alert.alert("Erfolg", "Ausflug wurde hinzugefügt");
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
+        }
+    };
+
+    const handleDeleteTrip = async (tripId: string) => {
+        const result = await deletePlanTrip(tripId);
+        if (result.success) {
+            setPlanTrips(planTrips.filter((t) => t.id !== tripId));
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler beim Löschen");
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -249,6 +288,12 @@ export default function PlanDetailScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <ThemedText style={styles.sectionTitle}>Ausflüge ({planTrips.length})</ThemedText>
+                        <Pressable
+                            onPress={() => setShowTripPicker(true)}
+                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+                        </Pressable>
                     </View>
                     {planTrips.map((trip) => (
                         <View
