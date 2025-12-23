@@ -16,7 +16,8 @@ import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { StatusBadge } from "@/components/planning/StatusBadge";
 import { ParticipantInvite } from "@/components/planning/ParticipantInvite";
-import { getPlan, type Plan } from "@/lib/planning-api";
+import { TaskItem } from "@/components/planning/TaskItem";
+import { getPlan, updatePlanStatus, type Plan, type PlanTask } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 
 interface PlanTrip {
