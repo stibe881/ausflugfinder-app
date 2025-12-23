@@ -19,23 +19,28 @@ export type TransportMode = 'car' | 'public_transport' | 'bike' | 'walk';
 export interface Plan {
     id: string;
     creator_id: number;
-    trip_id?: number;
     title: string;
     description?: string;
     status: PlanStatus;
-    date_type: PlanDateType;
-    start_date: string;
-    end_date?: string;
-    location?: string;
-    meeting_point?: string;
-    meeting_point_lat?: number;
-    meeting_point_lng?: number;
-    route_start_lat?: number;
-    route_start_lng?: number;
-    route_end_lat?: number;
-    route_end_lng?: number;
     created_at: string;
     updated_at: string;
+}
+
+export interface PlanTrip {
+    id: string;
+    plan_id: string;
+    trip_id?: number;
+    custom_location?: string;
+    planned_date: string;
+    sequence: number;
+    created_at: string;
+    // Joined data
+    trip?: {
+        id: number;
+        title: string;
+        lat?: string;
+        lng?: string;
+    };
 }
 
 export interface PlanParticipant {
@@ -168,18 +173,16 @@ export interface CostSummary {
 // ============================================================================
 
 /**
- * Create a new plan
+ * Create a new plan with trips
  */
 export async function createPlan(data: {
     title: string;
     description?: string;
-    trip_id?: number;
-    start_date: string;
-    end_date?: string;
-    location?: string;
-    meeting_point?: string;
-    meeting_point_lat?: number;
-    meeting_point_lng?: number;
+    trips: Array<{
+        trip_id?: number;
+        custom_location?: string;
+        planned_date: string;
+    }>;
 }): Promise<{ success: boolean; plan?: Plan; error?: string }> {
     try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -201,10 +204,10 @@ export async function createPlan(data: {
         const { data: plan, error } = await supabase
             .from('plans')
             .insert({
-                ...data,
+                title: data.title,
+                description: data.description,
                 creator_id: userData.id,
                 status: 'idea',
-                date_type: 'fullday',
             })
             .select()
             .single();
@@ -221,6 +224,19 @@ export async function createPlan(data: {
             role: 'organizer',
             invitation_status: 'accepted',
         });
+
+        // Add trips
+        if (data.trips && data.trips.length > 0) {
+            const tripInserts = data.trips.map((trip, index) => ({
+                plan_id: plan.id,
+                trip_id: trip.trip_id,
+                custom_location: trip.custom_location,
+                planned_date: trip.planned_date,
+                sequence: index,
+            }));
+
+            await supabase.from('plan_trips').insert(tripInserts);
+        }
 
         return { success: true, plan };
     } catch (error: any) {
@@ -248,16 +264,8 @@ export async function getPlans(): Promise<Plan[]> {
         const { data, error } = await supabase
             .from('plans')
             .select('*')
-            .or(`creator_id.eq.${userData.id},id.in.(${
-                // Get plans where user is a participant
-                await supabase
-                    .from('plan_participants')
-                    .select('plan_id')
-                    .eq('user_id', userData.id)
-                    .eq('invitation_status', 'accepted')
-                    .then(res => res.data?.map(p => p.plan_id).join(',') || '')
-                })`)
-            .order('start_date', { ascending: true });
+            .eq('creator_id', userData.id)
+            .order('created_at', { ascending: false });
 
         if (error) {
             console.error('[getPlans] Error:', error);

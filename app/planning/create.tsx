@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     View,
     ScrollView,
@@ -8,7 +8,9 @@ import {
     StyleSheet,
     Alert,
     ActivityIndicator,
+    Platform,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
@@ -16,6 +18,15 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { createPlan } from "@/lib/planning-api";
+import { getAllAusfluge, type Ausflug } from "@/lib/supabase-api";
+
+interface TripSelection {
+    id: string;
+    trip_id?: number;
+    custom_location?: string;
+    planned_date: Date;
+    trip?: Ausflug;
+}
 
 export default function CreatePlanScreen() {
     const router = useRouter();
@@ -25,9 +36,62 @@ export default function CreatePlanScreen() {
 
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [location, setLocation] = useState("");
-    const [startDate, setStartDate] = useState("");
+    const [trips, setTrips] = useState<TripSelection[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [availableTrips, setAvailableTrips] = useState<Ausflug[]>([]);
+    const [showTripPicker, setShowTripPicker] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadAvailableTrips();
+    }, []);
+
+    const loadAvailableTrips = async () => {
+        const data = await getAllAusfluge();
+        setAvailableTrips(data);
+    };
+
+    const addTrip = () => {
+        const newTrip: TripSelection = {
+            id: Math.random().toString(),
+            planned_date: new Date(),
+        };
+        setTrips([...trips, newTrip]);
+    };
+
+    const addTripFromDatabase = (ausflug: Ausflug) => {
+        const newTrip: TripSelection = {
+            id: Math.random().toString(),
+            trip_id: ausflug.id,
+            trip: ausflug,
+            planned_date: new Date(),
+        };
+        setTrips([...trips, newTrip]);
+        setShowTripPicker(false);
+    };
+
+    const addCustomTrip = () => {
+        const customLocation = prompt("Eigener Ort:");
+        if (customLocation) {
+            const newTrip: TripSelection = {
+                id: Math.random().toString(),
+                custom_location: customLocation,
+                planned_date: new Date(),
+            };
+            setTrips([...trips, newTrip]);
+        }
+    };
+
+    const removeTrip = (id: string) => {
+        setTrips(trips.filter((t) => t.id !== id));
+    };
+
+    const updateTripDate = (id: string, date: Date) => {
+        setTrips(
+            trips.map((t) => (t.id === id ? { ...t, planned_date: date } : t))
+        );
+        setShowDatePicker(null);
+    };
 
     const handleCreate = async () => {
         if (!title.trim()) {
@@ -35,26 +99,8 @@ export default function CreatePlanScreen() {
             return;
         }
 
-        if (!startDate.trim()) {
-            Alert.alert("Fehler", "Bitte gib ein Datum ein");
-            return;
-        }
-
-        // Simple date parsing for MVP - format: DD.MM.YYYY
-        const dateParts = startDate.split(".");
-        if (dateParts.length !== 3) {
-            Alert.alert("Fehler", "Datum muss im Format TT.MM.JJJJ sein (z.B. 25.12.2024)");
-            return;
-        }
-
-        const date = new Date(
-            parseInt(dateParts[2]),
-            parseInt(dateParts[1]) - 1,
-            parseInt(dateParts[0])
-        );
-
-        if (isNaN(date.getTime())) {
-            Alert.alert("Fehler", "Ungültiges Datum");
+        if (trips.length === 0) {
+            Alert.alert("Fehler", "Bitte füge mindestens einen Ausflug hinzu");
             return;
         }
 
@@ -62,15 +108,16 @@ export default function CreatePlanScreen() {
         const result = await createPlan({
             title: title.trim(),
             description: description.trim() || undefined,
-            location: location.trim() || undefined,
-            start_date: date.toISOString(),
+            trips: trips.map((t) => ({
+                trip_id: t.trip_id,
+                custom_location: t.custom_location,
+                planned_date: t.planned_date.toISOString(),
+            })),
         });
         setIsLoading(false);
 
         if (result.success && result.plan) {
             router.back();
-            // TODO: Navigate to plan detail
-            // router.push(`/planning/${result.plan.id}` as any);
         } else {
             Alert.alert("Fehler", result.error || "Plan konnte nicht erstellt werden");
         }
@@ -110,48 +157,6 @@ export default function CreatePlanScreen() {
                     />
                 </View>
 
-                {/* Date */}
-                <View style={styles.inputGroup}>
-                    <ThemedText style={styles.label}>Datum *</ThemedText>
-                    <TextInput
-                        style={[
-                            styles.input,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                color: colors.text,
-                            },
-                        ]}
-                        placeholder="TT.MM.JJJJ (z.B. 25.12.2024)"
-                        placeholderTextColor={colors.textSecondary}
-                        value={startDate}
-                        onChangeText={setStartDate}
-                        keyboardType="numeric"
-                    />
-                    <ThemedText style={[styles.hint, { color: colors.textSecondary }]}>
-                        Format: TT.MM.JJJJ
-                    </ThemedText>
-                </View>
-
-                {/* Location */}
-                <View style={styles.inputGroup}>
-                    <ThemedText style={styles.label}>Ort (optional)</ThemedText>
-                    <TextInput
-                        style={[
-                            styles.input,
-                            {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.border,
-                                color: colors.text,
-                            },
-                        ]}
-                        placeholder="z.B. Emmental, BE"
-                        placeholderTextColor={colors.textSecondary}
-                        value={location}
-                        onChangeText={setLocation}
-                    />
-                </View>
-
                 {/* Description */}
                 <View style={styles.inputGroup}>
                     <ThemedText style={styles.label}>Beschreibung (optional)</ThemedText>
@@ -170,9 +175,106 @@ export default function CreatePlanScreen() {
                         value={description}
                         onChangeText={setDescription}
                         multiline
-                        numberOfLines={4}
+                        numberOfLines={3}
                         textAlignVertical="top"
                     />
+                </View>
+
+                {/* Trips */}
+                <View style={styles.inputGroup}>
+                    <ThemedText style={styles.label}>Ausflüge *</ThemedText>
+
+                    {trips.map((trip) => (
+                        <View
+                            key={trip.id}
+                            style={[
+                                styles.tripItem,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
+                        >
+                            <View style={styles.tripInfo}>
+                                <ThemedText style={styles.tripTitle}>
+                                    {trip.trip ? trip.trip.title : trip.custom_location || "Eigener Ort"}
+                                </ThemedText>
+                                <Pressable
+                                    onPress={() => setShowDatePicker(trip.id)}
+                                    style={[styles.dateButton, { borderColor: colors.border }]}
+                                >
+                                    <IconSymbol name="calendar" size={16} color={colors.primary} />
+                                    <ThemedText style={[styles.dateText, { color: colors.text }]}>
+                                        {trip.planned_date.toLocaleDateString("de-DE", {
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </ThemedText>
+                                </Pressable>
+                            </View>
+                            <Pressable onPress={() => removeTrip(trip.id)} style={styles.removeButton}>
+                                <IconSymbol name="trash" size={18} color="#EF4444" />
+                            </Pressable>
+
+                            {/* DatePicker */}
+                            {showDatePicker === trip.id && (
+                                <DateTimePicker
+                                    value={trip.planned_date}
+                                    mode="date"
+                                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                                    onChange={(event, selectedDate) => {
+                                        if (selectedDate) {
+                                            updateTripDate(trip.id, selectedDate);
+                                        } else {
+                                            setShowDatePicker(null);
+                                        }
+                                    }}
+                                />
+                            )}
+                        </View>
+                    ))}
+
+                    {/* Add Trip Buttons */}
+                    <View style={styles.addButtonsRow}>
+                        <Pressable
+                            onPress={() => setShowTripPicker(!showTripPicker)}
+                            style={[styles.addButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
+                            <ThemedText style={styles.addButtonText}>Aus Datenbank</ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={addCustomTrip}
+                            style={[styles.addButton, { backgroundColor: colors.textSecondary + "CC" }]}
+                        >
+                            <IconSymbol name="pencil.circle.fill" size={20} color="#FFFFFF" />
+                            <ThemedText style={styles.addButtonText}>Eigener Ort</ThemedText>
+                        </Pressable>
+                    </View>
+
+                    {/* Trip Picker */}
+                    {showTripPicker && (
+                        <View
+                            style={[
+                                styles.tripPicker,
+                                { backgroundColor: colors.card, borderColor: colors.border },
+                            ]}
+                        >
+                            <ScrollView style={styles.tripPickerScroll}>
+                                {availableTrips.map((ausflug) => (
+                                    <Pressable
+                                        key={ausflug.id}
+                                        onPress={() => addTripFromDatabase(ausflug)}
+                                        style={styles.tripPickerItem}
+                                    >
+                                        <ThemedText style={styles.tripPickerTitle}>
+                                            {ausflug.title}
+                                        </ThemedText>
+                                        <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+                                    </Pressable>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
                 </View>
 
                 {/* Create Button */}
@@ -188,10 +290,8 @@ export default function CreatePlanScreen() {
                         <ActivityIndicator color="#FFFFFF" />
                     ) : (
                         <>
-                            <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                            <ThemedText style={styles.createButtonText}>
-                                Plan erstellen
-                            </ThemedText>
+                            <IconSymbol name="checkmark.circle.fill" size={20} color="#FFFFFF" />
+                            <ThemedText style={styles.createButtonText}>Plan erstellen</ThemedText>
                         </>
                     )}
                 </Pressable>
@@ -246,12 +346,80 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     textArea: {
-        minHeight: 100,
+        minHeight: 80,
         paddingTop: Spacing.md,
     },
-    hint: {
+    tripItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.sm,
+    },
+    tripInfo: {
+        flex: 1,
+    },
+    tripTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        marginBottom: Spacing.xs,
+    },
+    dateButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs,
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.sm,
+        borderWidth: 1,
+        borderRadius: BorderRadius.sm,
+        alignSelf: "flex-start",
+    },
+    dateText: {
         fontSize: 12,
-        marginTop: Spacing.xs,
+    },
+    removeButton: {
+        padding: Spacing.sm,
+    },
+    addButtonsRow: {
+        flexDirection: "row",
+        gap: Spacing.sm,
+        marginTop: Spacing.sm,
+    },
+    addButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: Spacing.xs,
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.md,
+    },
+    addButtonText: {
+        color: "#FFFFFF",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    tripPicker: {
+        maxHeight: 300,
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        marginTop: Spacing.sm,
+    },
+    tripPickerScroll: {
+        maxHeight: 300,
+    },
+    tripPickerItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(0,0,0,0.05)",
+    },
+    tripPickerTitle: {
+        fontSize: 14,
     },
     createButton: {
         flexDirection: "row",
@@ -260,7 +428,7 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
         paddingVertical: Spacing.md,
         borderRadius: BorderRadius.lg,
-        marginTop: Spacing.lg,
+        marginTop: Spacing.xl,
     },
     createButtonText: {
         color: "#FFFFFF",
