@@ -95,9 +95,9 @@ export default function PlanningIndexScreen() {
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
-            <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+            <ThemedView style={styles.container}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={[styles.header, { paddingTop: insets.top }]}>
                     <Pressable
                         onPress={() => router.canGoBack() ? router.back() : router.push("/(tabs)")}
                         style={styles.backButton}
