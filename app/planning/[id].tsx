@@ -32,8 +32,8 @@ interface PlanTrip {
     planned_date: string;
     trip?: {
         id: number;
-        title: string;
-        kurzbeschrieb?: string;
+        name: string;
+        beschreibung?: string;
     };
 }
 
