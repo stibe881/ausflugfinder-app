@@ -431,6 +431,13 @@ export default function PlanDetailScreen() {
                     </View>
                 </View>
             </ScrollView>
+
+            <TripPickerModal
+                visible={showTripPicker}
+                trips={availableTrips}
+                onSelectTrip={handleAddTrip}
+                onClose={() => setShowTripPicker(false)}
+            />
         </ThemedView>
     );
 }
