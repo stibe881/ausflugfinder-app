@@ -48,7 +48,7 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                             return (
                                 <Pressable
                                     onPress={() => {
-                                        console.log('[TripPickerModal] Selected trip:', item.id, item.title);
+                                        console.log('[TripPickerModal] Selected trip:', item.id, item.name);
                                         onSelectTrip(item.id);
                                     }}
                                     style={[
@@ -57,7 +57,7 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                                     ]}
                                 >
                                     <View style={{ flex: 1 }}>
-                                        <ThemedText style={styles.tripTitle}>{item.title || 'Unbenannt'}</ThemedText>
+                                        <ThemedText style={styles.tripTitle}>{item.name || 'Unbenannt'}</ThemedText>
                                         {item.kurzbeschrieb && (
                                             <ThemedText
                                                 style={[styles.tripDescription, { color: colors.textSecondary }]}
