@@ -103,7 +103,7 @@ export default function RootLayout() {
                     </Stack>
                     <ProximityTrackingInitializer />
                     <NotificationInitializer />
-                    <StatusBar style="auto" />
+                    <StatusBar style={colorScheme === "dark" ? "light" : "dark"} translucent backgroundColor="transparent" />
                   </ThemeProvider>
                 </LanguageProvider>
               </AppThemeProvider>
