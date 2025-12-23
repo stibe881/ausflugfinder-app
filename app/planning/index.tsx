@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, Stack } from "expo-router";
 import { useState, useCallback, useEffect } from "react";
 import {
     View,
