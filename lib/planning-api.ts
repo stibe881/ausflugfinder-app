@@ -1,0 +1,570 @@
+import { supabase } from "./supabase";
+
+// ============================================================================
+// TYPES & INTERFACES
+// ============================================================================
+
+export type PlanStatus = 'idea' | 'planning' | 'confirmed' | 'completed' | 'cancelled';
+export type PlanDateType = 'fullday' | 'timeslots';
+export type ParticipantRole = 'organizer' | 'co_planner' | 'participant';
+export type InvitationStatus = 'pending' | 'accepted' | 'declined';
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskType = 'general' | 'packing' | 'booking';
+export type CostCategory = 'entrance' | 'parking' | 'transport' | 'food' | 'other';
+export type CostSplitMode = 'self_pay' | 'organizer_pays';
+export type TimelineType = 'departure' | 'arrival' | 'activity' | 'break' | 'return';
+export type CommentThreadType = 'general' | 'travel' | 'food' | 'timeline' | 'booking';
+export type TransportMode = 'car' | 'public_transport' | 'bike' | 'walk';
+
+export interface Plan {
+    id: string;
+    creator_id: number;
+    trip_id?: number;
+    title: string;
+    description?: string;
+    status: PlanStatus;
+    date_type: PlanDateType;
+    start_date: string;
+    end_date?: string;
+    location?: string;
+    meeting_point?: string;
+    meeting_point_lat?: number;
+    meeting_point_lng?: number;
+    route_start_lat?: number;
+    route_start_lng?: number;
+    route_end_lat?: number;
+    route_end_lng?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PlanParticipant {
+    id: string;
+    plan_id: string;
+    user_id?: number;
+    email?: string;
+    role: ParticipantRole;
+    adults_count: number;
+    children_count: number;
+    children_ages: number[];
+    invitation_status: InvitationStatus;
+    invitation_token?: string;
+    created_at: string;
+    // Joined data
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        profile_photo_url?: string;
+    };
+}
+
+export interface PlanTask {
+    id: string;
+    plan_id: string;
+    title: string;
+    description?: string;
+    assigned_to?: string;
+    due_date?: string;
+    priority: TaskPriority;
+    task_type: TaskType;
+    is_completed: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PlanCost {
+    id: string;
+    plan_id: string;
+    category: CostCategory;
+    description: string;
+    amount: number;
+    per_person: boolean;
+    split_mode: CostSplitMode;
+    paid_by?: string;
+    created_at: string;
+}
+
+export interface PlanTimelineItem {
+    id: string;
+    plan_id: string;
+    sequence: number;
+    type: TimelineType;
+    title: string;
+    location?: string;
+    start_time: string;
+    end_time?: string;
+    buffer_minutes: number;
+    created_at: string;
+}
+
+export interface PlanBooking {
+    id: string;
+    plan_id: string;
+    provider: string;
+    booking_number?: string;
+    time_slot?: string;
+    notes?: string;
+    created_at: string;
+}
+
+export interface PlanDocument {
+    id: string;
+    plan_id: string;
+    booking_id?: string;
+    file_name: string;
+    file_path: string;
+    file_type: string;
+    file_size?: number;
+    uploaded_by?: string;
+    created_at: string;
+}
+
+export interface PlanComment {
+    id: string;
+    plan_id: string;
+    participant_id: string;
+    thread_type: CommentThreadType;
+    message: string;
+    created_at: string;
+    // Joined data
+    participant?: PlanParticipant;
+}
+
+export interface PlanTransport {
+    id: string;
+    plan_id: string;
+    mode: TransportMode;
+    parking_info?: string;
+    ticket_links: string[];
+    public_transport_stops: Array<{
+        name: string;
+        time?: string;
+    }>;
+    created_at: string;
+}
+
+// Composite types for full plan details
+export interface PlanWithDetails extends Plan {
+    participants: PlanParticipant[];
+    tasks: PlanTask[];
+    costs: PlanCost[];
+    timeline: PlanTimelineItem[];
+    bookings: PlanBooking[];
+    documents: PlanDocument[];
+    transport?: PlanTransport;
+}
+
+export interface CostSummary {
+    total: number;
+    per_person: number;
+    fixed_costs: number;
+    variable_costs: number;
+    breakdown_by_category: Record<CostCategory, number>;
+}
+
+// ============================================================================
+// PLAN MANAGEMENT
+// ============================================================================
+
+/**
+ * Create a new plan
+ */
+export async function createPlan(data: {
+    title: string;
+    description?: string;
+    trip_id?: number;
+    start_date: string;
+    end_date?: string;
+    location?: string;
+    meeting_point?: string;
+    meeting_point_lat?: number;
+    meeting_point_lng?: number;
+}): Promise<{ success: boolean; plan?: Plan; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: 'Not authenticated' };
+        }
+
+        // Get user ID from users table
+        const { data: userData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('open_id', user.id)
+            .single();
+
+        if (!userData) {
+            return { success: false, error: 'User not found' };
+        }
+
+        const { data: plan, error } = await supabase
+            .from('plans')
+            .insert({
+                ...data,
+                creator_id: userData.id,
+                status: 'idea',
+                date_type: 'fullday',
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[createPlan] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        // Automatically add creator as organizer participant
+        await supabase.from('plan_participants').insert({
+            plan_id: plan.id,
+            user_id: userData.id,
+            role: 'organizer',
+            invitation_status: 'accepted',
+        });
+
+        return { success: true, plan };
+    } catch (error: any) {
+        console.error('[createPlan] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get all plans for a user
+ */
+export async function getPlans(): Promise<Plan[]> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data: userData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('open_id', user.id)
+            .single();
+
+        if (!userData) return [];
+
+        const { data, error } = await supabase
+            .from('plans')
+            .select('*')
+            .or(`creator_id.eq.${userData.id},id.in.(${
+                // Get plans where user is a participant
+                await supabase
+                    .from('plan_participants')
+                    .select('plan_id')
+                    .eq('user_id', userData.id)
+                    .eq('invitation_status', 'accepted')
+                    .then(res => res.data?.map(p => p.plan_id).join(',') || '')
+                })`)
+            .order('start_date', { ascending: true });
+
+        if (error) {
+            console.error('[getPlans] Error:', error);
+            return [];
+        }
+
+        return data || [];
+    } catch (error) {
+        console.error('[getPlans] Exception:', error);
+        return [];
+    }
+}
+
+/**
+ * Get plan with all details
+ */
+export async function getPlan(planId: string): Promise<{ success: boolean; plan?: PlanWithDetails; error?: string }> {
+    try {
+        const { data: plan, error: planError } = await supabase
+            .from('plans')
+            .select('*')
+            .eq('id', planId)
+            .single();
+
+        if (planError) {
+            return { success: false, error: planError.message };
+        }
+
+        // Fetch all related data in parallel
+        const [
+            { data: participants },
+            { data: tasks },
+            { data: costs },
+            { data: timeline },
+            { data: bookings },
+            { data: documents },
+            { data: transport },
+        ] = await Promise.all([
+            supabase.from('plan_participants').select('*').eq('plan_id', planId),
+            supabase.from('plan_tasks').select('*').eq('plan_id', planId).order('created_at'),
+            supabase.from('plan_costs').select('*').eq('plan_id', planId),
+            supabase.from('plan_timeline').select('*').eq('plan_id', planId).order('sequence'),
+            supabase.from('plan_bookings').select('*').eq('plan_id', planId),
+            supabase.from('plan_documents').select('*').eq('plan_id', planId),
+            supabase.from('plan_transport').select('*').eq('plan_id', planId).single(),
+        ]);
+
+        // Fetch user details for participants
+        const participantsWithUsers = await Promise.all(
+            (participants || []).map(async (p) => {
+                if (p.user_id) {
+                    const { data: user } = await supabase
+                        .from('users')
+                        .select('id, name, email, profile_photo_url')
+                        .eq('id', p.user_id)
+                        .single();
+                    return { ...p, user };
+                }
+                return p;
+            })
+        );
+
+        const planWithDetails: PlanWithDetails = {
+            ...plan,
+            participants: participantsWithUsers,
+            tasks: tasks || [],
+            costs: costs || [],
+            timeline: timeline || [],
+            bookings: bookings || [],
+            documents: documents || [],
+            transport: transport || undefined,
+        };
+
+        return { success: true, plan: planWithDetails };
+    } catch (error: any) {
+        console.error('[getPlan] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update plan
+ */
+export async function updatePlan(
+    planId: string,
+    updates: Partial<Plan>
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plans')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', planId);
+
+        if (error) {
+            console.error('[updatePlan] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[updatePlan] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update plan status
+ */
+export async function updatePlanStatus(
+    planId: string,
+    status: PlanStatus
+): Promise<{ success: boolean; error?: string }> {
+    return updatePlan(planId, { status });
+}
+
+/**
+ * Delete plan
+ */
+export async function deletePlan(planId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plans')
+            .delete()
+            .eq('id', planId);
+
+        if (error) {
+            console.error('[deletePlan] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deletePlan] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================================================
+// PARTICIPANTS
+// ============================================================================
+
+/**
+ * Add participant to plan
+ */
+export async function addParticipant(
+    planId: string,
+    data: {
+        user_id?: number;
+        email?: string;
+        role: ParticipantRole;
+        adults_count?: number;
+        children_count?: number;
+        children_ages?: number[];
+    }
+): Promise<{ success: boolean; participant?: PlanParticipant; error?: string }> {
+    try {
+        const { data: participant, error } = await supabase
+            .from('plan_participants')
+            .insert({
+                plan_id: planId,
+                ...data,
+                invitation_status: data.user_id ? 'accepted' : 'pending',
+                invitation_token: data.user_id ? undefined : crypto.randomUUID(),
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[addParticipant] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, participant };
+    } catch (error: any) {
+        console.error('[addParticipant] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Invite participant by email
+ */
+export async function inviteParticipant(
+    planId: string,
+    email: string,
+    role: ParticipantRole = 'participant'
+): Promise<{ success: boolean; invitation_token?: string; error?: string }> {
+    try {
+        const result = await addParticipant(planId, {
+            email,
+            role,
+            adults_count: 1,
+            children_count: 0,
+        });
+
+        if (!result.success) {
+            return result;
+        }
+
+        // TODO: Send email with invitation link
+        // const invitationLink = `${APP_URL}/planning/invite/${result.participant.invitation_token}`;
+
+        return {
+            success: true,
+            invitation_token: result.participant?.invitation_token,
+        };
+    } catch (error: any) {
+        console.error('[inviteParticipant] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================================================
+// COSTS
+// ============================================================================
+
+/**
+ * Add cost to plan
+ */
+export async function addCost(
+    planId: string,
+    data: {
+        category: CostCategory;
+        description: string;
+        amount: number;
+        per_person?: boolean;
+        split_mode?: CostSplitMode;
+        paid_by?: string;
+    }
+): Promise<{ success: boolean; cost?: PlanCost; error?: string }> {
+    try {
+        const { data: cost, error } = await supabase
+            .from('plan_costs')
+            .insert({
+                plan_id: planId,
+                ...data,
+                per_person: data.per_person ?? false,
+                split_mode: data.split_mode ?? 'self_pay',
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[addCost] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, cost };
+    } catch (error: any) {
+        console.error('[addCost] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get cost summary for plan
+ */
+export async function getCostSummary(planId: string): Promise<{ success: boolean; summary?: CostSummary; error?: string }> {
+    try {
+        const { data: costs, error } = await supabase
+            .from('plan_costs')
+            .select('*')
+            .eq('plan_id', planId);
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        const { data: participants } = await supabase
+            .from('plan_participants')
+            .select('adults_count, children_count')
+            .eq('plan_id', planId)
+            .eq('invitation_status', 'accepted');
+
+        const totalParticipants = participants?.reduce(
+            (sum, p) => sum + p.adults_count + p.children_count,
+            0
+        ) || 1;
+
+        const total = costs?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+        const fixedCosts = costs?.filter(c => !c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+        const variableCosts = costs?.filter(c => c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+
+        const breakdown: Record<CostCategory, number> = {
+            entrance: 0,
+            parking: 0,
+            transport: 0,
+            food: 0,
+            other: 0,
+        };
+
+        costs?.forEach(c => {
+            breakdown[c.category] += Number(c.amount);
+        });
+
+        return {
+            success: true,
+            summary: {
+                total,
+                per_person: (fixedCosts / totalParticipants) + variableCosts,
+                fixed_costs: fixedCosts,
+                variable_costs: variableCosts,
+                breakdown_by_category: breakdown,
+            },
+        };
+    } catch (error: any) {
+        console.error('[getCostSummary] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
