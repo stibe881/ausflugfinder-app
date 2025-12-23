@@ -45,6 +45,9 @@ export default function PlanningIndexScreen() {
         }
     }, [isAuthenticated, loadPlans]);
 
+    const handlePlanPress = (planId: string) => {
+        router.push(`/planning/${planId}` as any);
+    };
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadPlans();
