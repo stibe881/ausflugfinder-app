@@ -39,7 +39,7 @@ export function TripTimeEditor({
     onSave,
     onClose,
 }: TripTimeEditorProps) {
-    const colorScheme = useColorScheme();
+    const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
     const [departureTime, setDepartureTime] = useState<Date>(
@@ -108,7 +108,7 @@ export function TripTimeEditor({
                         <View style={styles.section}>
                             <ThemedText style={styles.label}>Abfahrtszeit</ThemedText>
                             <Pressable
-                                style={[styles.timeButton, { backgroundColor: colors.cardBackground }]}
+                                style={[styles.timeButton, { backgroundColor: colors.card }]}
                                 onPress={() => setShowDeparturePicker(true)}
                             >
                                 <IconSymbol name="clock" size={20} color={colors.text} />
@@ -129,7 +129,7 @@ export function TripTimeEditor({
                         <View style={styles.section}>
                             <ThemedText style={styles.label}>Ankunftszeit</ThemedText>
                             <Pressable
-                                style={[styles.timeButton, { backgroundColor: colors.cardBackground }]}
+                                style={[styles.timeButton, { backgroundColor: colors.card }]}
                                 onPress={() => setShowArrivalPicker(true)}
                             >
                                 <IconSymbol name="clock" size={20} color={colors.text} />
@@ -152,7 +152,7 @@ export function TripTimeEditor({
                             <TextInput
                                 style={[
                                     styles.input,
-                                    { backgroundColor: colors.cardBackground, color: colors.text },
+                                    { backgroundColor: colors.card, color: colors.text },
                                 ]}
                                 value={bufferMinutes}
                                 onChangeText={setBufferMinutes}
@@ -168,7 +168,7 @@ export function TripTimeEditor({
                             <TextInput
                                 style={[
                                     styles.textArea,
-                                    { backgroundColor: colors.cardBackground, color: colors.text },
+                                    { backgroundColor: colors.card, color: colors.text },
                                 ]}
                                 value={notes}
                                 onChangeText={setNotes}
@@ -183,7 +183,7 @@ export function TripTimeEditor({
                     {/* Buttons */}
                     <View style={styles.buttons}>
                         <Pressable
-                            style={[styles.button, styles.cancelButton, { backgroundColor: colors.cardBackground }]}
+                            style={[styles.button, styles.cancelButton, { backgroundColor: colors.card }]}
                             onPress={onClose}
                         >
                             <ThemedText style={styles.buttonText}>Abbrechen</ThemedText>
@@ -278,3 +278,4 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
 });
+

@@ -30,6 +30,10 @@ interface PlanTrip {
     trip_id?: number;
     custom_location?: string;
     planned_date: string;
+    departure_time?: string;
+    arrival_time?: string;
+    notes?: string;
+    buffer_time_minutes?: number;
     trip?: {
         id: number;
         name: string;
