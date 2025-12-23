@@ -74,7 +74,7 @@ export default function PlanDetailScreen() {
             .from("plan_trips")
             .select(`
         *,
-        trip:ausfluege(id, name, kurzbeschrieb)
+        trip:ausfluege(id, name, beschreibung)
       `)
             .eq("plan_id", id)
             .order("sequence");
@@ -206,7 +206,7 @@ export default function PlanDetailScreen() {
             console.log('[handleAddTrip] Success! Reloading trips...');
             const { data: trips, error } = await supabase
                 .from("plan_trips")
-                .select(`*, trip:ausfluege(id, name, kurzbeschrieb)`)
+                .select(`*, trip:ausfluege(id, name, beschreibung)`)
                 .eq("plan_id", plan.id)
                 .order("sequence");
 
