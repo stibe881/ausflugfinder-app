@@ -98,7 +98,10 @@ export default function PlanningIndexScreen() {
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <Pressable onPress={() => router.back()} style={styles.backButton}>
+                    <Pressable
+                        onPress={() => router.canGoBack() ? router.back() : router.push("/(tabs)")}
+                        style={styles.backButton}
+                    >
                         <IconSymbol name="chevron.left" size={24} color={colors.text} />
                     </Pressable>
                     <ThemedText style={styles.headerTitle}>Planung</ThemedText>
