@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
