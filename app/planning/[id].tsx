@@ -151,6 +151,32 @@ export default function PlanDetailScreen() {
         }
     };
 
+    const handleAddCost = async (costData: {
+        category: "entrance" | "parking" | "transport" | "food" | "other";
+        description: string;
+        amount: number;
+        per_person?: boolean;
+    }) => {
+        if (!plan) return;
+
+        const result = await addCost(plan.id, costData);
+
+        if (result.success) {
+            // Reload budget summary
+            const costResult = await getCostSummary(plan.id);
+            if (costResult.success && costResult.summary) {
+                setBudgetSummary({
+                    total: costResult.summary.total,
+                    perPerson: costResult.summary.per_person,
+                    participantCount: 1,
+                });
+            }
+            Alert.alert("Erfolg", "Kosten wurden hinzugef\u00fcgt");
+        } else {
+            throw new Error(result.error || "Kosten konnten nicht hinzugef\u00fcgt werden");
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
