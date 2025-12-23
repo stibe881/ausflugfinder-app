@@ -7,12 +7,16 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
+    Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { SwipeablePlanCard } from "@/components/planning/SwipeablePlanCard";
+import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useAuth } from "@/hooks/use-auth";
 import { getPlans, deletePlan, type Plan } from "@/lib/planning-api";
 
 type FilterType = "all" | "upcoming" | "past";
@@ -34,9 +38,7 @@ export default function PlanningIndexScreen() {
         const data = await getPlans();
         setPlans(data);
         setIsLoading(false);
-    }, []);
-
-    useEffect(() => {
+    }, []); useEffect(() => {
         if (isAuthenticated) {
             loadPlans();
         }
@@ -51,6 +53,15 @@ export default function PlanningIndexScreen() {
         await loadPlans();
         setRefreshing(false);
     }, [loadPlans]);
+
+    const handleDeletePlan = async (planId: string) => {
+        const result = await deletePlan(planId);
+        if (result.success) {
+            setPlans(plans.filter((p) => p.id !== planId));
+        } else {
+            Alert.alert("Fehler", result.error || "Plan konnte nicht gelöscht werden");
+        }
+    };
 
     const filteredPlans = plans.filter((plan) => {
         if (filter === "upcoming") {

@@ -405,27 +405,6 @@ export async function deletePlan(planId: string): Promise<{ success: boolean; er
     }
 }
 
-/**
- * Delete plan
- */
-export async function deletePlan(planId: string): Promise<{ success: boolean; error?: string }> {
-    try {
-        const { error } = await supabase
-            .from('plans')
-            .delete()
-            .eq('id', planId);
-
-        if (error) {
-            console.error('[deletePlan] Error:', error);
-            return { success: false, error: error.message };
-        }
-
-        return { success: true };
-    } catch (error: any) {
-        console.error('[deletePlan] Exception:', error);
-        return { success: false, error: error.message };
-    }
-}
 
 /**
  * Add trip to plan
