@@ -318,7 +318,7 @@ export default function PlanDetailScreen() {
                                         color={colors.primary}
                                     />
                                     <ThemedText style={styles.tripTitle}>
-                                        {trip.trip?.title || trip.custom_location}
+                                        {trip.trip?.name || trip.custom_location || "Eigener Ort"}
                                     </ThemedText>
                                 </View>
                                 <View style={styles.tripMeta}>
