@@ -106,6 +106,7 @@ export default function PlanDetailScreen() {
 
         // Load available trips for adding
         const allTrips = await getAllAusfluege();
+        console.log('[Plan Detail] Loaded trips for picker:', allTrips?.length || 0, allTrips);
         setAvailableTrips(allTrips || []);
 
         setIsLoading(false);

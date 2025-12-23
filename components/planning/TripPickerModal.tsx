@@ -15,6 +15,8 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
 
+    console.log('[TripPickerModal] Rendering with trips:', trips?.length || 0, trips);
+
     return (
         <Modal
             visible={visible}
