@@ -58,6 +58,7 @@ export default function TabLayout() {
         name="planner"
         options={{
           title: "Planer",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="calendar" color={color} />
           ),
