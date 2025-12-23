@@ -48,6 +48,7 @@ export default function PlanningIndexScreen() {
     const handlePlanPress = (planId: string) => {
         router.push(`/planning/${planId}` as any);
     };
+
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadPlans();
@@ -65,123 +66,114 @@ export default function PlanningIndexScreen() {
 
     if (!isAuthenticated) {
         return (
-            <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-                <View style={styles.header}>
-                    <ThemedText style={styles.headerTitle}>Planung</ThemedText>
-                </View>
-                <View style={styles.emptyContainer}>
-                    <IconSymbol name="calendar" size={64} color={colors.textSecondary} />
-                    <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-                        Anmeldung erforderlich
-                    </ThemedText>
-                    <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                        Melde dich an, um Ausflüge zu planen
-                    </ThemedText>
-                    <Pressable
-                        onPress={() => router.push("/login" as any)}
-                        style={[styles.loginButton, { backgroundColor: colors.primary }]}
-                    >
-                        <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
-                    </Pressable>
-                </View>
-            </ThemedView>
+            <>
+                <Stack.Screen options={{ headerShown: false }} />
+                <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+                    <View style={styles.header}>
+                        <ThemedText style={styles.headerTitle}>Planung</ThemedText>
+                    </View>
+                    <View style={styles.emptyContainer}>
+                        <IconSymbol name="calendar" size={64} color={colors.textSecondary} />
+                        <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
+                            Anmeldung erforderlich
+                        </ThemedText>
+                        <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                            Melde dich an, um Ausflüge zu planen
+                        </ThemedText>
+                        <Pressable
+                            onPress={() => router.push("/login" as any)}
+                            style={[styles.loginButton, { backgroundColor: colors.primary }]}
+                        >
+                            <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
+                        </Pressable>
+                    </View>
+                </ThemedView>
+            </>
         );
     }
 
     return (
-        <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <View>
+        <>
+            <Stack.Screen options={{ headerShown: false }} />
+            <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <Pressable onPress={() => router.back()} style={styles.backButton}>
+                        <IconSymbol name="chevron.left" size={24} color={colors.text} />
+                    </Pressable>
                     <ThemedText style={styles.headerTitle}>Planung</ThemedText>
-                    <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                        {filteredPlans.length} {filter === "upcoming" ? "geplante" : filter === "past" ? "vergangene" : ""} Ausflüge
-                    </ThemedText>
-                </View>
-                <Pressable
-                    onPress={() => router.push("/planning/create" as any)}
-                    style={[styles.createButton, { backgroundColor: colors.primary }]}
-                >
-                    <IconSymbol name="plus" size={24} color="#FFFFFF" />
-                </Pressable>
-            </View>
-
-            {/* Filter Tabs */}
-            <View style={styles.filterTabs}>
-                {[
-                    { key: "upcoming" as const, label: "Geplant" },
-                    { key: "past" as const, label: "Vergangen" },
-                    { key: "all" as const, label: "Alle" },
-                ].map((option) => (
                     <Pressable
-                        key={option.key}
-                        onPress={() => setFilter(option.key)}
-                        style={[
-                            styles.filterTab,
-                            {
-                                backgroundColor: filter === option.key ? colors.primary : colors.surface,
-                                borderColor: filter === option.key ? colors.primary : colors.border,
-                            },
-                        ]}
+                        onPress={() => router.push("/planning/create" as any)}
+                        style={styles.addButton}
                     >
-                        <ThemedText
+                        <IconSymbol name="plus" size={24} color={colors.text} />
+                    </Pressable>
+                </View>
+
+                {/* Filter Tabs */}
+                <View style={styles.filterTabs}>
+                    {[
+                        { key: "upcoming" as const, label: "Geplant" },
+                        { key: "past" as const, label: "Vergangen" },
+                        { key: "all" as const, label: "Alle" },
+                    ].map((option) => (
+                        <Pressable
+                            key={option.key}
+                            onPress={() => setFilter(option.key)}
                             style={[
-                                styles.filterTabText,
-                                { color: filter === option.key ? "#FFFFFF" : colors.text },
+                                styles.filterTab,
+                                {
+                                    backgroundColor: filter === option.key ? colors.primary : colors.surface,
+                                    borderColor: filter === option.key ? colors.primary : colors.border,
+                                },
                             ]}
                         >
-                            {option.label}
-                        </ThemedText>
-                    </Pressable>
-                ))}
-            </View>
-
-            {/* Plan List */}
-            {isLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-            ) : filteredPlans.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <IconSymbol name="calendar" size={64} color={colors.textSecondary} />
-                    <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-                        {filter === "upcoming" ? "Keine geplanten Ausflüge" : "Keine vergangenen Ausflüge"}
-                    </ThemedText>
-                    <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                        Plane deinen ersten Ausflug
-                    </ThemedText>
-                    {filter === "upcoming" && (
-                        <Pressable
-                            onPress={() => router.push("/planning/create" as any)}
-                            style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-                        >
-                            <IconSymbol name="plus.circle.fill" size={20} color="#FFFFFF" />
-                            <ThemedText style={styles.emptyButtonText}>Neuen Plan erstellen</ThemedText>
+                            <ThemedText
+                                style={[
+                                    styles.filterTabText,
+                                    { color: filter === option.key ? "#FFFFFF" : colors.text },
+                                ]}
+                            >
+                                {option.label}
+                            </ThemedText>
                         </Pressable>
-                    )}
+                    ))}
                 </View>
-            ) : (
-                <FlatList
-                    data={filteredPlans}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <PlanCard
-                            plan={item}
-                            participantCount={0} // TODO: Load participant count
-                            onPress={() => router.push(`/planning/${item.id}` as any)}
-                        />
-                    )}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            tintColor={colors.primary}
-                        />
-                    }
-                />
-            )}
-        </ThemedView>
+
+                {/* Plans List */}
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                ) : filteredPlans.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <IconSymbol name="calendar" size={64} color={colors.textSecondary} />
+                        <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
+                            Keine Pläne vorhanden
+                        </ThemedText>
+                        <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                            Erstelle deinen ersten Plan
+                        </ThemedText>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={filteredPlans}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }) => (
+                            <PlanCard plan={item} onPress={() => handlePlanPress(item.id)} />
+                        )}
+                        contentContainerStyle={styles.list}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={handleRefresh}
+                                tintColor={colors.primary}
+                            />
+                        }
+                    />
+                )}
+            </ThemedView>
+        </>
     );
 }
 
@@ -191,24 +183,24 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: Spacing.lg,
-        paddingTop: Spacing.md,
-        paddingBottom: Spacing.md,
+        justifyContent: "space-between",
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+    },
+    backButton: {
+        width: 44,
+        height: 44,
+        justifyContent: "center",
+        alignItems: "center",
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: "bold",
+        fontSize: 20,
+        fontWeight: "600",
     },
-    headerSubtitle: {
-        fontSize: 14,
-        marginTop: 2,
-    },
-    createButton: {
-        width: 48,
-        height: 48,
-        borderRadius: BorderRadius.full,
+    addButton: {
+        width: 44,
+        height: 44,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -229,7 +221,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
     },
-    listContent: {
+    list: {
         paddingHorizontal: Spacing.lg,
         paddingBottom: Spacing.xl,
     },
@@ -242,37 +234,23 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: Spacing.xl,
+        gap: Spacing.md,
+        paddingHorizontal: Spacing.xl,
     },
     emptyTitle: {
         fontSize: 20,
         fontWeight: "600",
-        marginTop: Spacing.md,
-    },
-    emptySubtitle: {
-        fontSize: 16,
-        marginTop: Spacing.xs,
         textAlign: "center",
     },
-    emptyButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.sm,
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        marginTop: Spacing.lg,
-    },
-    emptyButtonText: {
-        color: "#FFFFFF",
-        fontSize: 16,
-        fontWeight: "600",
+    emptySubtitle: {
+        fontSize: 14,
+        textAlign: "center",
     },
     loginButton: {
-        paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.xl,
-        borderRadius: BorderRadius.lg,
-        marginTop: Spacing.lg,
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.md,
+        marginTop: Spacing.md,
     },
     loginButtonText: {
         color: "#FFFFFF",
