@@ -197,7 +197,7 @@ export default function PlanDetailScreen() {
         if (result.success) {
             const { data: trips } = await supabase
                 .from("plan_trips")
-                .select(`*, trip:ausfluege(id, title, kurzbeschrieb)`)
+                .select(`*, trip:ausfluege(id, name, kurzbeschrieb)`)
                 .eq("plan_id", plan.id)
                 .order("sequence");
 
