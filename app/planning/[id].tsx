@@ -597,4 +597,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
     },
+    deleteTripButton: {
+        padding: Spacing.sm,
+        marginLeft: Spacing.sm,
+    },
 });
