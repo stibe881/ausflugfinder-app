@@ -74,6 +74,20 @@ export default function PlanDetailScreen() {
         setIsLoading(false);
     };
 
+    const updateStatus = async (newStatus: Plan["status"]) => {
+        if (!plan) return;
+
+        const { updatePlanStatus } = await import("@/lib/planning-api");
+        const result = await updatePlanStatus(plan.id, newStatus);
+
+        if (result.success) {
+            setPlan({ ...plan, status: newStatus });
+            Alert.alert("Erfolg", "Status wurde geändert");
+        } else {
+            Alert.alert("Fehler", result.error || "Status konnte nicht geändert werden");
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -108,7 +122,19 @@ export default function PlanDetailScreen() {
                     <IconSymbol name="chevron.left" size={24} color={colors.text} />
                 </Pressable>
                 <ThemedText style={styles.headerTitle}>Plan Details</ThemedText>
-                <Pressable style={styles.menuButton}>
+                <Pressable
+                    style={styles.menuButton}
+                    onPress={() =>
+                        Alert.alert("Status ändern", "Wähle einen neuen Status", [
+                            { text: "Abbrechen", style: "cancel" },
+                            { text: "Idee", onPress: () => updateStatus("idea") },
+                            { text: "In Planung", onPress: () => updateStatus("planning") },
+                            { text: "Fix", onPress: () => updateStatus("confirmed") },
+                            { text: "Erledigt", onPress: () => updateStatus("completed") },
+                            { text: "Abgesagt", onPress: () => updateStatus("cancelled") },
+                        ])
+                    }
+                >
                     <IconSymbol name="ellipsis.circle" size={24} color={colors.text} />
                 </Pressable>
             </View>
