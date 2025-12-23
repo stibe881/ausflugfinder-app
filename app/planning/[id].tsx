@@ -58,6 +58,11 @@ export default function PlanDetailScreen() {
     const [showTripPicker, setShowTripPicker] = useState(false);
     const [availableTrips, setAvailableTrips] = useState<any[]>([]);
 
+    // Timeline state
+    const [editingTripTimeId, setEditingTripTimeId] = useState<string | null>(null);
+    const [editingActivitiesTripId, setEditingActivitiesTripId] = useState<string | null>(null);
+    const [tripActivities, setTripActivities] = useState<Record<string, TripActivity[]>>({});
+
     useEffect(() => {
         loadPlan();
     }, [id]);
@@ -235,6 +240,60 @@ export default function PlanDetailScreen() {
         }
     };
 
+    // Timeline handlers
+    const handleSaveTripTimes = async (times: { departure_time?: string; arrival_time?: string; notes?: string; buffer_time_minutes?: number }) => {
+        if (!editingTripTimeId) return;
+        const result = await updatePlanTripTimes(editingTripTimeId, times);
+        if (result.success) {
+            setPlanTrips(planTrips.map(trip => trip.id === editingTripTimeId ? { ...trip, ...times } : trip));
+            setEditingTripTimeId(null);
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler beim Speichern");
+        }
+    };
+
+    const loadTripActivities = async (tripId: string) => {
+        const result = await getTripActivities(tripId);
+        if (result.success && result.activities) {
+            setTripActivities(prev => ({ ...prev, [tripId]: result.activities || [] }));
+        }
+    };
+
+    const handleOpenActivityEditor = async (tripId: string) => {
+        setEditingActivitiesTripId(tripId);
+        if (!tripActivities[tripId]) await loadTripActivities(tripId);
+    };
+
+    const handleAddActivity = async (activity: any) => {
+        if (!editingActivitiesTripId) return;
+        const result = await addTripActivity(editingActivitiesTripId, activity);
+        if (result.success && result.activity) {
+            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: [...(prev[editingActivitiesTripId] || []), result.activity!] }));
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
+        }
+    };
+
+    const handleUpdateActivity = async (activityId: string, updates: any) => {
+        if (!editingActivitiesTripId) return;
+        const result = await updateTripActivity(activityId, updates);
+        if (result.success) {
+            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: (prev[editingActivitiesTripId] || []).map(act => act.id === activityId ? { ...act, ...updates } : act) }));
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler");
+        }
+    };
+
+    const handleDeleteActivity = async (activityId: string) => {
+        if (!editingActivitiesTripId) return;
+        const result = await deleteTripActivity(activityId);
+        if (result.success) {
+            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: (prev[editingActivitiesTripId] || []).filter(act => act.id !== activityId) }));
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler");
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -358,13 +417,29 @@ export default function PlanDetailScreen() {
                                     </ThemedText>
                                 )}
                             </View>
-                            <Pressable
-                                onPress={() => handleDeleteTrip(trip.id)}
-                                style={styles.deleteTripButton}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <IconSymbol name="trash" size={18} color="#FF3B30" />
-                            </Pressable>
+                            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                                <Pressable
+                                    onPress={() => setEditingTripTimeId(trip.id)}
+                                    style={styles.tripActionButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <IconSymbol name="clock" size={18} color={colors.tint} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => handleOpenActivityEditor(trip.id)}
+                                    style={styles.tripActionButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <IconSymbol name="list.bullet" size={18} color={colors.tint} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => handleDeleteTrip(trip.id)}
+                                    style={styles.tripActionButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <IconSymbol name="trash" size={18} color="#FF3B30" />
+                                </Pressable>
+                            </View>
                         </View>
                     ))}
                 </View>
