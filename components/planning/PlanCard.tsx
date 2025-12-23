@@ -9,11 +9,11 @@ import type { Plan } from "@/lib/planning-api";
 
 interface PlanCardProps {
     plan: Plan;
-    participantCount: number;
+    participantCount?: number;
     onPress: () => void;
 }
 
-export function PlanCard({ plan, participantCount, onPress }: PlanCardProps) {
+export function PlanCard({ plan, participantCount = 0, onPress }: PlanCardProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
 
