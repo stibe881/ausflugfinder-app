@@ -208,6 +208,8 @@ export async function createPlan(data: {
                 description: data.description,
                 creator_id: userData.id,
                 status: 'idea',
+                // Temporary: use first trip's date for start_date (old schema compatibility)
+                start_date: data.trips[0]?.planned_date || new Date().toISOString(),
             })
             .select()
             .single();

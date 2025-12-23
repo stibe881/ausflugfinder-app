@@ -18,7 +18,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { createPlan } from "@/lib/planning-api";
-import { getRecommendedTrips, type Ausflug } from "@/lib/supabase-api";
+import { getAllAusfluege, type Ausflug } from "@/lib/supabase-api";
 
 interface TripSelection {
     id: string;
@@ -47,7 +47,7 @@ export default function CreatePlanScreen() {
     }, []);
 
     const loadAvailableTrips = async () => {
-        const data = await getRecommendedTrips();
+        const data = await getAllAusfluege();
         setAvailableTrips(data);
     };
 
