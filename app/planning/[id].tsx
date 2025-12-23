@@ -18,7 +18,9 @@ import { StatusBadge } from "@/components/planning/StatusBadge";
 import { ParticipantInvite } from "@/components/planning/ParticipantInvite";
 import { TaskItem } from "@/components/planning/TaskItem";
 import { AddTaskDialog } from "@/components/planning/AddTaskDialog";
-import { getPlan, updatePlanStatus, addTask, type Plan, type PlanTask } from "@/lib/planning-api";
+import { AddCostDialog } from "@/components/planning/AddCostDialog";
+import { BudgetSummary } from "@/components/planning/BudgetSummary";
+import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, type Plan, type PlanTask } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 
 interface PlanTrip {
