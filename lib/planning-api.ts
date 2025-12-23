@@ -405,6 +405,82 @@ export async function deletePlan(planId: string): Promise<{ success: boolean; er
     }
 }
 
+/**
+ * Delete plan
+ */
+export async function deletePlan(planId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plans')
+            .delete()
+            .eq('id', planId);
+
+        if (error) {
+            console.error('[deletePlan] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deletePlan] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Add trip to plan
+ */
+export async function addPlanTrip(
+    planId: string,
+    tripData: {
+        trip_id?: number;
+        custom_location?: string;
+        planned_date: string;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .insert({
+                plan_id: planId,
+                ...tripData,
+                sequence: 0, // Will be updated if needed
+            });
+
+        if (error) {
+            console.error('[addPlanTrip] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[addPlanTrip] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete trip from plan
+ */
+export async function deletePlanTrip(tripId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .delete()
+            .eq('id', tripId);
+
+        if (error) {
+            console.error('[deletePlanTrip] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deletePlanTrip] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // ============================================================================
 // PARTICIPANTS
 // ============================================================================
