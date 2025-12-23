@@ -301,38 +301,52 @@ export default function PlanDetailScreen() {
                             key={trip.id}
                             style={[
                                 styles.tripCard,
-                                { backgroundColor: colors.surface, borderColor: colors.border },
+                                {
+                                    backgroundColor: colors.surface,
+                                    borderColor: colors.border,
+                                    flexDirection: "row",
+                                    alignItems: "flex-start",
+                                },
                             ]}
                         >
-                            <View style={styles.tripHeader}>
-                                <IconSymbol
-                                    name={trip.trip_id ? "mappin.circle.fill" : "location.fill"}
-                                    size={20}
-                                    color={colors.primary}
-                                />
-                                <ThemedText style={styles.tripTitle}>
-                                    {trip.trip?.title || trip.custom_location}
-                                </ThemedText>
+                            <View style={{ flex: 1 }}>
+                                <View style={styles.tripHeader}>
+                                    <IconSymbol
+                                        name={trip.trip_id ? "mappin.circle.fill" : "location.fill"}
+                                        size={20}
+                                        color={colors.primary}
+                                    />
+                                    <ThemedText style={styles.tripTitle}>
+                                        {trip.trip?.title || trip.custom_location}
+                                    </ThemedText>
+                                </View>
+                                <View style={styles.tripMeta}>
+                                    <IconSymbol name="calendar" size={14} color={colors.textSecondary} />
+                                    <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
+                                        {new Date(trip.planned_date).toLocaleDateString("de-DE", {
+                                            weekday: "short",
+                                            day: "2-digit",
+                                            month: "short",
+                                            year: "numeric",
+                                        })}
+                                    </ThemedText>
+                                </View>
+                                {trip.trip?.kurzbeschrieb && (
+                                    <ThemedText
+                                        style={[styles.tripDescription, { color: colors.textSecondary }]}
+                                        numberOfLines={2}
+                                    >
+                                        {trip.trip.kurzbeschrieb}
+                                    </ThemedText>
+                                )}
                             </View>
-                            <View style={styles.tripMeta}>
-                                <IconSymbol name="calendar" size={14} color={colors.textSecondary} />
-                                <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
-                                    {new Date(trip.planned_date).toLocaleDateString("de-DE", {
-                                        weekday: "short",
-                                        day: "2-digit",
-                                        month: "short",
-                                        year: "numeric",
-                                    })}
-                                </ThemedText>
-                            </View>
-                            {trip.trip?.kurzbeschrieb && (
-                                <ThemedText
-                                    style={[styles.tripDescription, { color: colors.textSecondary }]}
-                                    numberOfLines={2}
-                                >
-                                    {trip.trip.kurzbeschrieb}
-                                </ThemedText>
-                            )}
+                            <Pressable
+                                onPress={() => handleDeleteTrip(trip.id)}
+                                style={styles.deleteTripButton}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <IconSymbol name="trash" size={18} color="#FF3B30" />
+                            </Pressable>
                         </View>
                     ))}
                 </View>
