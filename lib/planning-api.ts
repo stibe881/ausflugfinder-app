@@ -478,143 +478,144 @@ export async function inviteParticipant(
         console.error('[inviteParticipant] Exception:', error);
         return { success: false, error: error.message };
     }
+}
 
-    // ============================================================================
-    // TASKS
-    // ============================================================================
+// ============================================================================
+// TASKS
+// ============================================================================
 
-    /**
-     * Add task to plan
-     */
-    export async function addTask(
-        planId: string,
-        data: {
-            title: string;
-            description?: string;
-            priority: TaskPriority;
-            task_type: TaskType;
-            due_date?: string;
-            assigned_to?: string;
-        }
-    ): Promise<{ success: boolean; task?: PlanTask; error?: string }> {
-        try {
-            const { data: task, error } = await supabase
-                .from('plan_tasks')
-                .insert({
-                    plan_id: planId,
-                    ...data,
-                    is_completed: false,
-                })
-                .select()
-                .single();
+/**
+ * Add task to plan
+ */
+export async function addTask(
+    planId: string,
+    data: {
+        title: string;
+        description?: string;
+        priority: TaskPriority;
+        task_type: TaskType;
+        due_date?: string;
+        assigned_to?: string;
+    }
+): Promise<{ success: boolean; task?: PlanTask; error?: string }> {
+    try {
+        const { data: task, error } = await supabase
+            .from('plan_tasks')
+            .insert({
+                plan_id: planId,
+                ...data,
+                is_completed: false,
+            })
+            .select()
+            .single();
 
-            if (error) {
-                console.error('[addTask] Error:', error);
-                return { success: false, error: error.message };
-            }
-
-            return { success: true, task };
-        } catch (error: any) {
-            console.error('[addTask] Exception:', error);
+        if (error) {
+            console.error('[addTask] Error:', error);
             return { success: false, error: error.message };
         }
+
+        return { success: true, task };
+    } catch (error: any) {
+        console.error('[addTask] Exception:', error);
+        return { success: false, error: error.message };
     }
+}
 
-    // ============================================================================
-    // COSTS
-    // ============================================================================
+// ============================================================================
+// COSTS
+// ============================================================================
 
-    /**
-     * Add cost to plan
-     */
-    export async function addCost(
-        planId: string,
-        data: {
-            category: CostCategory;
-            description: string;
-            amount: number;
-            per_person?: boolean;
-            split_mode?: CostSplitMode;
-            paid_by?: string;
-        }
-    ): Promise<{ success: boolean; cost?: PlanCost; error?: string }> {
-        try {
-            const { data: cost, error } = await supabase
-                .from('plan_costs')
-                .insert({
-                    plan_id: planId,
-                    ...data,
-                    per_person: data.per_person ?? false,
-                    split_mode: data.split_mode ?? 'self_pay',
-                })
-                .select()
-                .single();
+/**
+ * Add cost to plan
+ */
+export async function addCost(
+    planId: string,
+    data: {
+        category: CostCategory;
+        description: string;
+        amount: number;
+        per_person?: boolean;
+        split_mode?: CostSplitMode;
+        paid_by?: string;
+    }
+): Promise<{ success: boolean; cost?: PlanCost; error?: string }> {
+    try {
+        const { data: cost, error } = await supabase
+            .from('plan_costs')
+            .insert({
+                plan_id: planId,
+                ...data,
+                per_person: data.per_person ?? false,
+                split_mode: data.split_mode ?? 'self_pay',
+            })
+            .select()
+            .single();
 
-            if (error) {
-                console.error('[addCost] Error:', error);
-                return { success: false, error: error.message };
-            }
-
-            return { success: true, cost };
-        } catch (error: any) {
-            console.error('[addCost] Exception:', error);
+        if (error) {
+            console.error('[addCost] Error:', error);
             return { success: false, error: error.message };
         }
+
+        return { success: true, cost };
+    } catch (error: any) {
+        console.error('[addCost] Exception:', error);
+        return { success: false, error: error.message };
     }
+}
 
-    /**
-     * Get cost summary for plan
-     */
-    export async function getCostSummary(planId: string): Promise<{ success: boolean; summary?: CostSummary; error?: string }> {
-        try {
-            const { data: costs, error } = await supabase
-                .from('plan_costs')
-                .select('*')
-                .eq('plan_id', planId);
+/**
+ * Get cost summary for plan
+ */
+export async function getCostSummary(planId: string): Promise<{ success: boolean; summary?: CostSummary; error?: string }> {
+    try {
+        const { data: costs, error } = await supabase
+            .from('plan_costs')
+            .select('*')
+            .eq('plan_id', planId);
 
-            if (error) {
-                return { success: false, error: error.message };
-            }
-
-            const { data: participants } = await supabase
-                .from('plan_participants')
-                .select('adults_count, children_count')
-                .eq('plan_id', planId)
-                .eq('invitation_status', 'accepted');
-
-            const totalParticipants = participants?.reduce(
-                (sum, p) => sum + p.adults_count + p.children_count,
-                0
-            ) || 1;
-
-            const total = costs?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-            const fixedCosts = costs?.filter(c => !c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-            const variableCosts = costs?.filter(c => c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
-
-            const breakdown: Record<CostCategory, number> = {
-                entrance: 0,
-                parking: 0,
-                transport: 0,
-                food: 0,
-                other: 0,
-            };
-
-            costs?.forEach(c => {
-                breakdown[c.category] += Number(c.amount);
-            });
-
-            return {
-                success: true,
-                summary: {
-                    total,
-                    per_person: (fixedCosts / totalParticipants) + variableCosts,
-                    fixed_costs: fixedCosts,
-                    variable_costs: variableCosts,
-                    breakdown_by_category: breakdown,
-                },
-            };
-        } catch (error: any) {
-            console.error('[getCostSummary] Exception:', error);
+        if (error) {
             return { success: false, error: error.message };
         }
+
+        const { data: participants } = await supabase
+            .from('plan_participants')
+            .select('adults_count, children_count')
+            .eq('plan_id', planId)
+            .eq('invitation_status', 'accepted');
+
+        const totalParticipants = participants?.reduce(
+            (sum, p) => sum + p.adults_count + p.children_count,
+            0
+        ) || 1;
+
+        const total = costs?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+        const fixedCosts = costs?.filter(c => !c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+        const variableCosts = costs?.filter(c => c.per_person).reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+
+        const breakdown: Record<CostCategory, number> = {
+            entrance: 0,
+            parking: 0,
+            transport: 0,
+            food: 0,
+            other: 0,
+        };
+
+        costs?.forEach(c => {
+            breakdown[c.category] += Number(c.amount);
+        });
+
+        return {
+            success: true,
+            summary: {
+                total,
+                per_person: (fixedCosts / totalParticipants) + variableCosts,
+                fixed_costs: fixedCosts,
+                variable_costs: variableCosts,
+                breakdown_by_category: breakdown,
+            },
+        };
+    } catch (error: any) {
+        console.error('[getCostSummary] Exception:', error);
+        return { success: false, error: error.message };
     }
+}
