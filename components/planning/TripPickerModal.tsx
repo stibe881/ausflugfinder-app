@@ -36,6 +36,8 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                     <FlatList
                         data={trips}
                         keyExtractor={(item) => item.id.toString()}
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{ paddingBottom: Spacing.lg }}
                         ListEmptyComponent={
                             <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
                                 Keine Ausflüge verfügbar
