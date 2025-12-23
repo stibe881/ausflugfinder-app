@@ -44,6 +44,7 @@ export default function PlanDetailScreen() {
     const [planTrips, setPlanTrips] = useState<PlanTrip[]>([]);
     const [tasks, setTasks] = useState<PlanTask[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showAddTask, setShowAddTask] = useState(false);
 
     useEffect(() => {
         loadPlan();
@@ -114,6 +115,25 @@ export default function PlanDetailScreen() {
 
         if (data) {
             setTasks(tasks.map((t) => (t.id === taskId ? (data as PlanTask) : t)));
+        }
+    };
+
+    const handleAddTask = async (taskData: {
+        title: string;
+        description?: string;
+        priority: "low" | "medium" | "high";
+        task_type: "general" | "packing" | "booking";
+        due_date?: string;
+    }) => {
+        if (!plan) return;
+
+        const result = await addTask(plan.id, taskData);
+
+        if (result.success && result.task) {
+            setTasks([result.task, ...tasks]);
+            Alert.alert("Erfolg", "Aufgabe wurde hinzugefügt");
+        } else {
+            throw new Error(result.error || "Aufgabe konnte nicht erstellt werden");
         }
     };
 
@@ -243,6 +263,12 @@ export default function PlanDetailScreen() {
                         <ThemedText style={styles.sectionTitle}>
                             Aufgaben ({tasks.filter((t) => !t.is_completed).length}/{tasks.length})
                         </ThemedText>
+                        <Pressable
+                            onPress={() => setShowAddTask(true)}
+                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+                        </Pressable>
                     </View>
                     {tasks.length === 0 ? (
                         <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -252,6 +278,13 @@ export default function PlanDetailScreen() {
                         tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)
                     )}
                 </View>
+
+                <AddTaskDialog
+                    visible={showAddTask}
+                    planId={id!}
+                    onClose={() => setShowAddTask(false)}
+                    onAdd={handleAddTask}
+                />
 
                 {/* Quick Actions */}
                 <View style={styles.section}>
@@ -276,10 +309,10 @@ export default function PlanDetailScreen() {
                                 styles.actionCard,
                                 { backgroundColor: colors.surface, borderColor: colors.border },
                             ]}
-                            onPress={() => Alert.alert("Coming Soon", "Aufgabenverwaltung wird noch implementiert")}
+                            onPress={() => Alert.alert("Coming Soon", "Budget-Tracking wird noch implementiert")}
                         >
-                            <IconSymbol name="checklist" size={32} color={colors.primary} />
-                            <ThemedText style={styles.actionLabel}>Aufgaben</ThemedText>
+                            <IconSymbol name="dollarsign.circle" size={32} color={colors.primary} />
+                            <ThemedText style={styles.actionLabel}>Budget</ThemedText>
                             <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
                                 Bald verfügbar
                             </ThemedText>
@@ -389,6 +422,13 @@ const styles = StyleSheet.create({
     tripDescription: {
         fontSize: 13,
         lineHeight: 18,
+    },
+    addTaskButton: {
+        width: 32,
+        height: 32,
+        borderRadius: BorderRadius.full,
+        justifyContent: "center",
+        alignItems: "center",
     },
     emptyText: {
         fontSize: 14,
