@@ -210,7 +210,8 @@ export default function PlanDetailScreen() {
                 .eq("plan_id", plan.id)
                 .order("sequence");
 
-            console.log('[handleAddTrip] Loaded', trips?.length, 'trips, error:', error);
+            console.log('[handleAddTrip] Loaded', trips?.length, 'trips');
+            console.log('[handleAddTrip] Error:', JSON.stringify(error, null, 2));
 
             if (trips) setPlanTrips(trips as any);
             setShowTripPicker(false);
