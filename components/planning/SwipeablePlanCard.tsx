@@ -26,21 +26,25 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
     const colors = Colors[colorScheme ?? "light"];
     const translateX = useSharedValue(0);
 
-    const handleDelete = () => {
-        onDelete(plan.id);
+    const handleDeletePress = () => {
+        // Animate card out before deleting
+        translateX.value = withTiming(-300, { duration: 200 }, () => {
+            runOnJS(onDelete)(plan.id);
+        });
     };
 
     const panGesture = Gesture.Pan()
         .activeOffsetX([-10, 10])
         .onUpdate((event) => {
             if (event.translationX < 0) {
-                translateX.value = Math.max(event.translationX, -100);
+                // Limit swipe to just reveal the button, not go past it
+                translateX.value = Math.max(event.translationX, -120);
             }
         })
-        .onEnd((event) => {
+        .onEnd(() => {
+            // Snap to either open or closed
             if (translateX.value < SWIPE_THRESHOLD) {
                 translateX.value = withTiming(-100);
-                runOnJS(handleDelete)();
             } else {
                 translateX.value = withTiming(0);
             }
@@ -58,7 +62,9 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
         <View style={styles.container}>
             {/* Delete Button Background */}
             <Animated.View style={[styles.deleteBackground, deleteButtonStyle]}>
-                <IconSymbol name="trash.fill" size={24} color="#FFFFFF" />
+                <Pressable onPress={handleDeletePress} style={styles.deleteButton}>
+                    <IconSymbol name="trash.fill" size={24} color="#FFFFFF" />
+                </Pressable>
             </Animated.View>
 
             {/* Swipeable Card */}
@@ -113,17 +119,23 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
 const styles = StyleSheet.create({
     container: {
         marginBottom: Spacing.md,
-        marginHorizontal: Spacing.sm,
+        marginHorizontal: Spacing.md,
         position: "relative",
     },
     deleteBackground: {
         position: "absolute",
-        right: 0,
+        right: Spacing.sm,
         top: 0,
         bottom: 0,
         width: 100,
         backgroundColor: "#FF3B30",
         borderRadius: BorderRadius.lg,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    deleteButton: {
+        width: "100%",
+        height: "100%",
         justifyContent: "center",
         alignItems: "center",
     },
