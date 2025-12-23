@@ -41,6 +41,7 @@ export default function PlanDetailScreen() {
 
     const [plan, setPlan] = useState<Plan | null>(null);
     const [planTrips, setPlanTrips] = useState<PlanTrip[]>([]);
+    const [tasks, setTasks] = useState<PlanTask[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -72,13 +73,23 @@ export default function PlanDetailScreen() {
             setPlanTrips(trips as any);
         }
 
+        // Load tasks
+        const { data: tasksData } = await supabase
+            .from("plan_tasks")
+            .select("*")
+            .eq("plan_id", id)
+            .order("created_at", { ascending: false });
+
+        if (tasksData) {
+            setTasks(tasksData as PlanTask[]);
+        }
+
         setIsLoading(false);
     };
 
     const updateStatus = async (newStatus: Plan["status"]) => {
         if (!plan) return;
 
-        const { updatePlanStatus } = await import("@/lib/planning-api");
         const result = await updatePlanStatus(plan.id, newStatus);
 
         if (result.success) {
@@ -86,6 +97,22 @@ export default function PlanDetailScreen() {
             Alert.alert("Erfolg", "Status wurde geändert");
         } else {
             Alert.alert("Fehler", result.error || "Status konnte nicht geändert werden");
+        }
+    };
+
+    const toggleTask = async (taskId: string) => {
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        const { data, error } = await supabase
+            .from("plan_tasks")
+            .update({ is_completed: !task.is_completed })
+            .eq("id", taskId)
+            .select()
+            .single();
+
+        if (data) {
+            setTasks(tasks.map((t) => (t.id === taskId ? (data as PlanTask) : t)));
         }
     };
 
@@ -209,12 +236,31 @@ export default function PlanDetailScreen() {
                     <ParticipantInvite planId={id!} onInvited={loadPlan} />
                 </View>
 
+                {/* Tasks */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <ThemedText style={styles.sectionTitle}>
+                            Aufgaben ({tasks.filter((t) => !t.is_completed).length}/{tasks.length})
+                        </ThemedText>
+                    </View>
+                    {tasks.length === 0 ? (
+                        <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
+                            Noch keine Aufgaben
+                        </ThemedText>
+                    ) : (
+                        tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)
+                    )}
+                </View>
+
                 {/* Quick Actions */}
                 <View style={styles.section}>
                     <ThemedText style={styles.sectionTitle}>Schnellzugriff</ThemedText>
                     <View style={styles.quickActions}>
                         <Pressable
-                            style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
                             onPress={() => Alert.alert("Coming Soon", "Teilnehmerverwaltung wird noch implementiert")}
                         >
                             <IconSymbol name="person.2.fill" size={32} color={colors.primary} />
@@ -225,7 +271,10 @@ export default function PlanDetailScreen() {
                         </Pressable>
 
                         <Pressable
-                            style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
                             onPress={() => Alert.alert("Coming Soon", "Aufgabenverwaltung wird noch implementiert")}
                         >
                             <IconSymbol name="checklist" size={32} color={colors.primary} />
@@ -339,6 +388,12 @@ const styles = StyleSheet.create({
     tripDescription: {
         fontSize: 13,
         lineHeight: 18,
+    },
+    emptyText: {
+        fontSize: 14,
+        fontStyle: "italic",
+        textAlign: "center",
+        padding: Spacing.lg,
     },
     quickActions: {
         flexDirection: "row",
