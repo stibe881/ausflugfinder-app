@@ -15,6 +15,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { StatusBadge } from "@/components/planning/StatusBadge";
+import { ParticipantInvite } from "@/components/planning/ParticipantInvite";
 import { getPlan, type Plan } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 
@@ -173,6 +174,12 @@ export default function PlanDetailScreen() {
                             )}
                         </View>
                     ))}
+                </View>
+
+                {/* Participants */}
+                <View style={styles.section}>
+                    <ThemedText style={styles.sectionTitle}>Teilnehmer</ThemedText>
+                    <ParticipantInvite planId={id!} onInvited={loadPlan} />
                 </View>
 
                 {/* Quick Actions */}
