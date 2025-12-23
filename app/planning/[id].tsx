@@ -47,6 +47,8 @@ export default function PlanDetailScreen() {
     const [tasks, setTasks] = useState<PlanTask[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showAddTask, setShowAddTask] = useState(false);
+    const [showAddCost, setShowAddCost] = useState(false);
+    const [budgetSummary, setBudgetSummary] = useState({ total: 0, perPerson: 0, participantCount: 1 });
 
     useEffect(() => {
         loadPlan();
@@ -86,6 +88,16 @@ export default function PlanDetailScreen() {
 
         if (tasksData) {
             setTasks(tasksData as PlanTask[]);
+        }
+
+        // Load budget summary
+        const costResult = await getCostSummary(id);
+        if (costResult.success && costResult.summary) {
+            setBudgetSummary({
+                total: costResult.summary.total,
+                perPerson: costResult.summary.per_person,
+                participantCount: 1,
+            });
         }
 
         setIsLoading(false);
@@ -286,6 +298,31 @@ export default function PlanDetailScreen() {
                     planId={id!}
                     onClose={() => setShowAddTask(false)}
                     onAdd={handleAddTask}
+                />
+
+                {/* Budget */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <ThemedText style={styles.sectionTitle}>Budget</ThemedText>
+                        <Pressable
+                            onPress={() => setShowAddCost(true)}
+                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+                        </Pressable>
+                    </View>
+                    <BudgetSummary
+                        total={budgetSummary.total}
+                        perPerson={budgetSummary.perPerson}
+                        participantCount={budgetSummary.participantCount}
+                    />
+                </View>
+
+                <AddCostDialog
+                    visible={showAddCost}
+                    planId={id!}
+                    onClose={() => setShowAddCost(false)}
+                    onAdd={handleAddCost}
                 />
 
                 {/* Quick Actions */}
