@@ -74,7 +74,7 @@ export default function PlanDetailScreen() {
             .from("plan_trips")
             .select(`
         *,
-        trip:ausfluege(id, title, kurzbeschrieb)
+        trip:ausfluege(id, name, kurzbeschrieb)
       `)
             .eq("plan_id", id)
             .order("sequence");
