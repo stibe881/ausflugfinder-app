@@ -1,4 +1,4 @@
-import { Pressable, View, StyleSheet, Alert } from "react-native";
+import { Pressable, View, StyleSheet } from "react-native";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -27,22 +27,7 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
     const translateX = useSharedValue(0);
 
     const handleDelete = () => {
-        Alert.alert(
-            "Plan löschen",
-            `Möchtest du "${plan.title}" wirklich löschen?`,
-            [
-                {
-                    text: "Abbrechen", style: "cancel", onPress: () => {
-                        translateX.value = withTiming(0);
-                    }
-                },
-                {
-                    text: "Löschen",
-                    style: "destructive",
-                    onPress: () => onDelete(plan.id),
-                },
-            ]
-        );
+        onDelete(plan.id);
     };
 
     const panGesture = Gesture.Pan()
@@ -128,6 +113,7 @@ export function SwipeablePlanCard({ plan, onPress, onDelete }: SwipeablePlanCard
 const styles = StyleSheet.create({
     container: {
         marginBottom: Spacing.md,
+        marginHorizontal: Spacing.sm,
         position: "relative",
     },
     deleteBackground: {
