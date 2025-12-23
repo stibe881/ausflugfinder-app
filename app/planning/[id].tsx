@@ -345,12 +345,12 @@ export default function PlanDetailScreen() {
                                         })}
                                     </ThemedText>
                                 </View>
-                                {trip.trip?.kurzbeschrieb && (
+                                {trip.trip?.beschreibung && (
                                     <ThemedText
                                         style={[styles.tripDescription, { color: colors.textSecondary }]}
                                         numberOfLines={2}
                                     >
-                                        {trip.trip.kurzbeschrieb}
+                                        {trip.trip.beschreibung}
                                     </ThemedText>
                                 )}
                             </View>
