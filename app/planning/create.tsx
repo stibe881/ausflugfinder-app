@@ -71,15 +71,27 @@ export default function CreatePlanScreen() {
     };
 
     const addCustomTrip = () => {
-        const customLocation = prompt("Eigener Ort:");
-        if (customLocation) {
-            const newTrip: TripSelection = {
-                id: Math.random().toString(),
-                custom_location: customLocation,
-                planned_date: new Date(),
-            };
-            setTrips([...trips, newTrip]);
-        }
+        Alert.prompt(
+            "Eigener Ort",
+            "Gib einen Ortsnamen ein:",
+            [
+                { text: "Abbrechen", style: "cancel" },
+                {
+                    text: "Hinzufügen",
+                    onPress: (customLocation) => {
+                        if (customLocation && customLocation.trim()) {
+                            const newTrip: TripSelection = {
+                                id: Math.random().toString(),
+                                custom_location: customLocation.trim(),
+                                planned_date: new Date(),
+                            };
+                            setTrips([...trips, newTrip]);
+                        }
+                    },
+                },
+            ],
+            "plain-text"
+        );
     };
 
     const removeTrip = (id: string) => {
@@ -117,7 +129,8 @@ export default function CreatePlanScreen() {
         setIsLoading(false);
 
         if (result.success && result.plan) {
-            router.back();
+            // Navigate back with refresh parameter
+            router.replace("/planning");
         } else {
             Alert.alert("Fehler", result.error || "Plan konnte nicht erstellt werden");
         }
