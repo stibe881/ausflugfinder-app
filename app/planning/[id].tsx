@@ -531,7 +531,7 @@ export default function PlanDetailScreen() {
                             ]}
                             onPress={() => Alert.alert("Coming Soon", "Budget-Tracking wird noch implementiert")}
                         >
-                            <IconSymbol name="dollarsign.circle" size={32} color={colors.primary} />
+                            <IconSymbol name="francsign.circle" size={32} color={colors.primary} />
                             <ThemedText style={styles.actionLabel}>Budget</ThemedText>
                             <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
                                 Bald verfügbar
