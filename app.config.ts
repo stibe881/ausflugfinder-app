@@ -28,7 +28,7 @@ const config: ExpoConfig = {
   version: "1.0.5",
   platforms: ["ios", "android", "web"],
   orientation: "portrait",
-  // icon: "./assets/images/icon.png",
+  icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
@@ -87,18 +87,18 @@ const config: ExpoConfig = {
   },
   plugins: [
     "expo-router",
-    // [
-    //   "expo-splash-screen",
-    //   {
-    //     image: "./assets/images/splash-icon.png",
-    //     imageWidth: 200,
-    //     resizeMode: "contain",
-    //     backgroundColor: "#ffffff",
-    //     dark: {
-    //       backgroundColor: "#000000",
-    //     },
-    //   },
-    // ],
+    [
+      "expo-splash-screen",
+      {
+        image: "./assets/images/splash-icon.png",
+        imageWidth: 200,
+        resizeMode: "contain",
+        backgroundColor: "#ffffff",
+        dark: {
+          backgroundColor: "#000000",
+        },
+      },
+    ],
     [
       "expo-location",
       {
