@@ -908,3 +908,353 @@ export function detectTimeConflicts(activities: TripActivity[]): {
         conflicts
     };
 }
+
+// ====================================
+// MULTI-DAY TRIP PLANNING
+// ====================================
+
+export interface Accommodation {
+    id: string;
+    plan_id: string;
+    name: string;
+    address?: string;
+    link?: string;
+    check_in_date: string;
+    check_out_date: string;
+    latitude?: number;
+    longitude?: number;
+    sequence: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DistanceInfo {
+    distanceText: string;
+    distanceMeters: number;
+    durationText: string;
+    durationSeconds: number;
+}
+
+/**
+ * Update trip date
+ */
+export async function updatePlanTripDate(
+    tripId: string,
+    newDate: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .update({ planned_date: newDate })
+            .eq('id', tripId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Add accommodation
+ */
+export async function addAccommodation(
+    planId: string,
+    accommodation: {
+        name: string;
+        address?: string;
+        link?: string;
+        check_in_date: string;
+        check_out_date: string;
+        latitude?: number;
+        longitude?: number;
+    }
+): Promise<{ success: boolean; accommodation?: Accommodation; error?: string }> {
+    try {
+        // Get next sequence number
+        const { data: trips } = await supabase
+            .from('plan_trips')
+            .select('sequence')
+            .eq('plan_id', planId)
+            .order('sequence', { ascending: false })
+            .limit(1);
+
+        const nextSequence = trips && trips.length > 0 ? (trips[0].sequence || 0) + 1 : 0;
+
+        const { data, error } = await supabase
+            .from('plan_trips')
+            .insert({
+                plan_id: planId,
+                is_accommodation: true,
+                accommodation_name: accommodation.name,
+                accommodation_address: accommodation.address,
+                accommodation_link: accommodation.link,
+                accommodation_check_in_date: accommodation.check_in_date,
+                accommodation_check_out_date: accommodation.check_out_date,
+                latitude: accommodation.latitude,
+                longitude: accommodation.longitude,
+                planned_date: accommodation.check_in_date,
+                sequence: nextSequence
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            accommodation: {
+                id: data.id,
+                plan_id: data.plan_id,
+                name: data.accommodation_name!,
+                address: data.accommodation_address,
+                link: data.accommodation_link,
+                check_in_date: data.accommodation_check_in_date!,
+                check_out_date: data.accommodation_check_out_date!,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                sequence: data.sequence,
+                created_at: data.created_at,
+                updated_at: data.updated_at
+            }
+        };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Update accommodation
+ */
+export async function updateAccommodation(
+    accommodationId: string,
+    updates: {
+        name?: string;
+        address?: string;
+        link?: string;
+        check_in_date?: string;
+        check_out_date?: string;
+        latitude?: number;
+        longitude?: number;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const updateData: any = {};
+        if (updates.name !== undefined) updateData.accommodation_name = updates.name;
+        if (updates.address !== undefined) updateData.accommodation_address = updates.address;
+        if (updates.link !== undefined) updateData.accommodation_link = updates.link;
+        if (updates.check_in_date !== undefined) {
+            updateData.accommodation_check_in_date = updates.check_in_date;
+            updateData.planned_date = updates.check_in_date; // Keep in sync
+        }
+        if (updates.check_out_date !== undefined) updateData.accommodation_check_out_date = updates.check_out_date;
+        if (updates.latitude !== undefined) updateData.latitude = updates.latitude;
+        if (updates.longitude !== undefined) updateData.longitude = updates.longitude;
+
+        const { error } = await supabase
+            .from('plan_trips')
+            .update(updateData)
+            .eq('id', accommodationId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Delete accommodation
+ */
+export async function deleteAccommodation(
+    accommodationId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .delete()
+            .eq('id', accommodationId)
+            .eq('is_accommodation', true);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Get all trips and accommodations for a plan, grouped by date
+ */
+export async function getPlanTripsGroupedByDay(
+    planId: string
+): Promise<{ success: boolean; days?: Array<{ date: string; items: any[] }>; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('plan_trips')
+            .select(`
+                *,
+                trip:ausfluege(id, name, beschreibung)
+            `)
+            .eq('plan_id', planId)
+            .order('planned_date', { ascending: true })
+            .order('sequence', { ascending: true });
+
+        if (error) throw error;
+
+        // Group by date
+        const grouped = new Map<string, any[]>();
+        data?.forEach(item => {
+            const date = item.planned_date;
+            if (!grouped.has(date)) {
+                grouped.set(date, []);
+            }
+            grouped.get(date)!.push(item);
+        });
+
+        const days = Array.from(grouped.entries()).map(([date, items]) => ({
+            date,
+            items
+        }));
+
+        return { success: true, days };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Auto-insert accommodations between different days
+ */
+export async function autoInsertAccommodations(
+    planId: string
+): Promise<{ success: boolean; inserted?: number; error?: string }> {
+    try {
+        const { data: trips, error: fetchError } = await supabase
+            .from('plan_trips')
+            .select('*')
+            .eq('plan_id', planId)
+            .eq('is_accommodation', false)
+            .order('planned_date', { ascending: true });
+
+        if (fetchError) throw fetchError;
+        if (!trips || trips.length < 2) return { success: true, inserted: 0 };
+
+        let insertedCount = 0;
+        const uniqueDates = [...new Set(trips.map(t => t.planned_date))].sort();
+
+        for (let i = 0; i < uniqueDates.length - 1; i++) {
+            const currentDate = uniqueDates[i];
+            const nextDate = uniqueDates[i + 1];
+
+            // Check if accommodation already exists between these dates
+            const { data: existing } = await supabase
+                .from('plan_trips')
+                .select('id')
+                .eq('plan_id', planId)
+                .eq('is_accommodation', true)
+                .eq('accommodation_check_in_date', currentDate)
+                .eq('accommodation_check_out_date', nextDate)
+                .single();
+
+            if (!existing) {
+                // Insert accommodation
+                const result = await addAccommodation(planId, {
+                    name: `Unterkunft (${currentDate} - ${nextDate})`,
+                    check_in_date: currentDate,
+                    check_out_date: nextDate
+                });
+
+                if (result.success) insertedCount++;
+            }
+        }
+
+        return { success: true, inserted: insertedCount };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
+
+/**
+ * Get distance between two locations using Google Maps Distance Matrix API
+ * with caching to minimize API calls
+ */
+export async function getDistanceBetweenLocations(
+    origin: { lat: number; lng: number },
+    destination: { lat: number; lng: number },
+    googleMapsKey: string
+): Promise<{ success: boolean; distance?: DistanceInfo; error?: string }> {
+    try {
+        // Round coordinates for cache matching (6 decimal places ≈ 11cm precision)
+        const originLat = Math.round(origin.lat * 1000000) / 1000000;
+        const originLng = Math.round(origin.lng * 1000000) / 1000000;
+        const destLat = Math.round(destination.lat * 1000000) / 1000000;
+        const destLng = Math.round(destination.lng * 1000000) / 1000000;
+
+        // Check cache first
+        const { data: cached } = await supabase
+            .from('distance_cache')
+            .select('*')
+            .eq('origin_lat', originLat)
+            .eq('origin_lng', originLng)
+            .eq('dest_lat', destLat)
+            .eq('dest_lng', destLng)
+            .gt('expires_at', new Date().toISOString())
+            .single();
+
+        if (cached) {
+            return {
+                success: true,
+                distance: {
+                    distanceText: cached.distance_text,
+                    distanceMeters: cached.distance_meters,
+                    durationText: cached.duration_text,
+                    durationSeconds: cached.duration_seconds
+                }
+            };
+        }
+
+        // Call Google Maps API
+        const url = `https://maps.googleapis.com/maps/api/distancematrix/json?` +
+            `origins=${originLat},${originLng}&` +
+            `destinations=${destLat},${destLng}&` +
+            `key=${googleMapsKey}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.status !== 'OK' || !data.rows?.[0]?.elements?.[0]) {
+            throw new Error(`Google Maps API error: ${data.status}`);
+        }
+
+        const element = data.rows[0].elements[0];
+        if (element.status !== 'OK') {
+            throw new Error(`Route not found: ${element.status}`);
+        }
+
+        const distanceInfo: DistanceInfo = {
+            distanceText: element.distance.text,
+            distanceMeters: element.distance.value,
+            durationText: element.duration.text,
+            durationSeconds: element.duration.value
+        };
+
+        // Cache the result
+        await supabase
+            .from('distance_cache')
+            .insert({
+                origin_lat: originLat,
+                origin_lng: originLng,
+                dest_lat: destLat,
+                dest_lng: destLng,
+                distance_text: distanceInfo.distanceText,
+                distance_meters: distanceInfo.distanceMeters,
+                duration_text: distanceInfo.durationText,
+                duration_seconds: distanceInfo.durationSeconds
+            });
+
+        return { success: true, distance: distanceInfo };
+    } catch (error) {
+        return { success: false, error: String(error) };
+    }
+}
