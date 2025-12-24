@@ -656,6 +656,19 @@ export default function PlanDetailScreen() {
                         onClose={() => setEditingActivitiesTripId(null)}
                     />
                 )}
+
+                {/* Accommodation Editor */}
+                {showAccommodationEditor && (
+                    <MultiDayAccommodationEditor
+                        visible={showAccommodationEditor}
+                        accommodation={editingAccommodation}
+                        onSave={handleSaveAccommodation}
+                        onClose={() => {
+                            setShowAccommodationEditor(false);
+                            setEditingAccommodation(null);
+                        }}
+                    />
+                )}
             </ScrollView>
         </ThemedView>
     );
