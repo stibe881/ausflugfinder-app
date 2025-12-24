@@ -125,6 +125,9 @@ export default function PlanDetailScreen() {
             });
         }
 
+        // Load grouped days for multi-day display
+        await loadGroupedDays();
+
         // Load available trips for adding
         const allTrips = await getAllAusfluege();
         console.log('[Plan Detail] Loaded trips for picker:', allTrips?.length || 0, allTrips);
@@ -201,9 +204,9 @@ export default function PlanDetailScreen() {
                     participantCount: 1,
                 });
             }
-            Alert.alert("Erfolg", "Kosten wurden hinzugef\u00fcgt");
+            Alert.alert("Erfolg", "Kosten wurden hinzugefügt");
         } else {
-            throw new Error(result.error || "Kosten konnten nicht hinzugef\u00fcgt werden");
+            throw new Error(result.error || "Kosten konnten nicht hinzugefügt werden");
         }
     };
 
@@ -461,6 +464,18 @@ export default function PlanDetailScreen() {
                             <IconSymbol name="plus" size={16} color="#FFFFFF" />
                         </Pressable>
                     </View>
+
+                    {/* Auto-Insert Accommodations Button */}
+                    <Pressable
+                        style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: Spacing.md }]}
+                        onPress={handleAutoInsertAccommodations}
+                    >
+                        <IconSymbol name="bed.double.fill" size={20} color={colors.primary} />
+                        <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
+                            Unterkünfte hinzufügen
+                        </ThemedText>
+                    </Pressable>
+
                     {planTrips.map((trip) => (
                         <View
                             key={trip.id}
@@ -625,6 +640,7 @@ export default function PlanDetailScreen() {
                         </Pressable>
                     </View>
                 </View>
+
                 {/* Trip Picker Modal */}
                 <TripPickerModal
                     visible={showTripPicker}
@@ -780,6 +796,16 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: Spacing.sm,
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+    },
     emptyText: {
         fontSize: 14,
         fontStyle: "italic",
@@ -817,9 +843,5 @@ const styles = StyleSheet.create({
     },
     tripActionButton: {
         padding: Spacing.sm,
-    },
-    deleteTripButton: {
-        padding: Spacing.sm,
-        marginLeft: Spacing.sm,
     },
 });
