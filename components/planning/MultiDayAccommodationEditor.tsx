@@ -27,7 +27,7 @@ interface AccommodationEditorProps {
     onClose: () => void;
 }
 
-export function AccommodationEditor({ visible, accommodation, onSave, onClose }: AccommodationEditorProps) {
+export function MultiDayAccommodationEditor({ visible, accommodation, onSave, onClose }: AccommodationEditorProps) {
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
