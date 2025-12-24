@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Pressable, StyleSheet, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import RNDateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -46,7 +46,7 @@ export function DateTimePicker({ value, mode = 'date', onChange }: DateTimePicke
             </Pressable>
 
             {show && (
-                <DateTimePicker
+                <RNDateTimePicker
                     value={value}
                     mode={mode}
                     display="default"
