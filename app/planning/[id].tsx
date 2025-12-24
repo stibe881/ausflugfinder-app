@@ -23,7 +23,10 @@ import { BudgetSummary } from "@/components/planning/BudgetSummary";
 import { TripPickerModal } from "@/components/planning/TripPickerModal";
 import { TripTimeEditor } from "@/components/planning/TripTimeEditor";
 import { ActivityEditor } from "@/components/planning/ActivityEditor";
-import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, type Plan, type PlanTask, type TripActivity } from "@/lib/planning-api";
+import { AccommodationCard } from "@/components/planning/AccommodationCard";
+import { MultiDayAccommodationEditor } from "@/components/planning/MultiDayAccommodationEditor";
+import { DistanceBadge } from "@/components/planning/DistanceBadge";
+import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, updatePlanTripDate, addAccommodation, updateAccommodation, deleteAccommodation, getPlanTripsGroupedByDay, autoInsertAccommodations, getDistanceBetweenLocations, type Plan, type PlanTask, type TripActivity, type Accommodation, type DistanceInfo } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 import { getAllAusfluege } from "@/lib/supabase-api";
 
@@ -64,6 +67,13 @@ export default function PlanDetailScreen() {
     const [editingTripTimeId, setEditingTripTimeId] = useState<string | null>(null);
     const [editingActivitiesTripId, setEditingActivitiesTripId] = useState<string | null>(null);
     const [tripActivities, setTripActivities] = useState<Record<string, TripActivity[]>>({});
+
+    // Multi-day trip state
+    const [groupedDays, setGroupedDays] = useState<Array<{ date: string; items: any[] }>>([]);
+    const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null);
+    const [showAccommodationEditor, setShowAccommodationEditor] = useState(false);
+    const [distances, setDistances] = useState<Record<string, DistanceInfo>>({});
+    const [loadingDistances, setLoadingDistances] = useState(false);
 
     useEffect(() => {
         loadPlan();
