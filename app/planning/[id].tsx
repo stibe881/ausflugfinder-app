@@ -306,6 +306,82 @@ export default function PlanDetailScreen() {
         }
     };
 
+    // Multi-day trip handlers
+    const loadGroupedDays = async () => {
+        if (!id) return;
+        const result = await getPlanTripsGroupedByDay(id);
+        if (result.success && result.days) {
+            setGroupedDays(result.days);
+        }
+    };
+
+    const handleAddAccommodation = async (accommodationData: any) => {
+        if (!id) return;
+        const result = await addAccommodation(id, accommodationData);
+        if (result.success) {
+            await loadGroupedDays();
+            setShowAccommodationEditor(false);
+            setEditingAccommodation(null);
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
+        }
+    };
+
+    const handleEditAccommodation = (accommodation: any) => {
+        setEditingAccommodation(accommodation);
+        setShowAccommodationEditor(true);
+    };
+
+    const handleSaveAccommodation = async (accommodationData: any) => {
+        if (editingAccommodation) {
+            // Update existing
+            const result = await updateAccommodation(editingAccommodation.id, accommodationData);
+            if (result.success) {
+                await loadGroupedDays();
+                setShowAccommodationEditor(false);
+                setEditingAccommodation(null);
+            } else {
+                Alert.alert("Fehler", result.error || "Fehler beim Aktualisieren");
+            }
+        } else {
+            // Create new
+            await handleAddAccommodation(accommodationData);
+        }
+    };
+
+    const handleDeleteAccommodation = async (accommodationId: string) => {
+        Alert.alert(
+            "Unterkunft löschen",
+            "Möchtest du diese Unterkunft wirklich löschen?",
+            [
+                { text: "Abbrechen", style: "cancel" },
+                {
+                    text: "Löschen",
+                    style: "destructive",
+                    onPress: async () => {
+                        const result = await deleteAccommodation(accommodationId);
+                        if (result.success) {
+                            await loadGroupedDays();
+                        } else {
+                            Alert.alert("Fehler", result.error || "Fehler beim Löschen");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleAutoInsertAccommodations = async () => {
+        if (!id) return;
+        const result = await autoInsertAccommodations(id);
+        if (result.success) {
+            await loadGroupedDays();
+            Alert.alert("Erfolg", `${result.inserted || 0} Unterkunft(en) hinzugefügt`);
+        } else {
+            Alert.alert("Fehler", result.error || "Fehler");
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
