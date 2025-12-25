@@ -390,23 +390,23 @@ export default function ProfileScreen() {
               />
             </SettingSection>
 
-            <SettingSection title="SOZIAL">
+            <SettingSection title={t.socialSection}>
               <SettingItem
                 icon="person.2.fill"
                 iconColor={BrandColors.accent}
-                title="Freunde"
-                subtitle="Freunde verwalten"
+                title={t.profileFriends}
+                subtitle={t.friendsSubtitle}
                 onPress={() => router.push("/friends" as any)}
               />
               <SettingItem
                 icon="square.and.arrow.up"
                 iconColor={BrandColors.secondary}
-                title="Teilen"
-                subtitle="App mit Freunden teilen"
+                title={t.profileShare}
+                subtitle={t.shareSubtitle}
                 onPress={async () => {
                   try {
                     await Share.share({
-                      message: "Schau dir AusflugFinder an! Entdecke tolle Ausflugsziele in deiner Nähe. 🏔️",
+                      message: t.shareMessage,
                       title: "AusflugFinder App",
                     });
                   } catch (error) {
