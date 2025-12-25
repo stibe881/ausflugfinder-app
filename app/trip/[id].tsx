@@ -524,7 +524,7 @@ export default function TripDetailScreen() {
             {/* Weather */}
             {currentWeather && (
               <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>{t.equipmentTitle}</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t.tripWeatherTitle}</ThemedText>
 
                 {/* Current Weather */}
                 <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

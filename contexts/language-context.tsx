@@ -210,6 +210,41 @@ type Translations = {
   // Common
   yes: string;
   no: string;
+  // Profile Screen Extended
+  welcomeToApp: string;
+  loginPromptText: string;
+  login: string;
+  register: string;
+  generalSection: string;
+  location: string;
+  locationSubtitle: string;
+  notifications: string;
+  notificationsSubtitle: string;
+  language: string;
+  appearance: string;
+  appearanceSubtitle: string;
+  socialSection: string;
+  friends: string;
+  friendsSubtitle: string;
+  share: string;
+  shareSubtitle: string;
+  shareMessage: string;
+  supportSection: string;
+  about: string;
+  privacy: string;
+  sendFeedback: string;
+  accountSection: string;
+  logout: string;
+  logoutConfirm: string;
+  logoutMessage: string;
+  adminActionsSection: string;
+  newTrip: string;
+  newTripSubtitle: string;
+  pushNotifications: string;
+  broadcastSubtitle: string;
+  adminMode: string;
+  adminModeActive: string;
+  adminModeInactive: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -419,6 +454,41 @@ const translations: Record<Language, Translations> = {
     // Common
     yes: "Ja",
     no: "Nein",
+    // Profile Screen Extended
+    welcomeToApp: "Willkommen bei AusflugFinder",
+    loginPromptText: "Melde dich an, um deine Ausflüge zu speichern, Pläne zu erstellen und mit Freunden zu teilen",
+    login: "Anmelden",
+    register: "Registrieren",
+    generalSection: "ALLGEMEIN",
+    location: "Standort",
+    locationSubtitle: "Standort & Nähe-Benachrichtigungen",
+    notifications: "Benachrichtigungen",
+    notificationsSubtitle: "Push-Benachrichtigungen verwalten",
+    language: "Sprache",
+    appearance: "Erscheinungsbild",
+    appearanceSubtitle: "Systemeinstellung",
+    socialSection: "SOZIAL",
+    friends: "Freunde",
+    friendsSubtitle: "Freunde verwalten",
+    share: "Teilen",
+    shareSubtitle: "App mit Freunden teilen",
+    shareMessage: "Schau dir AusflugFinder an! Entdecke tolle Ausflugsziele in deiner Nähe. 🏞️",
+    supportSection: "SUPPORT",
+    about: "Über AusflugFinder",
+    privacy: "Datenschutz",
+    sendFeedback: "Feedback senden",
+    accountSection: "KONTO",
+    logout: "Abmelden",
+    logoutConfirm: "Abmelden",
+    logoutMessage: "Möchtest du dich wirklich abmelden?",
+    adminActionsSection: "ADMINISTRATION",
+    newTrip: "Neuer Ausflug",
+    newTripSubtitle: "Ausflug hinzufügen",
+    pushNotifications: "Push-Benachrichtigungen",
+    broadcastSubtitle: "Broadcast an alle User senden",
+    adminMode: "Admin-Modus",
+    adminModeActive: "Aktiviert - Bearbeiten möglich",
+    adminModeInactive: "Deaktiviert",
   },
   en: {
     // Navigation
