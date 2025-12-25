@@ -524,7 +524,7 @@ export default function TripDetailScreen() {
             {/* Weather */}
             {currentWeather && (
               <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>Wetter</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t.equipmentTitle}</ThemedText>
 
                 {/* Current Weather */}
                 <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -599,7 +599,7 @@ export default function TripDetailScreen() {
             {/* Description */}
             {trip.beschreibung ? (
               <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>Beschreibung</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t.descriptionTitle}</ThemedText>
                 <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
                   {trip.beschreibung}
                 </ThemedText>
@@ -608,7 +608,7 @@ export default function TripDetailScreen() {
 
             {/* Details */}
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Details</ThemedText>
+              <ThemedText style={styles.sectionTitle}>{t.detailsTitle}</ThemedText>
 
               {trip.region ? (
                 <InfoRow icon="location.fill" label="Region" value={trip.region} />

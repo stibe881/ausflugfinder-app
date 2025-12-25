@@ -187,6 +187,16 @@ type Translations = {
   myPlans: string;
   noPlansYet: string;
   createFirstPlan: string;
+  // Trip Detail Sections
+  descriptionTitle: string;
+  detailsTitle: string;
+  equipmentTitle: string;
+  weatherTitle: string;
+  categories: string;
+  duration: string;
+  season: string;
+  difficulty: string;
+  accessibility: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -373,6 +383,16 @@ const translations: Record<Language, Translations> = {
     myPlans: "Meine Pläne",
     noPlansYet: "Noch keine Pläne erstellt",
     createFirstPlan: "Erstelle deinen ersten Tagesplan",
+    // Trip Detail Sections
+    descriptionTitle: "Beschreibung",
+    detailsTitle: "Details",
+    equipmentTitle: "Ausrüstung",
+    weatherTitle: "Wetter",
+    categories: "Kategorien",
+    duration: "Dauer",
+    season: "Saison",
+    difficulty: "Schwierigkeit",
+    accessibility: "Zugänglichkeit",
   },
   en: {
     // Navigation
@@ -557,6 +577,16 @@ const translations: Record<Language, Translations> = {
     myPlans: "My Plans",
     noPlansYet: "No plans created yet",
     createFirstPlan: "Create your first day plan",
+    // Trip Detail Sections
+    descriptionTitle: "Description",
+    detailsTitle: "Details",
+    equipmentTitle: "Equipment",
+    weatherTitle: "Weather",
+    categories: "Categories",
+    duration: "Duration",
+    season: "Season",
+    difficulty: "Difficulty",
+    accessibility: "Accessibility",
   },
   fr: {
     // Navigation
@@ -741,6 +771,16 @@ const translations: Record<Language, Translations> = {
     myPlans: "Mes plans",
     noPlansYet: "Aucun plan créé",
     createFirstPlan: "Créez votre premier plan de journée",
+    // Trip Detail Sections
+    descriptionTitle: "Description",
+    detailsTitle: "Détails",
+    equipmentTitle: "Équipement",
+    weatherTitle: "Météo",
+    categories: "Catégories",
+    duration: "Durée",
+    season: "Saison",
+    difficulty: "Difficulté",
+    accessibility: "Accessibilité",
   },
   it: {
     // Navigation
@@ -925,6 +965,16 @@ const translations: Record<Language, Translations> = {
     myPlans: "I miei piani",
     noPlansYet: "Nessun piano creato",
     createFirstPlan: "Crea il tuo primo piano giornaliero",
+    // Trip Detail Sections
+    descriptionTitle: "Descrizione",
+    detailsTitle: "Dettagli",
+    equipmentTitle: "Attrezzatura",
+    weatherTitle: "Meteo",
+    categories: "Categorie",
+    duration: "Durata",
+    season: "Stagione",
+    difficulty: "Difficoltà",
+    accessibility: "Accessibilità",
   },
 };
 
