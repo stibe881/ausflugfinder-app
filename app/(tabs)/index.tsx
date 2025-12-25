@@ -25,6 +25,7 @@ import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import { getAusflugeStatistics } from "@/lib/supabase-api";
+import { useLanguage } from "@/contexts/language-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -146,6 +147,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { user, loading: authLoading, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   // Fetch statistics from Supabase
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
@@ -188,7 +190,7 @@ export default function HomeScreen() {
         </View>
 
         <ThemedText style={[styles.heroSubtitle, { color: colors.textSecondary }]}>
-          Entdecke die schönsten Ausflugsziele in der Schweiz und Umgebung
+          {t.discoverSwitzerlandSub}
         </ThemedText>
 
         {/* CTA Buttons */}
@@ -205,7 +207,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <IconSymbol name="magnifyingglass" size={20} color="#FFFFFF" />
-                <ThemedText style={styles.primaryButtonText}>Entdecken</ThemedText>
+                <ThemedText style={styles.primaryButtonText}>{t.exploreButton}</ThemedText>
               </Pressable>
               <Pressable
                 onPress={() => router.push("/(tabs)/profile")}
@@ -219,7 +221,7 @@ export default function HomeScreen() {
               >
                 <IconSymbol name="person.fill" size={20} color={colors.secondary} />
                 <ThemedText style={[styles.secondaryButtonText, { color: colors.secondary }]}>
-                  Profil
+                  {t.profile}
                 </ThemedText>
               </Pressable>
             </>
@@ -232,7 +234,7 @@ export default function HomeScreen() {
               ]}
             >
               <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
-              <ThemedText style={styles.primaryButtonText}>Anmelden</ThemedText>
+              <ThemedText style={styles.primaryButtonText}>{t.loginButton}</ThemedText>
             </Pressable>
           )}
         </View>
@@ -253,7 +255,7 @@ export default function HomeScreen() {
             />
             <StatCard
               value={stats?.freeActivities ?? 0}
-              label="Kostenlos"
+              label={t.free}
               color={BrandColors.secondary}
               onPress={() => router.push("/(tabs)/explore?view=list&cost=free" as any)}
             />

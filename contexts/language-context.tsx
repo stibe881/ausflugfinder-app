@@ -118,6 +118,41 @@ type Translations = {
   errorOccurred: string;
   tryAgain: string;
   notFound: string;
+  // Explore Screen Extended
+  activitiesWaiting: string;
+  searchTrips: string;
+  noResultsFound: string;
+  tryDifferentTerms: string;
+  sortBy: string;
+  sortByName: string;
+  sortByDistance: string;
+  sortByPriceAsc: string;
+  sortByPriceDesc: string;
+  sortByRegion: string;
+  // Admin Create/Edit
+  createTrip: string;
+  chooseImage: string;
+  permissionRequired: string;
+  pleaseAllowPhotoAccess: string;
+  pleaseEnterName: string;
+  pleaseEnterAddress: string;
+  successfullyCreated: string;
+  successfullyUpdated: string;
+  // Home Screen
+  discoverSwitzerlandTitle: string;
+  discoverSwitzerlandSub: string;
+  freeActivitiesLabel: string;
+  searchHundredsDescription: string;
+  findNearbyDescription: string;
+  // Common UI
+  doneButton: string;
+  close: string;
+  name: string;
+  description: string;
+  address: string;
+  // Empty States
+  noActivitiesYet: string;
+  discoverAndSave: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -235,6 +270,41 @@ const translations: Record<Language, Translations> = {
     errorOccurred: "Ein Fehler ist aufgetreten",
     tryAgain: "Bitte versuche es erneut",
     notFound: "Nicht gefunden",
+    // Explore Screen Extended
+    activitiesWaiting: "Ausflugsziele warten auf dich",
+    searchTrips: "Suche nach Ausflügen...",
+    noResultsFound: "Keine Ausflüge gefunden",
+    tryDifferentTerms: "Versuche andere Suchbegriffe oder Filter",
+    sortBy: "Sortieren",
+    sortByName: "Name",
+    sortByDistance: "Entfernung",
+    sortByPriceAsc: "Preis aufsteigend",
+    sortByPriceDesc: "Preis absteigend",
+    sortByRegion: "Region",
+    // Admin Create/Edit
+    createTrip: "Ausflug erstellen",
+    chooseImage: "Bild auswählen",
+    permissionRequired: "Berechtigung erforderlich",
+    pleaseAllowPhotoAccess: "Bitte erlaube den Zugriff auf deine Fotos.",
+    pleaseEnterName: "Bitte Name eingeben",
+    pleaseEnterAddress: "Bitte Adresse eingeben",
+    successfullyCreated: "Erfolgreich erstellt",
+    successfullyUpdated: "Erfolgreich aktualisiert",
+    // Home Screen
+    discoverSwitzerlandTitle: "Entdecke die Schweiz",
+    discoverSwitzerlandSub: "Entdecke die schönsten Ausflugsziele in der Schweiz und Umgebung",
+    freeActivitiesLabel: "Kostenlose Aktivitäten",
+    searchHundredsDescription: "Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget",
+    findNearbyDescription: "Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte",
+    // Common UI
+    doneButton: "Fertig",
+    close: "Schließen",
+    name: "Name",
+    description: "Beschreibung",
+    address: "Adresse",
+    // Empty States
+    noActivitiesYet: "Noch keine Trips gespeichert",
+    discoverAndSave: "Entdecke Ausflugsziele und speichere deine Favoriten",
   },
   en: {
     // Navigation
@@ -350,6 +420,41 @@ const translations: Record<Language, Translations> = {
     errorOccurred: "An error occurred",
     tryAgain: "Please try again",
     notFound: "Not found",
+    // Explore Screen Extended
+    activitiesWaiting: "activities waiting for you",
+    searchTrips: "Search for trips...",
+    noResultsFound: "No trips found",
+    tryDifferentTerms: "Try different search terms or filters",
+    sortBy: "Sort by",
+    sortByName: "Name",
+    sortByDistance: "Distance",
+    sortByPriceAsc: "Price ascending",
+    sortByPriceDesc: "Price descending",
+    sortByRegion: "Region",
+    // Admin Create/Edit
+    createTrip: "Create trip",
+    chooseImage: "Choose image",
+    permissionRequired: "Permission required",
+    pleaseAllowPhotoAccess: "Please allow access to your photos.",
+    pleaseEnterName: "Please enter name",
+    pleaseEnterAddress: "Please enter address",
+    successfullyCreated: "Successfully created",
+    successfullyUpdated: "Successfully updated",
+    // Home Screen
+    discoverSwitzerlandTitle: "Discover Switzerland",
+    discoverSwitzerlandSub: "Discover the most beautiful destinations in Switzerland and surroundings",
+    freeActivitiesLabel: "Free activities",
+    searchHundredsDescription: "Search hundreds of destinations by category, region and budget",
+    findNearbyDescription: "Find destinations near you with the interactive map",
+    // Common UI
+    doneButton: "Done",
+    close: "Close",
+    name: "Name",
+    description: "Description",
+    address: "Address",
+    // Empty States
+    noActivitiesYet: "No trips saved yet",
+    discoverAndSave: "Discover destinations and save your favorites",
   },
   fr: {
     // Navigation
@@ -465,6 +570,41 @@ const translations: Record<Language, Translations> = {
     errorOccurred: "Une erreur s'est produite",
     tryAgain: "Veuillez réessayer",
     notFound: "Non trouvé",
+    // Explore Screen Extended
+    activitiesWaiting: "excursions vous attendent",
+    searchTrips: "Rechercher des excursions...",
+    noResultsFound: "Aucune excursion trouvée",
+    tryDifferentTerms: "Essayez d'autres termes ou filtres",
+    sortBy: "Trier par",
+    sortByName: "Nom",
+    sortByDistance: "Distance",
+    sortByPriceAsc: "Prix croissant",
+    sortByPriceDesc: "Prix décroissant",
+    sortByRegion: "Région",
+    // Admin Create/Edit
+    createTrip: "Créer une excursion",
+    chooseImage: "Choisir une image",
+    permissionRequired: "Autorisation requise",
+    pleaseAllowPhotoAccess: "Veuillez autoriser l'accès à vos photos.",
+    pleaseEnterName: "Veuillez entrer un nom",
+    pleaseEnterAddress: "Veuillez entrer une adresse",
+    successfullyCreated: "Créé avec succès",
+    successfullyUpdated: "Mis à jour avec succès",
+    // Home Screen
+    discoverSwitzerlandTitle: "Découvrez la Suisse",
+    discoverSwitzerlandSub: "Découvrez les plus belles destinations en Suisse et ses environs",
+    freeActivitiesLabel: "Activités gratuites",
+    searchHundredsDescription: "Recherchez des centaines de destinations par catégorie, région et budget",
+    findNearbyDescription: "Trouvez des destinations près de chez vous avec la carte interactive",
+    // Common UI
+    doneButton: "Terminé",
+    close: "Fermer",
+    name: "Nom",
+    description: "Description",
+    address: "Adresse",
+    // Empty States
+    noActivitiesYet: "Aucun voyage enregistré",
+    discoverAndSave: "Découvrez des destinations et enregistrez vos favoris",
   },
   it: {
     // Navigation
@@ -580,6 +720,41 @@ const translations: Record<Language, Translations> = {
     errorOccurred: "Si è verificato un errore",
     tryAgain: "Riprova",
     notFound: "Non trovato",
+    // Explore Screen Extended
+    activitiesWaiting: "escursioni ti aspettano",
+    searchTrips: "Cerca escursioni...",
+    noResultsFound: "Nessuna escursione trovata",
+    tryDifferentTerms: "Prova termini o filtri diversi",
+    sortBy: "Ordina per",
+    sortByName: "Nome",
+    sortByDistance: "Distanza",
+    sortByPriceAsc: "Prezzo crescente",
+    sortByPriceDesc: "Prezzo decrescente",
+    sortByRegion: "Regione",
+    // Admin Create/Edit
+    createTrip: "Crea escursione",
+    chooseImage: "Scegli immagine",
+    permissionRequired: "Autorizzazione richiesta",
+    pleaseAllowPhotoAccess: "Consenti l'accesso alle tue foto.",
+    pleaseEnterName: "Inserisci il nome",
+    pleaseEnterAddress: "Inserisci l'indirizzo",
+    successfullyCreated: "Creato con successo",
+    successfullyUpdated: "Aggiornato con successo",
+    // Home Screen
+    discoverSwitzerlandTitle: "Scopri la Svizzera",
+    discoverSwitzerlandSub: "Scopri le destinazioni più belle in Svizzera e dintorni",
+    freeActivitiesLabel: "Attività gratuite",
+    searchHundredsDescription: "Cerca centinaia di destinazioni per categoria, regione e budget",
+    findNearbyDescription: "Trova destinazioni vicino a te con la mappa interattiva",
+    // Common UI
+    doneButton: "Fatto",
+    close: "Chiudi",
+    name: "Nome",
+    description: "Descrizione",
+    address: "Indirizzo",
+    // Empty States
+    noActivitiesYet: "Nessun viaggio salvato",
+    discoverAndSave: "Scopri destinazioni e salva i tuoi preferiti",
   },
 };
 
