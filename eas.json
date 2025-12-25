@@ -22,7 +22,8 @@
             "ios": {
                 "image": "latest",
                 "resourceClass": "m-medium"
-            }
+            },
+            "postInstall": "./eas-build-post-install.sh"
         }
     },
     "submit": {
