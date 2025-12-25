@@ -388,11 +388,8 @@ export default function TripDetailScreen() {
           ),
         }}
       />
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Hero Image Gallery */}
+      <View style={styles.pageContainer}>
+        {/* Hero Image Gallery - Outside ScrollView */}
         <View style={styles.heroContainer}>
           {allPhotos.length > 0 ? (
             <>
@@ -457,226 +454,238 @@ export default function TripDetailScreen() {
           </View>
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Title & Location */}
-          <ThemedText style={styles.title}>{trip.name}</ThemedText>
-          <View style={styles.locationRow}>
-            <IconSymbol name="mappin.and.ellipse" size={16} color={colors.textSecondary} />
-            <ThemedText style={[styles.locationText, { color: colors.textSecondary }]}>
-              {trip.adresse}
-            </ThemedText>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <View style={styles.actionButtonRow}>
-              {(trip.lat && trip.lng) || trip.adresse ? (
-                <Pressable
-                  onPress={handleOpenMap}
-                  style={[styles.actionButtonHalf, { backgroundColor: colors.primary }]}
-                >
-                  <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
-                  <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
-                </Pressable>
-              ) : null}
-
-              {trip.website_url ? (
-                <Pressable
-                  onPress={handleOpenWebsite}
-                  style={[styles.actionButtonHalf, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
-                >
-                  <IconSymbol name="globe" size={20} color={colors.primary} />
-                  <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-
-          {/* User Trip Actions */}
-          {isAuthenticated && (
-            <View style={styles.userTripActions}>
-              <Pressable
-                onPress={handleToggleFavorite}
-                style={[styles.userTripButton, { backgroundColor: isFavorite ? "#EF4444" : colors.surface, borderWidth: 1, borderColor: isFavorite ? "#EF4444" : colors.border }]}
-              >
-                <IconSymbol name={isFavorite ? "heart.fill" : "heart"} size={20} color={isFavorite ? "#FFFFFF" : colors.text} />
-                <ThemedText style={[styles.userTripButtonText, { color: isFavorite ? "#FFFFFF" : colors.text }]}>
-                  {isFavorite ? "Favorit" : "Als Favorit"}
-                </ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={handleToggleDone}
-                style={[styles.userTripButton, { backgroundColor: isDone ? "#10B981" : colors.surface, borderWidth: 1, borderColor: isDone ? "#10B981" : colors.border }]}
-              >
-                <IconSymbol name="checkmark.circle.fill" size={20} color={isDone ? "#FFFFFF" : colors.text} />
-                <ThemedText style={[styles.userTripButtonText, { color: isDone ? "#FFFFFF" : colors.text }]}>
-                  {isDone ? "Gemacht" : "Als gemacht"}
-                </ThemedText>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Weather */}
-          {currentWeather && (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Wetter</ThemedText>
-
-              {/* Current Weather */}
-              <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.weatherCurrent}>
-                  {currentWeather.icon && (
-                    <Image
-                      source={{ uri: getWeatherIconUrl(currentWeather.icon) }}
-                      style={styles.weatherIcon}
-                      contentFit="contain"
-                    />
-                  )}
-                  <View style={styles.weatherCurrentInfo}>
-                    <ThemedText style={styles.weatherTemp}>{currentWeather.temp}°C</ThemedText>
-                    <ThemedText style={[styles.weatherDescription, { color: colors.textSecondary }]}>
-                      {currentWeather.description}
-                    </ThemedText>
-                  </View>
-                </View>
-
-                {/* Forecast Toggle Button */}
-                <Pressable
-                  onPress={handleShowForecast}
-                  style={({ pressed }) => [
-                    styles.forecastButton,
-                    { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }
-                  ]}
-                  disabled={weatherLoading}
-                >
-                  {weatherLoading ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <>
-                      <ThemedText style={styles.forecastButtonText}>
-                        {showForecast ? "7-Tage Vorhersage ausblenden" : "7-Tage Vorhersage anzeigen"}
-                      </ThemedText>
-                      <IconSymbol
-                        name={showForecast ? "chevron.up" : "chevron.down"}
-                        size={16}
-                        color="#FFFFFF"
-                      />
-                    </>
-                  )}
-                </Pressable>
-              </View>
-
-              {/* 7-Day Forecast */}
-              {showForecast && forecast.length > 0 && (
-                <View style={[styles.forecastContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {forecast.map((day, index) => (
-                    <View key={day.date} style={[styles.forecastDay, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                      <ThemedText style={[styles.forecastDate, { color: colors.textSecondary }]}>
-                        {new Date(day.date).toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })}
-                      </ThemedText>
-                      <Image
-                        source={{ uri: getWeatherIconUrl(day.icon) }}
-                        style={styles.forecastIcon}
-                        contentFit="contain"
-                      />
-                      <ThemedText style={styles.forecastTemp}>
-                        {day.temp_max}° / {day.temp_min}°
-                      </ThemedText>
-                      <ThemedText style={[styles.forecastDescription, { color: colors.textSecondary }]}>
-                        {day.description}
-                      </ThemedText>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Description */}
-          {trip.beschreibung ? (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Beschreibung</ThemedText>
-              <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                {trip.beschreibung}
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Title & Location */}
+            <ThemedText style={styles.title}>{trip.name}</ThemedText>
+            <View style={styles.locationRow}>
+              <IconSymbol name="mappin.and.ellipse" size={16} color={colors.textSecondary} />
+              <ThemedText style={[styles.locationText, { color: colors.textSecondary }]}>
+                {trip.adresse}
               </ThemedText>
             </View>
-          ) : null}
 
-          {/* Details */}
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Details</ThemedText>
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <View style={styles.actionButtonRow}>
+                {(trip.lat && trip.lng) || trip.adresse ? (
+                  <Pressable
+                    onPress={handleOpenMap}
+                    style={[styles.actionButtonHalf, { backgroundColor: colors.primary }]}
+                  >
+                    <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
+                    <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
+                  </Pressable>
+                ) : null}
 
-            {trip.region ? (
-              <InfoRow icon="location.fill" label="Region" value={trip.region} />
-            ) : null}
+                {trip.website_url ? (
+                  <Pressable
+                    onPress={handleOpenWebsite}
+                    style={[styles.actionButtonHalf, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                  >
+                    <IconSymbol name="globe" size={20} color={colors.primary} />
+                    <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
 
-            {trip.land ? (
-              <InfoRow icon="flag.fill" label="Land" value={trip.land} />
-            ) : null}
+            {/* User Trip Actions */}
+            {isAuthenticated && (
+              <View style={styles.userTripActions}>
+                <Pressable
+                  onPress={handleToggleFavorite}
+                  style={[styles.userTripButton, { backgroundColor: isFavorite ? "#EF4444" : colors.surface, borderWidth: 1, borderColor: isFavorite ? "#EF4444" : colors.border }]}
+                >
+                  <IconSymbol name={isFavorite ? "heart.fill" : "heart"} size={20} color={isFavorite ? "#FFFFFF" : colors.text} />
+                  <ThemedText style={[styles.userTripButtonText, { color: isFavorite ? "#FFFFFF" : colors.text }]}>
+                    {isFavorite ? "Favorit" : "Als Favorit"}
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={handleToggleDone}
+                  style={[styles.userTripButton, { backgroundColor: isDone ? "#10B981" : colors.surface, borderWidth: 1, borderColor: isDone ? "#10B981" : colors.border }]}
+                >
+                  <IconSymbol name="checkmark.circle.fill" size={20} color={isDone ? "#FFFFFF" : colors.text} />
+                  <ThemedText style={[styles.userTripButtonText, { color: isDone ? "#FFFFFF" : colors.text }]}>
+                    {isDone ? "Gemacht" : "Als gemacht"}
+                  </ThemedText>
+                </Pressable>
+              </View>
+            )}
 
-            {trip.parkplatz ? (
-              <InfoRow icon="parkingsign" label="Parkplatz" value={trip.parkplatz} />
-            ) : null}
+            {/* Weather */}
+            {currentWeather && (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Wetter</ThemedText>
 
-            {trip.altersempfehlung ? (
-              <InfoRow icon="person.2.fill" label="Altersempfehlung" value={trip.altersempfehlung} />
-            ) : null}
+                {/* Current Weather */}
+                <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.weatherCurrent}>
+                    {currentWeather.icon && (
+                      <Image
+                        source={{ uri: getWeatherIconUrl(currentWeather.icon) }}
+                        style={styles.weatherIcon}
+                        contentFit="contain"
+                      />
+                    )}
+                    <View style={styles.weatherCurrentInfo}>
+                      <ThemedText style={styles.weatherTemp}>{currentWeather.temp}°C</ThemedText>
+                      <ThemedText style={[styles.weatherDescription, { color: colors.textSecondary }]}>
+                        {currentWeather.description}
+                      </ThemedText>
+                    </View>
+                  </View>
 
-            {trip.jahreszeiten ? (
-              <InfoRow
-                icon="calendar"
-                label="Jahreszeiten"
-                value={translateSeasons(trip.jahreszeiten, t)}
-              />
-            ) : null}
-          </View>
+                  {/* Forecast Toggle Button */}
+                  <Pressable
+                    onPress={handleShowForecast}
+                    style={({ pressed }) => [
+                      styles.forecastButton,
+                      { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }
+                    ]}
+                    disabled={weatherLoading}
+                  >
+                    {weatherLoading ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <ThemedText style={styles.forecastButtonText}>
+                          {showForecast ? "7-Tage Vorhersage ausblenden" : "7-Tage Vorhersage anzeigen"}
+                        </ThemedText>
+                        <IconSymbol
+                          name={showForecast ? "chevron.up" : "chevron.down"}
+                          size={16}
+                          color="#FFFFFF"
+                        />
+                      </>
+                    )}
+                  </Pressable>
+                </View>
 
-          {/* Nice to Know */}
-          {trip.nice_to_know ? (
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Gut zu wissen</ThemedText>
-              <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <IconSymbol name="lightbulb.fill" size={20} color={colors.primary} />
-                <ThemedText style={[styles.infoBoxText, { color: colors.textSecondary }]}>
-                  {trip.nice_to_know}
+                {/* 7-Day Forecast */}
+                {showForecast && forecast.length > 0 && (
+                  <View style={[styles.forecastContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    {forecast.map((day, index) => (
+                      <View key={day.date} style={[styles.forecastDay, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                        <ThemedText style={[styles.forecastDate, { color: colors.textSecondary }]}>
+                          {new Date(day.date).toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        </ThemedText>
+                        <Image
+                          source={{ uri: getWeatherIconUrl(day.icon) }}
+                          style={styles.forecastIcon}
+                          contentFit="contain"
+                        />
+                        <ThemedText style={styles.forecastTemp}>
+                          {day.temp_max}° / {day.temp_min}°
+                        </ThemedText>
+                        <ThemedText style={[styles.forecastDescription, { color: colors.textSecondary }]}>
+                          {day.description}
+                        </ThemedText>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Description */}
+            {trip.beschreibung ? (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Beschreibung</ThemedText>
+                <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+                  {trip.beschreibung}
                 </ThemedText>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {/* Admin Actions */}
-          {canEdit && (
+            {/* Details */}
             <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Admin-Aktionen</ThemedText>
-              <View style={styles.adminActions}>
-                <Pressable
-                  onPress={handleEdit}
-                  style={[styles.adminButton, { backgroundColor: colors.primary }]}
-                >
-                  <IconSymbol name="pencil" size={20} color="#FFFFFF" />
-                  <ThemedText style={styles.adminButtonText}>Bearbeiten</ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={handleDelete}
-                  style={[styles.adminButton, { backgroundColor: "#EF4444" }]}
-                >
-                  <IconSymbol name="trash.fill" size={20} color="#FFFFFF" />
-                  <ThemedText style={styles.adminButtonText}>Löschen</ThemedText>
-                </Pressable>
-              </View>
-            </View>
-          )}
-        </View>
+              <ThemedText style={styles.sectionTitle}>Details</ThemedText>
 
-        {/* Bottom Spacing */}
-        <View style={{ height: insets.bottom + 32 }} />
-      </ScrollView>
+              {trip.region ? (
+                <InfoRow icon="location.fill" label="Region" value={trip.region} />
+              ) : null}
+
+              {trip.land ? (
+                <InfoRow icon="flag.fill" label="Land" value={trip.land} />
+              ) : null}
+
+              {trip.parkplatz ? (
+                <InfoRow icon="parkingsign" label="Parkplatz" value={trip.parkplatz} />
+              ) : null}
+
+              {trip.altersempfehlung ? (
+                <InfoRow icon="person.2.fill" label="Altersempfehlung" value={trip.altersempfehlung} />
+              ) : null}
+
+              {trip.jahreszeiten ? (
+                <InfoRow
+                  icon="calendar"
+                  label="Jahreszeiten"
+                  value={translateSeasons(trip.jahreszeiten, t)}
+                />
+              ) : null}
+            </View>
+
+            {/* Nice to Know */}
+            {trip.nice_to_know ? (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Gut zu wissen</ThemedText>
+                <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <IconSymbol name="lightbulb.fill" size={20} color={colors.primary} />
+                  <ThemedText style={[styles.infoBoxText, { color: colors.textSecondary }]}>
+                    {trip.nice_to_know}
+                  </ThemedText>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Admin Actions */}
+            {canEdit && (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Admin-Aktionen</ThemedText>
+                <View style={styles.adminActions}>
+                  <Pressable
+                    onPress={handleEdit}
+                    style={[styles.adminButton, { backgroundColor: colors.primary }]}
+                  >
+                    <IconSymbol name="pencil" size={20} color="#FFFFFF" />
+                    <ThemedText style={styles.adminButtonText}>Bearbeiten</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleDelete}
+                    style={[styles.adminButton, { backgroundColor: "#EF4444" }]}
+                  >
+                    <IconSymbol name="trash.fill" size={20} color="#FFFFFF" />
+                    <ThemedText style={styles.adminButtonText}>Löschen</ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Bottom Spacing */}
+          <View style={{ height: insets.bottom + 32 }} />
+        </ScrollView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  pageContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  scrollContent: {
     flex: 1,
   },
   loadingContainer: {
