@@ -25,13 +25,6 @@
             }
         }
     },
-    "build": {
-        "production": {
-            "hooks": {
-                "postInstall": "./eas-build-post-install.sh"
-            }
-        }
-    },
     "submit": {
         "production": {
             "ios": {
