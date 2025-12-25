@@ -22,6 +22,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/contexts/language-context";
 import { getUserTrips, toggleTripFavorite, toggleTripDone, removeUserTrip, type UserTrip } from "@/lib/supabase-api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -48,12 +49,14 @@ function TripListItem({
   onToggleFavorite,
   onToggleDone,
   onDelete,
+  getCostLabel,
 }: {
   trip: Trip;
   onPress: () => void;
   onToggleFavorite: () => void;
   onToggleDone: () => void;
   onDelete: () => void;
+  getCostLabel: (level: number) => string;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -131,7 +134,7 @@ function TripListItem({
           <View style={styles.tripItemFooter}>
             <View style={[styles.tripCostBadge, { backgroundColor: CostColors[trip.kosten_stufe ?? 0] + "20" }]}>
               <ThemedText style={[styles.tripItemCost, { color: CostColors[trip.kosten_stufe ?? 0] }]}>
-                {COST_LABELS[trip.kosten_stufe ?? 0] || trip.cost}
+                {getCostLabel(trip.kosten_stufe ?? 0)}
               </ThemedText>
             </View>
           </View>
@@ -162,22 +165,23 @@ function TripListItem({
 function EmptyState({ onExplore }: { onExplore: () => void }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
 
   return (
     <View style={styles.emptyContainer}>
       <IconSymbol name="heart.fill" size={64} color={colors.textSecondary} />
       <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-        Noch keine Trips gespeichert
+        {t.noActivitiesYet}
       </ThemedText>
       <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Entdecke Ausflugsziele und speichere deine Favoriten
+        {t.discoverAndSave}
       </ThemedText>
       <Pressable
         onPress={onExplore}
         style={[styles.exploreButton, { backgroundColor: colors.primary }]}
       >
         <IconSymbol name="magnifyingglass" size={18} color="#FFFFFF" />
-        <ThemedText style={styles.exploreButtonText}>Entdecken</ThemedText>
+        <ThemedText style={styles.exploreButtonText}>{t.exploreButton}</ThemedText>
       </Pressable>
     </View>
   );
@@ -186,22 +190,23 @@ function EmptyState({ onExplore }: { onExplore: () => void }) {
 function LoginPrompt({ onLogin }: { onLogin: () => void }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
 
   return (
     <View style={styles.emptyContainer}>
       <IconSymbol name="person.fill" size={64} color={colors.textSecondary} />
       <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-        Anmeldung erforderlich
+        {t.loginRequired}
       </ThemedText>
       <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Melde dich an, um deine Trips zu verwalten
+        {t.manageTrips}
       </ThemedText>
       <Pressable
         onPress={onLogin}
         style={[styles.exploreButton, { backgroundColor: colors.primary }]}
       >
         <IconSymbol name="person.fill" size={18} color="#FFFFFF" />
-        <ThemedText style={styles.exploreButtonText}>Anmelden</ThemedText>
+        <ThemedText style={styles.exploreButtonText}>{t.loginButton}</ThemedText>
       </Pressable>
     </View>
   );
@@ -213,10 +218,22 @@ export default function TripsScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
+
+  const getCostLabel = (level: number) => {
+    switch (level) {
+      case 0: return t.costFree;
+      case 1: return t.cheap;
+      case 2: return t.medium;
+      case 3: return t.expensive;
+      case 4: return t.expensive; // Using expensive for "Sehr teuer"
+      default: return t.costFree;
+    }
+  };
 
   const sortOptions: Array<{ key: "name" | "distance"; label: string }> = [
-    { key: "name", label: "Name" },
-    { key: "distance", label: "Entfernung" },
+    { key: "name", label: t.sortByName },
+    { key: "distance", label: t.sortByDistance },
   ];
 
   const [filter, setFilter] = useState<"all" | "favorites" | "done">("all");
@@ -250,7 +267,7 @@ export default function TripsScreen() {
       ...ut,
       title: ut.name,
       destination: ut.adresse,
-      cost: COST_LABELS[ut.kosten_stufe ?? 0],
+      cost: getCostLabel(ut.kosten_stufe ?? 0),
       image: ut.primaryPhotoUrl ?? null,
     }));
 
@@ -296,19 +313,19 @@ export default function TripsScreen() {
 
   const handleDelete = (tripId: number, title: string) => {
     Alert.alert(
-      "Aus Trips entfernen",
-      `Möchtest du "${title}" wirklich aus deinen Trips entfernen?`,
+      t.removeFromTrips,
+      t.removeConfirm.replace('diesen Trip', `"${title}"`),
       [
-        { text: "Abbrechen", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Entfernen",
+          text: t.remove,
           style: "destructive",
           onPress: async () => {
             const result = await removeUserTrip(tripId);
             if (result.success) {
               fetchTrips();
             } else {
-              Alert.alert("Fehler", result.error || "Entfernen fehlgeschlagen");
+              Alert.alert(t.error, result.error || t.removeFailed);
             }
           },
         },
@@ -321,7 +338,7 @@ export default function TripsScreen() {
     if (result.success) {
       fetchTrips();
     } else {
-      Alert.alert("Fehler", result.error || "Fehler beim Favorisieren");
+      Alert.alert(t.error, result.error || t.favoriteFailed);
     }
   };
 
@@ -330,7 +347,7 @@ export default function TripsScreen() {
     if (result.success) {
       fetchTrips();
     } else {
-      Alert.alert("Fehler", result.error || "Fehler beim Markieren");
+      Alert.alert(t.error, result.error || t.markFailed);
     }
   };
 
@@ -374,9 +391,9 @@ export default function TripsScreen() {
     });
 
   const filterOptions = [
-    { key: "all", label: "Alle", count: trips.length },
-    { key: "favorites", label: "Favoriten", count: trips.filter(t => t.is_favorite).length },
-    { key: "done", label: "Erledigt", count: trips.filter(t => t.is_done).length },
+    { key: "all", label: t.allFilter, count: trips.length },
+    { key: "favorites", label: t.favorites, count: trips.filter(t => t.is_favorite).length },
+    { key: "done", label: t.done, count: trips.filter(t => t.is_done).length },
   ];
 
   if (authLoading) {
@@ -405,9 +422,9 @@ export default function TripsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <ThemedText style={styles.headerTitle}>Meine Trips</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t.myTripsTab}</ThemedText>
           <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {trips?.length || 0} gespeicherte Ausflüge
+            {trips?.length || 0} {t.savedActivities}
           </ThemedText>
         </View>
         {/* Sort Button */}
@@ -521,6 +538,7 @@ export default function TripsScreen() {
               onToggleFavorite={() => handleToggleFavorite(item.id)}
               onToggleDone={() => handleToggleDone(item.id)}
               onDelete={() => handleDelete(item.id, item.title)}
+              getCostLabel={getCostLabel}
             />
           )}
         />
