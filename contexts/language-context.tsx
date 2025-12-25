@@ -252,6 +252,17 @@ type Translations = {
   parkingLocation: string;
   ageRecommendation: string;
   seasons: string;
+  // Categories
+  categoryHiking: string;
+  categoryMuseum: string;
+  categoryNature: string;
+  categoryCulture: string;
+  categorySport: string;
+  categoryFamily: string;
+  categoryAdventure: string;
+  categoryWellness: string;
+  categoryGastronomy: string;
+  categoryShopping: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -503,6 +514,17 @@ const translations: Record<Language, Translations> = {
     parkingLocation: "Parkplatz",
     ageRecommendation: "Altersempfehlung",
     seasons: "Jahreszeiten",
+    // Categories
+    categoryHiking: "Wandern",
+    categoryMuseum: "Museum",
+    categoryNature: "Natur",
+    categoryCulture: "Kultur",
+    categorySport: "Sport",
+    categoryFamily: "Familie",
+    categoryAdventure: "Abenteuer",
+    categoryWellness: "Wellness",
+    categoryGastronomy: "Gastronomie",
+    categoryShopping: "Shopping",
   },
   en: {
     // Navigation
@@ -752,6 +774,17 @@ const translations: Record<Language, Translations> = {
     parkingLocation: "Parking",
     ageRecommendation: "Age recommendation",
     seasons: "Seasons",
+    // Categories
+    categoryHiking: "Hiking",
+    categoryMuseum: "Museum",
+    categoryNature: "Nature",
+    categoryCulture: "Culture",
+    categorySport: "Sport",
+    categoryFamily: "Family",
+    categoryAdventure: "Adventure",
+    categoryWellness: "Wellness",
+    categoryGastronomy: "Gastronomy",
+    categoryShopping: "Shopping",
   },
   fr: {
     // Navigation
@@ -1001,6 +1034,17 @@ const translations: Record<Language, Translations> = {
     parkingLocation: "Parking",
     ageRecommendation: "Recommandation d'âge",
     seasons: "Saisons",
+    // Categories
+    categoryHiking: "Randonnée",
+    categoryMuseum: "Musée",
+    categoryNature: "Nature",
+    categoryCulture: "Culture",
+    categorySport: "Sport",
+    categoryFamily: "Famille",
+    categoryAdventure: "Aventure",
+    categoryWellness: "Bien-être",
+    categoryGastronomy: "Gastronomie",
+    categoryShopping: "Shopping",
   },
   it: {
     // Navigation
@@ -1250,6 +1294,17 @@ const translations: Record<Language, Translations> = {
     parkingLocation: "Parcheggio",
     ageRecommendation: "Raccomandazione età",
     seasons: "Stagioni",
+    // Categories
+    categoryHiking: "Escursioni",
+    categoryMuseum: "Museo",
+    categoryNature: "Natura",
+    categoryCulture: "Cultura",
+    categorySport: "Sport",
+    categoryFamily: "Famiglia",
+    categoryAdventure: "Avventura",
+    categoryWellness: "Benessere",
+    categoryGastronomy: "Gastronomia",
+    categoryShopping: "Shopping",
   },
 };
 
