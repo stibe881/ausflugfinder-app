@@ -275,9 +275,9 @@ const translations: Record<Language, Translations> = {
     profile: "Profil",
     // Home Screen
     welcome: "Willkommen",
-    discoverTitle: "Entdecke die Schweiz",
-    discoverSubtitle: "Finde die schönsten Ausflugsziele",
-    exploreButton: "Entdecken",
+    discoverTitle: "Entdecke die schönsten Ausflugsziele",
+    discoverSubtitle: "Finde Wanderungen, Sehenswürdigkeiten und Aktivitäten in deiner Nähe",
+    exploreButton: "Jetzt entdecken",
     loginButton: "Anmelden",
     logoutButton: "Abmelden",
     // Explore Screen
