@@ -98,6 +98,8 @@ export default function RootLayout() {
                       <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
                       <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
                       <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
+                      <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung" }} />
+                      <Stack.Screen name="admin/create-trip" options={{ headerShown: true, title: "Neuer Ausflug" }} />
                       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
                       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
                       <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
