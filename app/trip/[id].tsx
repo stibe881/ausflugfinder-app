@@ -436,11 +436,11 @@ export default function TripDetailScreen() {
               <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
             </View>
           )}
-          <View style={styles.heroOverlay} />
+          <View style={styles.heroOverlay} pointerEvents="none" />
 
           {/* Category Badge */}
           {trip?.kategorie_alt && (
-            <View style={styles.categoryBadge}>
+            <View style={styles.categoryBadge} pointerEvents="none">
               {trip.kategorie_alt.split(',').map((cat, index) => (
                 <View key={index} style={styles.categoryBadgeItem}>
                   <ThemedText style={styles.categoryBadgeText}>{cat.trim()}</ThemedText>
@@ -450,7 +450,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* Cost Badge */}
-          <View style={[styles.costBadge, { backgroundColor: costColor }]}>
+          <View style={[styles.costBadge, { backgroundColor: costColor }]} pointerEvents="none">
             <ThemedText style={styles.costBadgeText}>{costLabel}</ThemedText>
           </View>
         </View>
