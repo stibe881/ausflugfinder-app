@@ -27,14 +27,6 @@ import { useLanguage } from "@/contexts/language-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const COST_LABELS: Record<number, string> = {
-  0: "Kostenlos",
-  1: "Günstig (CHF 10-30)",
-  2: "Mittel (CHF 30-60)",
-  3: "Teuer (CHF 60-100)",
-  4: "Sehr teuer (CHF 100+)",
-};
-
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -230,20 +222,20 @@ export default function TripDetailScreen() {
     if (!trip) return;
 
     Alert.alert(
-      "Ausflug löschen",
-      `Möchtest du "${trip.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
+      t.deleteTrip,
+      `${t.deleteTripConfirm.replace('diesen Ausflug', `"${trip.name}"`)}`,
       [
-        { text: "Abbrechen", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Löschen",
+          text: t.delete,
           style: "destructive",
           onPress: async () => {
             const result = await deleteAusflug(trip.id);
             if (result.success) {
-              Alert.alert("Gelöscht", "Der Ausflug wurde erfolgreich gelöscht.");
+              Alert.alert(t.deleted, t.deletedSuccess);
               router.back();
             } else {
-              Alert.alert("Fehler", result.error || "Fehler beim Löschen.");
+              Alert.alert(t.error, result.error || t.deleteError);
             }
           },
         },
@@ -341,7 +333,17 @@ export default function TripDetailScreen() {
   }
 
   const kostenStufe = trip.kosten_stufe ?? 0;
-  const costLabel = COST_LABELS[kostenStufe] || "Kostenlos";
+  const getCostLabel = (level: number) => {
+    switch (level) {
+      case 0: return t.costFree;
+      case 1: return t.costCheap;
+      case 2: return t.costMedium;
+      case 3: return t.costExpensive;
+      case 4: return t.costVeryExpensive;
+      default: return t.costFree;
+    }
+  };
+  const costLabel = getCostLabel(kostenStufe);
   const costColors = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#DC2626"];
   const costColor = costColors[kostenStufe] || costColors[0];
 
@@ -479,7 +481,7 @@ export default function TripDetailScreen() {
                     style={[styles.actionButtonHalf, { backgroundColor: colors.primary }]}
                   >
                     <IconSymbol name="map.fill" size={20} color="#FFFFFF" />
-                    <ThemedText style={styles.actionButtonLargeText}>Karte öffnen</ThemedText>
+                    <ThemedText style={styles.actionButtonLargeText}>{t.openMap}</ThemedText>
                   </Pressable>
                 ) : null}
 
@@ -489,7 +491,7 @@ export default function TripDetailScreen() {
                     style={[styles.actionButtonHalf, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
                   >
                     <IconSymbol name="globe" size={20} color={colors.primary} />
-                    <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>Website</ThemedText>
+                    <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>{t.website}</ThemedText>
                   </Pressable>
                 ) : null}
               </View>
