@@ -434,11 +434,11 @@ const translations: Record<Language, Translations> = {
     continueAction: "Fortfahren",
     // Home Screen Extended
     statistics: "Statistiken",
-    activities: "Aktivitäten",
+    statsActivities: "Aktivitäten",
     regions: "Regionen",
     whatAwaits: "Was dich erwartet",
     perfectTrip: "Alles was du für deinen perfekten Ausflug brauchst",
-    discoverTrips: "Ausflüge entdecken",
+    exploreDiscoverTrips: "Ausflüge entdecken",
     discoverTripsDesc: "Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget",
     dayPlanning: "Tagesplanung",
     dayPlanningDesc: "Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget",
