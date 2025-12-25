@@ -22,6 +22,14 @@ export interface Plan {
     title: string;
     description?: string;
     status: PlanStatus;
+    departure_location?: string;
+    departure_address?: string;
+    departure_lat?: number;
+    departure_lng?: number;
+    home_location?: string;
+    home_address?: string;
+    home_lat?: number;
+    home_lng?: number;
     created_at: string;
     updated_at: string;
 }
@@ -381,6 +389,21 @@ export async function updatePlanStatus(
     status: PlanStatus
 ): Promise<{ success: boolean; error?: string }> {
     return updatePlan(planId, { status });
+}
+
+/**
+ * Update plan start location
+ */
+export async function updatePlanLocation(
+    planId: string,
+    location: {
+        departure_location?: string;
+        departure_address?: string;
+        departure_lat?: number;
+        departure_lng?: number;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    return updatePlan(planId, location);
 }
 
 /**
