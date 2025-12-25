@@ -104,7 +104,7 @@ const config: ExpoConfig = {
     [
       "expo-notifications",
       {
-        icon: "./assets/images/icon.png", // For Android only
+        icon: "./assets/images/notification-icon.png",
         color: "#4A90E2",
       },
     ],
