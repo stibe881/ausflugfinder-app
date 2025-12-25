@@ -614,6 +614,18 @@ export default function TripDetailScreen() {
                 <InfoRow icon="pawprint.fill" label={t.dogFriendly} value={trip.hundefreundlich ? t.yes : t.no} />
               ) : null}
 
+              {trip.land ? (
+                <InfoRow icon="flag.fill" label={t.country} value={trip.land} />
+              ) : null}
+
+              {trip.parkplatz ? (
+                <InfoRow icon="parkingsign" label={t.parkingLocation} value={trip.parkplatz} />
+              ) : null}
+
+              {trip.altersempfehlung ? (
+                <InfoRow icon="person.2.fill" label={t.ageRecommendation} value={trip.altersempfehlung} />
+              ) : null}
+
               {trip.dauer ? (
                 <InfoRow icon="clock.fill" label={t.duration} value={trip.dauer} />
               ) : null}
@@ -629,7 +641,7 @@ export default function TripDetailScreen() {
               {trip.jahreszeiten ? (
                 <InfoRow
                   icon="calendar"
-                  label="Jahreszeiten"
+                  label={t.seasons}
                   value={translateSeasons(trip.jahreszeiten, t)}
                 />
               ) : null}

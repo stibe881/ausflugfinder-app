@@ -297,8 +297,8 @@ export default function HomeScreen() {
           />
           <FeatureItem
             icon="map.fill"
-            title="Kartenansicht"
-            description={t.findNearbyDesc}
+            title={t.mapView}
+            description={t.mapViewDesc}
             onPress={() => router.push("/(tabs)/explore?view=map" as any)}
           />
         </View>

@@ -245,6 +245,13 @@ type Translations = {
   adminMode: string;
   adminModeActive: string;
   adminModeInactive: string;
+  // Additional Detail Fields
+  mapView: string;
+  mapViewDesc: string;
+  country: string;
+  parkingLocation: string;
+  ageRecommendation: string;
+  seasons: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -489,6 +496,13 @@ const translations: Record<Language, Translations> = {
     adminMode: "Admin-Modus",
     adminModeActive: "Aktiviert - Bearbeiten möglich",
     adminModeInactive: "Deaktiviert",
+    // Additional Detail Fields
+    mapView: "Kartenansicht",
+    mapViewDesc: "Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte",
+    country: "Land",
+    parkingLocation: "Parkplatz",
+    ageRecommendation: "Altersempfehlung",
+    seasons: "Jahreszeiten",
   },
   en: {
     // Navigation
@@ -731,6 +745,13 @@ const translations: Record<Language, Translations> = {
     adminMode: "Admin mode",
     adminModeActive: "Active - Editing enabled",
     adminModeInactive: "Inactive",
+    // Additional Detail Fields
+    mapView: "Map view",
+    mapViewDesc: "Find destinations nearby with the interactive map",
+    country: "Country",
+    parkingLocation: "Parking",
+    ageRecommendation: "Age recommendation",
+    seasons: "Seasons",
   },
   fr: {
     // Navigation
@@ -973,6 +994,13 @@ const translations: Record<Language, Translations> = {
     adminMode: "Mode admin",
     adminModeActive: "Actif - Édition possible",
     adminModeInactive: "Inactif",
+    // Additional Detail Fields
+    mapView: "Vue carte",
+    mapViewDesc: "Trouvez des destinations à proximité avec la carte interactive",
+    country: "Pays",
+    parkingLocation: "Parking",
+    ageRecommendation: "Recommandation d'âge",
+    seasons: "Saisons",
   },
   it: {
     // Navigation
@@ -1215,6 +1243,13 @@ const translations: Record<Language, Translations> = {
     adminMode: "Modalità admin",
     adminModeActive: "Attiva - Modifica abilitata",
     adminModeInactive: "Inattiva",
+    // Additional Detail Fields
+    mapView: "Vista mappa",
+    mapViewDesc: "Trova destinazioni nelle vicinanze con la mappa interattiva",
+    country: "Paese",
+    parkingLocation: "Parcheggio",
+    ageRecommendation: "Raccomandazione età",
+    seasons: "Stagioni",
   },
 };
 
