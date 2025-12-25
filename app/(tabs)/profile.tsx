@@ -417,8 +417,8 @@ export default function ProfileScreen() {
               />
             </SettingSection>
 
-            {/* Admin Section - Only visible for admins */}
-            {isAdmin && (
+            {/* Admin Section - Only visible when admin mode is enabled */}
+            {isAdminModeEnabled && (
               <SettingSection title="ADMINISTRATION">
                 <SettingItem
                   icon="plus.circle.fill"

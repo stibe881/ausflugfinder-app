@@ -26,7 +26,7 @@ import { ActivityEditor } from "@/components/planning/ActivityEditor";
 import { AccommodationCard } from "@/components/planning/AccommodationCard";
 import { MultiDayAccommodationEditor } from "@/components/planning/MultiDayAccommodationEditor";
 import { DistanceBadge } from "@/components/planning/DistanceBadge";
-import { getPlan, updatePlanStatus, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, updatePlanTripDate, addAccommodation, updateAccommodation, deleteAccommodation, getPlanTripsGroupedByDay, autoInsertAccommodations, getDistanceBetweenLocations, type Plan, type PlanTask, type TripActivity, type Accommodation, type DistanceInfo } from "@/lib/planning-api";
+import { getPlan, updatePlanStatus, updatePlanLocation, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, updatePlanTripDate, addAccommodation, updateAccommodation, deleteAccommodation, getPlanTripsGroupedByDay, autoInsertAccommodations, getDistanceBetweenLocations, type Plan, type PlanTask, type TripActivity, type Accommodation, type DistanceInfo } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
 import { getAllAusfluege } from "@/lib/supabase-api";
 
@@ -74,6 +74,9 @@ export default function PlanDetailScreen() {
     const [showAccommodationEditor, setShowAccommodationEditor] = useState(false);
     const [distances, setDistances] = useState<Record<string, DistanceInfo>>({});
     const [loadingDistances, setLoadingDistances] = useState(false);
+
+    // Start location state
+    const [showStartLocationModal, setShowStartLocationModal] = useState(false);
 
     useEffect(() => {
         loadPlan();
