@@ -191,10 +191,10 @@ type Translations = {
   descriptionTitle: string;
   detailsTitle: string;
   equipmentTitle: string;
-  weatherTitle: string;
+  tripWeatherTitle: string;  // Renamed from weatherTitle to avoid duplicate
   categories: string;
   duration: string;
-  season: string;
+  tripSeason: string;  // Renamed from season to avoid duplicate
   difficulty: string;
   accessibility: string;
 };
@@ -387,10 +387,10 @@ const translations: Record<Language, Translations> = {
     descriptionTitle: "Beschreibung",
     detailsTitle: "Details",
     equipmentTitle: "Ausrüstung",
-    weatherTitle: "Wetter",
+    tripWeatherTitle: "Wetter",
     categories: "Kategorien",
     duration: "Dauer",
-    season: "Saison",
+    tripSeason: "Saison",
     difficulty: "Schwierigkeit",
     accessibility: "Zugänglichkeit",
   },
@@ -581,10 +581,10 @@ const translations: Record<Language, Translations> = {
     descriptionTitle: "Description",
     detailsTitle: "Details",
     equipmentTitle: "Equipment",
-    weatherTitle: "Weather",
+    tripWeatherTitle: "Weather",
     categories: "Categories",
     duration: "Duration",
-    season: "Season",
+    tripSeason: "Season",
     difficulty: "Difficulty",
     accessibility: "Accessibility",
   },
@@ -775,10 +775,10 @@ const translations: Record<Language, Translations> = {
     descriptionTitle: "Description",
     detailsTitle: "Détails",
     equipmentTitle: "Équipement",
-    weatherTitle: "Météo",
+    tripWeatherTitle: "Météo",
     categories: "Catégories",
     duration: "Durée",
-    season: "Saison",
+    tripSeason: "Saison",
     difficulty: "Difficulté",
     accessibility: "Accessibilité",
   },
@@ -969,10 +969,10 @@ const translations: Record<Language, Translations> = {
     descriptionTitle: "Descrizione",
     detailsTitle: "Dettagli",
     equipmentTitle: "Attrezzatura",
-    weatherTitle: "Meteo",
+    tripWeatherTitle: "Meteo",
     categories: "Categorie",
     duration: "Durata",
-    season: "Stagione",
+    tripSeason: "Stagione",
     difficulty: "Difficoltà",
     accessibility: "Accessibilità",
   },
