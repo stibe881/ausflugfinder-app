@@ -7,10 +7,12 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useLanguage } from "@/contexts/language-context";
+import { useAdmin } from "@/contexts/admin-context";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useLanguage();
+  const { canEdit } = useAdmin();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? "light"];
 
@@ -56,15 +58,17 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="planner"
-        options={{
-          title: t.planner,
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="calendar" color={color} />
-          ),
-        }}
-      />
+      {canEdit && (
+        <Tabs.Screen
+          name="planner"
+          options={{
+            title: t.planner,
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={28} name="calendar" color={color} />
+            ),
+          }}
+        />
+      )}
       <Tabs.Screen
         name="profile"
         options={{
