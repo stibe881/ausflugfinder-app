@@ -449,38 +449,38 @@ export default function ProfileScreen() {
               </SettingSection>
             )}
 
-            <SettingSection title="SUPPORT">
+            <SettingSection title={t.supportSection}>
               <SettingItem
-                icon="info.circle.fill"
-                title="Über AusflugFinder"
+                icon="info.circle"
+                iconColor={BrandColors.primary}
+                title={t.profileAbout}
                 onPress={() => router.push("/about" as any)}
               />
               <SettingItem
-                icon="doc.text.fill"
-                title="Datenschutz"
-                onPress={() => WebBrowser.openBrowserAsync("https://ausflugfinder.ch/privacy-policy")}
+                icon="hand.raised.fill"
+                title={t.profilePrivacy}
+                onPress={() => router.push("/settings/privacy" as any)}
               />
               <SettingItem
-                icon="bubble.left.fill"
-                title="Feedback senden"
+                icon="envelope.fill"
+                iconColor={BrandColors.accent}
+                title={t.sendFeedback}
                 onPress={() => setShowFeedbackModal(true)}
               />
             </SettingSection>
 
-            <SettingSection title="KONTO">
+            <SettingSection title={t.accountSection}>
               <SettingItem
-                icon="arrow.left"
-                iconColor="#EF4444"
-                title="Abmelden"
+                icon="rectangle.portrait.and.arrow.right"
+                title={t.logout}
                 onPress={handleLogout}
-                danger
+                isDestructive
               />
               <SettingItem
                 icon="trash.fill"
-                iconColor="#EF4444"
-                title="Konto löschen"
+                title={t.deleteAccount}
                 onPress={handleDeleteAccount}
-                danger
+                isDestructive
               />
             </SettingSection>
 
