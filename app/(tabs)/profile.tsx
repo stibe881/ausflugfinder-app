@@ -125,6 +125,7 @@ function LoginScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
   const router = useRouter();
+  const { t } = useLanguage();
 
   const handleLogin = () => {
     router.push("/auth/login");
