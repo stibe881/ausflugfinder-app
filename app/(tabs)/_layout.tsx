@@ -7,12 +7,10 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useLanguage } from "@/contexts/language-context";
-import { useAdmin } from "@/contexts/admin-context";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { t } = useLanguage();
-  const { canEdit } = useAdmin();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? "light"];
 
