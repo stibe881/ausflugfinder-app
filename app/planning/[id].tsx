@@ -465,16 +465,27 @@ export default function PlanDetailScreen() {
                         </Pressable>
                     </View>
 
-                    {/* Auto-Insert Accommodations Button */}
-                    <Pressable
-                        style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: Spacing.md }]}
-                        onPress={handleAutoInsertAccommodations}
-                    >
-                        <IconSymbol name="bed.double.fill" size={20} color={colors.primary} />
-                        <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
-                            Unterkünfte hinzufügen
-                        </ThemedText>
-                    </Pressable>
+                    {/* Accommodation Buttons */}
+                    <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
+                        <Pressable
+                            style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, flex: 1 }]}
+                            onPress={() => setShowAccommodationEditor(true)}
+                        >
+                            <IconSymbol name="bed.double.fill" size={20} color={colors.primary} />
+                            <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
+                                Unterkunft hinzufügen
+                            </ThemedText>
+                        </Pressable>
+                        <Pressable
+                            style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, flex: 1 }]}
+                            onPress={handleAutoInsertAccommodations}
+                        >
+                            <IconSymbol name="sparkles" size={20} color={colors.primary} />
+                            <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
+                                Auto-Einfügen
+                            </ThemedText>
+                        </Pressable>
+                    </View>
 
                     {planTrips.map((trip) => (
                         <View
