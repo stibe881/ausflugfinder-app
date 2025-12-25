@@ -177,9 +177,12 @@ type Translations = {
   whatAwaits: string;
   perfectTrip: string;
   exploreDiscoverTrips: string;  // Renamed from discoverTrips to avoid duplicate
+  discoverTripsDesc: string;
   dayPlanning: string;
+  dayPlanningDesc: string;
   shareWithFriends: string;
   planAdventures: string;
+  findNearbyDesc: string;
   // Planner
   myPlans: string;
   noPlansYet: string;
@@ -360,9 +363,12 @@ const translations: Record<Language, Translations> = {
     whatAwaits: "Was dich erwartet",
     perfectTrip: "Alles was du für deinen perfekten Ausflug brauchst",
     discoverTrips: "Ausflüge entdecken",
+    discoverTripsDesc: "Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget",
     dayPlanning: "Tagesplanung",
+    dayPlanningDesc: "Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget",
     shareWithFriends: "Mit Freunden teilen",
     planAdventures: "Teile deine Lieblingsausflüge und plane gemeinsame Abenteuer",
+    findNearbyDesc: "Entdecke spannende Aktivitäten in deiner Nähe mit Karten-Ansicht",
     // Planner
     myPlans: "Meine Pläne",
     noPlansYet: "Noch keine Pläne erstellt",
@@ -541,9 +547,12 @@ const translations: Record<Language, Translations> = {
     whatAwaits: "What awaits you",
     perfectTrip: "Everything you need for your perfect trip",
     exploreDiscoverTrips: "Discover trips",
+    discoverTripsDesc: "Browse hundreds of destinations by category, region and budget",
     dayPlanning: "Day planning",
+    dayPlanningDesc: "Plan your perfect day with scheduling, packing list and budget",
     shareWithFriends: "Share with friends",
     planAdventures: "Share your favorite trips and plan adventures together",
+    findNearbyDesc: "Discover exciting activities nearby with map view",
     // Planner
     myPlans: "My Plans",
     noPlansYet: "No plans created yet",
@@ -722,9 +731,12 @@ const translations: Record<Language, Translations> = {
     whatAwaits: "Ce qui vous attend",
     perfectTrip: "Tout ce dont vous avez besoin pour votre excursion parfaite",
     exploreDiscoverTrips: "Découvrir des excursions",
+    discoverTripsDesc: "Parcourez des centaines de destinations par catégorie, région et budget",
     dayPlanning: "Planification de journée",
+    dayPlanningDesc: "Planifiez votre journée parfaite avec planification, liste de bagages et budget",
     shareWithFriends: "Partager avec des amis",
     planAdventures: "Partagez vos excursions préférées et planifiez des aventures ensemble",
+    findNearbyDesc: "Découvrez des activités passionnantes à proximité avec la vue carte",
     // Planner
     myPlans: "Mes plans",
     noPlansYet: "Aucun plan créé",
@@ -903,9 +915,12 @@ const translations: Record<Language, Translations> = {
     whatAwaits: "Cosa ti aspetta",
     perfectTrip: "Tutto ciò di cui hai bisogno per la tua escursione perfetta",
     exploreDiscoverTrips: "Scopri escursioni",
+    discoverTripsDesc: "Sfoglia centinaia di destinazioni per categoria, regione e budget",
     dayPlanning: "Pianificazione giornaliera",
+    dayPlanningDesc: "Pianifica la tua giornata perfetta con pianificazione, lista bagagli e budget",
     shareWithFriends: "Condividi con gli amici",
     planAdventures: "Condividi le tue escursioni preferite e pianifica avventure insieme",
+    findNearbyDesc: "Scopri attività entusiasmanti nelle vicinanze con la vista mappa",
     // Planner
     myPlans: "I miei piani",
     noPlansYet: "Nessun piano creato",

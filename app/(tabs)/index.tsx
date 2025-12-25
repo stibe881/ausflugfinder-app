@@ -280,13 +280,13 @@ export default function HomeScreen() {
           <FeatureItem
             icon="magnifyingglass"
             title={t.exploreDiscoverTrips}
-            description="Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget"
+            description={t.discoverTripsDesc}
             onPress={() => router.push("/(tabs)/explore?view=list" as any)}
           />
           <FeatureItem
             icon="calendar"
             title={t.dayPlanning}
-            description="Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget"
+            description={t.dayPlanningDesc}
             onPress={() => router.push("/(tabs)/planner")}
           />
           <FeatureItem
@@ -298,7 +298,7 @@ export default function HomeScreen() {
           <FeatureItem
             icon="map.fill"
             title="Kartenansicht"
-            description="Finde Ausflugsziele in deiner Nähe mit der interaktiven Karte"
+            description={t.findNearbyDesc}
             onPress={() => router.push("/(tabs)/explore?view=map" as any)}
           />
         </View>
