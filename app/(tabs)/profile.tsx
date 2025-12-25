@@ -139,9 +139,9 @@ function LoginScreen() {
       <View style={[styles.loginIcon, { backgroundColor: colors.primary + "15" }]}>
         <IconSymbol name="person.fill" size={48} color={colors.primary} />
       </View>
-      <ThemedText style={styles.loginTitle}>Willkommen bei AusflugFinder</ThemedText>
+      <ThemedText style={styles.loginTitle}>{t.welcomeToApp}</ThemedText>
       <ThemedText style={[styles.loginSubtitle, { color: colors.textSecondary }]}>
-        Melde dich an, um deine Ausflüge zu speichern, Pläne zu erstellen und mit Freunden zu teilen
+        {t.loginPromptText}
       </ThemedText>
       <Pressable
         onPress={handleLogin}
@@ -151,7 +151,7 @@ function LoginScreen() {
         ]}
       >
         <IconSymbol name="person.fill" size={20} color="#FFFFFF" />
-        <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
+        <ThemedText style={styles.loginButtonText}>{t.login}</ThemedText>
       </Pressable>
       <Pressable
         onPress={handleRegister}
@@ -160,7 +160,7 @@ function LoginScreen() {
           { borderColor: colors.primary },
         ]}
       >
-        <ThemedText style={[styles.registerButtonText, { color: colors.primary }]}>Registrieren</ThemedText>
+        <ThemedText style={[styles.registerButtonText, { color: colors.primary }]}>{t.register}</ThemedText>
       </Pressable>
     </View>
   );
@@ -173,7 +173,11 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { user: manusUser, isAuthenticated: manusAuth, loading: manusLoading } = useAuth();
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+
+  // Get language name for display
+  const languageNames = { de: "Deutsch", en: "English", fr: "Français", it: "Italiano" };
+  const currentLanguageName = languageNames[language];
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -358,30 +362,30 @@ export default function ProfileScreen() {
             />
 
             {/* Settings Sections */}
-            <SettingSection title="ALLGEMEIN">
+            <SettingSection title={t.generalSection}>
               <SettingItem
                 icon="location.fill"
                 iconColor={BrandColors.accent}
-                title="Standort"
-                subtitle="Standort & Nähe-Benachrichtigungen"
+                title={t.profileLocation}
+                subtitle={t.locationSubtitle}
                 onPress={() => router.push("/settings/location" as any)}
               />
               <SettingItem
                 icon="bell.fill"
-                title="Benachrichtigungen"
-                subtitle="Push-Benachrichtigungen verwalten"
+                title={t.profileNotifications}
+                subtitle={t.notificationsSubtitle}
                 onPress={() => router.push("/settings/notifications" as any)}
               />
               <SettingItem
                 icon="globe"
-                title="Sprache"
-                subtitle="Deutsch"
+                title={t.profileLanguage}
+                subtitle={currentLanguageName}
                 onPress={() => router.push("/settings/language" as any)}
               />
               <SettingItem
                 icon="moon.fill"
-                title="Erscheinungsbild"
-                subtitle="Systemeinstellung"
+                title={t.profileAppearance}
+                subtitle={t.appearanceSubtitle}
                 onPress={() => router.push("/settings/appearance" as any)}
               />
             </SettingSection>
