@@ -611,7 +611,7 @@ export default function TripDetailScreen() {
               <ThemedText style={styles.sectionTitle}>{t.detailsTitle}</ThemedText>
 
               {trip.hundefreundlich !== undefined ? (
-                <InfoRow icon="pawprint.fill" label={t.dogFriendly} value={trip.hundefreundlich ? "Ja" : "Nein"} />
+                <InfoRow icon="pawprint.fill" label={t.dogFriendly} value={trip.hundefreundlich ? t.yes : t.no} />
               ) : null}
 
               {trip.dauer ? (
@@ -619,11 +619,11 @@ export default function TripDetailScreen() {
               ) : null}
 
               {trip.parkplaetze !== undefined ? (
-                <InfoRow icon="parkingsign.circle.fill" label={t.parking} value={trip.parkplaetze ? "Ja" : "Nein"} />
+                <InfoRow icon="parkingsign.circle.fill" label={t.parking} value={trip.parkplaetze ? t.yes : t.no} />
               ) : null}
 
               {trip.oeffentlicher_verkehr !== undefined ? (
-                <InfoRow icon="tram.fill" label={t.publicTransport} value={trip.oeffentlicher_verkehr ? "Ja" : "Nein"} />
+                <InfoRow icon="tram.fill" label={t.publicTransport} value={trip.oeffentlicher_verkehr ? t.yes : t.no} />
               ) : null}
 
               {trip.jahreszeiten ? (

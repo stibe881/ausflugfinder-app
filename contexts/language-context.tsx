@@ -207,6 +207,9 @@ type Translations = {
   dogFriendly: string;
   childFriendly: string;
   openingHours: string;
+  // Common
+  yes: string;
+  no: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -413,6 +416,9 @@ const translations: Record<Language, Translations> = {
     dogFriendly: "Hundefreundlich",
     childFriendly: "Kinderfreundlich",
     openingHours: "Öffnungszeiten",
+    // Common
+    yes: "Ja",
+    no: "Nein",
   },
   en: {
     // Navigation
@@ -617,6 +623,9 @@ const translations: Record<Language, Translations> = {
     dogFriendly: "Dog friendly",
     childFriendly: "Child friendly",
     openingHours: "Opening hours",
+    // Common
+    yes: "Yes",
+    no: "No",
   },
   fr: {
     // Navigation
@@ -821,6 +830,9 @@ const translations: Record<Language, Translations> = {
     dogFriendly: "Accepte les chiens",
     childFriendly: "Adapté aux enfants",
     openingHours: "Heures d'ouverture",
+    // Common
+    yes: "Oui",
+    no: "Non",
   },
   it: {
     // Navigation
@@ -1025,6 +1037,9 @@ const translations: Record<Language, Translations> = {
     dogFriendly: "Accetta cani",
     childFriendly: "Adatto ai bambini",
     openingHours: "Orari di apertura",
+    // Common
+    yes: "Sì",
+    no: "No",
   },
 };
 
