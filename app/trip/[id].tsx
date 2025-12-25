@@ -13,13 +13,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import PagerView from "react-native-pager-view";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, deleteAusflug, type Ausflug, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
 import { useAdmin } from "@/contexts/admin-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
@@ -90,6 +91,8 @@ export default function TripDetailScreen() {
   const [trip, setTrip] = useState<Ausflug | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [allPhotos, setAllPhotos] = useState<string[]>([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isDone, setIsDone] = useState(false);
@@ -110,10 +113,23 @@ export default function TripDetailScreen() {
       const result = await getAusflugById(Number(id));
       setTrip(result);
 
-      // Fetch primary photo
+      // Fetch all photos
       if (result) {
-        const photo = await getPrimaryPhoto(result.id);
-        setPhotoUrl(photo);
+        const photos = await getAusflugPhotos(result.id);
+        const photoUrls = photos.map((p: AusflugFoto) => p.full_url);
+        setAllPhotos(photoUrls);
+
+        // Also get primary photo as fallback
+        const primaryPhoto = await getPrimaryPhoto(result.id);
+        if (primaryPhoto) {
+          setPhotoUrl(primaryPhoto);
+          // If primary photo exists in list, move it to first position
+          const primaryIndex = photoUrls.indexOf(primaryPhoto);
+          if (primaryIndex > 0) {
+            photoUrls.unshift(photoUrls.splice(primaryIndex, 1)[0]);
+            setAllPhotos([...photoUrls]);
+          }
+        }
       }
 
       // Check if trip is saved and get its status
@@ -376,9 +392,42 @@ export default function TripDetailScreen() {
         style={[styles.container, { backgroundColor: colors.background }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image */}
+        {/* Hero Image Gallery */}
         <View style={styles.heroContainer}>
-          {photoUrl ? (
+          {allPhotos.length > 0 ? (
+            <>
+              <PagerView
+                style={styles.heroImage}
+                initialPage={0}
+                onPageSelected={(e) => setCurrentPhotoIndex(e.nativeEvent.position)}
+              >
+                {allPhotos.map((photoUrl, index) => (
+                  <View key={`page-${index}`} style={styles.page}>
+                    <Image
+                      source={{ uri: photoUrl }}
+                      style={styles.heroImage}
+                      contentFit="cover"
+                    />
+                  </View>
+                ))}
+              </PagerView>
+
+              {/* Pagination Dots */}
+              {allPhotos.length > 1 && (
+                <View style={styles.paginationContainer}>
+                  {allPhotos.map((_, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        index === currentPhotoIndex && styles.paginationDotActive
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : photoUrl ? (
             <Image
               source={{ uri: photoUrl }}
               style={styles.heroImage}
@@ -681,6 +730,32 @@ const styles = StyleSheet.create({
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.2)",
+  },
+  page: {
+    width: "100%",
+    height: "100%",
+  },
+  paginationContainer: {
+    position: "absolute",
+    bottom: Spacing.md,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  paginationDotActive: {
+    backgroundColor: "#FFFFFF",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   costBadge: {
     position: "absolute",
