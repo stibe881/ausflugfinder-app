@@ -6,9 +6,11 @@ import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useLanguage } from "@/contexts/language-context";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const colors = Colors[colorScheme ?? "light"];
 
@@ -30,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t.home,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -39,16 +41,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Entdecken",
+          title: t.explore,
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="magnifyingglass" color={color} />
+            <IconSymbol size={28} name="paperplane.fill" color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="trips"
         options={{
-          title: "Meine Trips",
+          title: t.myTripsTab,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="heart.fill" color={color} />
           ),
@@ -57,8 +59,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="planner"
         options={{
-          title: "Planer",
-          headerShown: false,
+          title: t.planner,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="calendar" color={color} />
           ),
@@ -67,7 +68,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profil",
+          title: t.profile,
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="person.fill" color={color} />
           ),
