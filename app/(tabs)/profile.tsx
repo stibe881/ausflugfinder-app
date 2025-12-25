@@ -417,9 +417,28 @@ export default function ProfileScreen() {
               />
             </SettingSection>
 
-            {/* Admin Section - Only visible when admin mode is enabled */}
-            {isAdminModeEnabled && (
+            {/* Admin Mode Toggle - Always visible for admins */}
+            {isAdmin && (
               <SettingSection title="ADMINISTRATION">
+                <SettingItem
+                  icon="wrench.fill"
+                  iconColor={BrandColors.primary}
+                  title="Admin-Modus"
+                  subtitle={isAdminModeEnabled ? "Aktiviert - Bearbeiten möglich" : "Deaktiviert"}
+                  rightElement={
+                    <Switch
+                      value={isAdminModeEnabled}
+                      onValueChange={toggleAdminMode}
+                      trackColor={{ false: colors.border, true: colors.primary }}
+                    />
+                  }
+                />
+              </SettingSection>
+            )}
+
+            {/* Admin Functions - Only visible when admin mode is enabled */}
+            {isAdminModeEnabled && (
+              <SettingSection title="ADMIN-FUNKTIONEN">
                 <SettingItem
                   icon="plus.circle.fill"
                   iconColor="#10B981"
@@ -433,19 +452,6 @@ export default function ProfileScreen() {
                   title="Push-Benachrichtigungen"
                   subtitle="Broadcast an alle User senden"
                   onPress={() => router.push("/broadcast" as any)}
-                />
-                <SettingItem
-                  icon="wrench.fill"
-                  iconColor={BrandColors.primary}
-                  title="Admin-Modus"
-                  subtitle={isAdminModeEnabled ? "Aktiviert - Bearbeiten möglich" : "Deaktiviert"}
-                  rightElement={
-                    <Switch
-                      value={isAdminModeEnabled}
-                      onValueChange={toggleAdminMode}
-                      trackColor={{ false: colors.border, true: colors.primary }}
-                    />
-                  }
                 />
               </SettingSection>
             )}
