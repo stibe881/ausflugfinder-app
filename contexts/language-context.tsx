@@ -153,6 +153,23 @@ type Translations = {
   // Empty States
   noActivitiesYet: string;
   discoverAndSave: string;
+  // Trips Screen
+  myTripsTab: string;
+  savedActivities: string;
+  allFilter: string;
+  removeFromTrips: string;
+  removeConfirm: string;
+  remove: string;
+  removed: string;
+  removeFailed: string;
+  favoriteFailed: string;
+  markFailed: string;
+  // Profile
+  manageTrips: string;
+  loginToManage: string;
+  deleteAccountConfirm: string;
+  deleteAllData: string;
+  continueAction: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -305,6 +322,23 @@ const translations: Record<Language, Translations> = {
     // Empty States
     noActivitiesYet: "Noch keine Trips gespeichert",
     discoverAndSave: "Entdecke Ausflugsziele und speichere deine Favoriten",
+    // Trips Screen
+    myTripsTab: "Meine Trips",
+    savedActivities: "gespeicherte Ausflüge",
+    allFilter: "Alle",
+    removeFromTrips: "Aus Trips entfernen",
+    removeConfirm: "Möchtest du diesen Trip wirklich aus deiner Liste entfernen?",
+    remove: "Entfernen",
+    removed: "Entfernt",
+    removeFailed: "Entfernen fehlgeschlagen",
+    favoriteFailed: "Fehler beim Favorisieren",
+    markFailed: "Fehler beim Markieren",
+    // Profile
+    manageTrips: "Melde dich an, um deine Trips zu verwalten",
+    loginToManage: "Anmeldung erforderlich",
+    deleteAccountConfirm: "Konto löschen",
+    deleteAllData: "Alle deine Daten werden unwiderruflich gelöscht. Fortfahren?",
+    continueAction: "Fortfahren",
   },
   en: {
     // Navigation
@@ -455,6 +489,23 @@ const translations: Record<Language, Translations> = {
     // Empty States
     noActivitiesYet: "No trips saved yet",
     discoverAndSave: "Discover destinations and save your favorites",
+    // Trips Screen
+    myTripsTab: "My Trips",
+    savedActivities: "saved activities",
+    allFilter: "All",
+    removeFromTrips: "Remove from trips",
+    removeConfirm: "Do you really want to remove this trip from your list?",
+    remove: "Remove",
+    removed: "Removed",
+    removeFailed: "Remove failed",
+    favoriteFailed: "Failed to favorite",
+    markFailed: "Failed to mark",
+    // Profile
+    manageTrips: "Sign in to manage your trips",
+    loginToManage: "Login required",
+    deleteAccountConfirm: "Delete account",
+    deleteAllData: "All your data will be permanently deleted. Continue?",
+    continueAction: "Continue",
   },
   fr: {
     // Navigation
@@ -605,6 +656,23 @@ const translations: Record<Language, Translations> = {
     // Empty States
     noActivitiesYet: "Aucun voyage enregistré",
     discoverAndSave: "Découvrez des destinations et enregistrez vos favoris",
+    // Trips Screen
+    myTripsTab: "Mes voyages",
+    savedActivities: "activités enregistrées",
+    allFilter: "Tous",
+    removeFromTrips: "Retirer des voyages",
+    removeConfirm: "Voulez-vous vraiment retirer ce voyage de votre liste?",
+    remove: "Retirer",
+    removed: "Retiré",
+    removeFailed: "Échec de la suppression",
+    favoriteFailed: "Échec de l'ajout aux favoris",
+    markFailed: "Échec du marquage",
+    // Profile
+    manageTrips: "Connectez-vous pour gérer vos voyages",
+    loginToManage: "Connexion requise",
+    deleteAccountConfirm: "Supprimer le compte",
+    deleteAllData: "Toutes vos données seront définitivement supprimées. Continuer?",
+    continueAction: "Continuer",
   },
   it: {
     // Navigation
@@ -755,6 +823,23 @@ const translations: Record<Language, Translations> = {
     // Empty States
     noActivitiesYet: "Nessun viaggio salvato",
     discoverAndSave: "Scopri destinazioni e salva i tuoi preferiti",
+    // Trips Screen
+    myTripsTab: "I miei viaggi",
+    savedActivities: "attività salvate",
+    allFilter: "Tutti",
+    removeFromTrips: "Rimuovi dai viaggi",
+    removeConfirm: "Vuoi davvero rimuovere questo viaggio dalla tua lista?",
+    remove: "Rimuovi",
+    removed: "Rimosso",
+    removeFailed: "Rimozione fallita",
+    favoriteFailed: "Errore nell'aggiungere ai preferiti",
+    markFailed: "Errore nel segnare",
+    // Profile
+    manageTrips: "Accedi per gestire i tuoi viaggi",
+    loginToManage: "Accesso richiesto",
+    deleteAccountConfirm: "Elimina account",
+    deleteAllData: "Tutti i tuoi dati saranno eliminati permanentemente. Continuare?",
+    continueAction: "Continua",
   },
 };
 

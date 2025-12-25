@@ -23,6 +23,7 @@ import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/consta
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip, getUserTrips } from "@/lib/supabase-api";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/contexts/language-context";
 import * as Location from "expo-location";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -212,19 +213,21 @@ function CategoryChip({
   );
 }
 
-const SORT_OPTIONS: Array<{ key: "name" | "cost_asc" | "cost_desc" | "region" | "distance"; label: string }> = [
-  { key: "name", label: "Name" },
-  { key: "distance", label: "Entfernung" },
-  { key: "cost_asc", label: "Preis aufsteigend" },
-  { key: "cost_desc", label: "Preis absteigend" },
-  { key: "region", label: "Region" },
-];
 
 export default function ExploreScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
+
+  const SORT_OPTIONS: Array<{ key: "name" | "cost_asc" | "cost_desc" | "region" | "distance"; label: string }> = [
+    { key: "name", label: t.sortByName },
+    { key: "distance", label: t.sortByDistance },
+    { key: "cost_asc", label: t.sortByPriceAsc },
+    { key: "cost_desc", label: t.sortByPriceDesc },
+    { key: "region", label: t.sortByRegion },
+  ];
 
   const [keyword, setKeyword] = useState("");
   const [selectedCost, setSelectedCost] = useState<string | null>(null);
@@ -393,11 +396,11 @@ export default function ExploreScreen() {
   };
 
   const costFilters = [
-    { key: "", label: "Alle" },
-    { key: "free", label: "Kostenlos" },
-    { key: "low", label: "Günstig" },
-    { key: "medium", label: "Mittel" },
-    { key: "high", label: "Teuer" },
+    { key: "", label: t.all },
+    { key: "free", label: t.free },
+    { key: "low", label: t.cheap },
+    { key: "medium", label: t.medium },
+    { key: "high", label: t.expensive },
   ];
 
   return (
@@ -405,9 +408,9 @@ export default function ExploreScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <ThemedText style={styles.headerTitle}>Entdecken</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t.explore}</ThemedText>
           <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {stats?.totalActivities || 0} Ausflugsziele warten auf dich
+            {stats?.totalActivities || 0} {t.activitiesWaiting}
           </ThemedText>
         </View>
         <View style={styles.headerButtons}>
@@ -473,7 +476,7 @@ export default function ExploreScreen() {
           <IconSymbol name="magnifyingglass" size={20} color={colors.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Suche nach Ausflügen..."
+            placeholder={t.searchTrips}
             placeholderTextColor={colors.textSecondary}
             value={keyword}
             onChangeText={setKeyword}
@@ -518,10 +521,10 @@ export default function ExploreScreen() {
         <View style={styles.emptyContainer}>
           <IconSymbol name="magnifyingglass" size={48} color={colors.textSecondary} />
           <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Keine Ausflüge gefunden
+            {t.noResultsFound}
           </ThemedText>
           <ThemedText style={[styles.emptySubtext, { color: colors.textDisabled }]}>
-            Versuche andere Suchbegriffe oder Filter
+            {t.tryDifferentTerms}
           </ThemedText>
         </View>
       ) : (
