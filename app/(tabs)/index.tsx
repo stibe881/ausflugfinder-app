@@ -242,14 +242,14 @@ export default function HomeScreen() {
 
       {/* Statistics Section */}
       <View style={styles.section}>
-        <ThemedText style={styles.sectionTitle}>Statistiken</ThemedText>
+        <ThemedText style={styles.sectionTitle}>{t.statistics}</ThemedText>
         {statsLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
         ) : (
           <View style={styles.statsGrid}>
             <StatCard
               value={stats?.totalActivities ?? 0}
-              label="Aktivitäten"
+              label={t.statsActivities}
               color={BrandColors.primary}
               onPress={() => router.push("/(tabs)/explore?view=list" as any)}
             />
@@ -261,7 +261,7 @@ export default function HomeScreen() {
             />
             <StatCard
               value={stats?.totalRegions ?? 0}
-              label="Regionen"
+              label={t.regions}
               color={BrandColors.accent}
               onPress={() => router.push("/(tabs)/explore?view=map" as any)}
             />
@@ -271,28 +271,28 @@ export default function HomeScreen() {
 
       {/* Features Section */}
       <View style={styles.section}>
-        <ThemedText style={styles.sectionTitle}>Was dich erwartet</ThemedText>
+        <ThemedText style={styles.sectionTitle}>{t.whatAwaits}</ThemedText>
         <ThemedText style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-          Alles was du für deinen perfekten Ausflug brauchst
+          {t.perfectTrip}
         </ThemedText>
 
         <View style={styles.featuresContainer}>
           <FeatureItem
             icon="magnifyingglass"
-            title="Ausflüge entdecken"
+            title={t.exploreDiscoverTrips}
             description="Durchsuche hunderte von Ausflugszielen nach Kategorie, Region und Budget"
             onPress={() => router.push("/(tabs)/explore?view=list" as any)}
           />
           <FeatureItem
             icon="calendar"
-            title="Tagesplanung"
+            title={t.dayPlanning}
             description="Plane deinen perfekten Tag mit Zeitplanung, Packliste und Budget"
             onPress={() => router.push("/(tabs)/planner")}
           />
           <FeatureItem
             icon="person.2.fill"
-            title="Mit Freunden teilen"
-            description="Teile deine Lieblingsausflüge und plane gemeinsame Abenteuer"
+            title={t.shareWithFriends}
+            description={t.planAdventures}
             onPress={() => router.push("/(tabs)/trips")}
           />
           <FeatureItem

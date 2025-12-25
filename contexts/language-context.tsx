@@ -170,6 +170,20 @@ type Translations = {
   deleteAccountConfirm: string;
   deleteAllData: string;
   continueAction: string;
+  // Home Screen Extended
+  statistics: string;
+  statsActivities: string;  // Renamed from activities to avoid duplicate
+  regions: string;
+  whatAwaits: string;
+  perfectTrip: string;
+  exploreDiscoverTrips: string;  // Renamed from discoverTrips to avoid duplicate
+  dayPlanning: string;
+  shareWithFriends: string;
+  planAdventures: string;
+  // Planner
+  myPlans: string;
+  noPlansYet: string;
+  createFirstPlan: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -339,6 +353,20 @@ const translations: Record<Language, Translations> = {
     deleteAccountConfirm: "Konto löschen",
     deleteAllData: "Alle deine Daten werden unwiderruflich gelöscht. Fortfahren?",
     continueAction: "Fortfahren",
+    // Home Screen Extended
+    statistics: "Statistiken",
+    activities: "Aktivitäten",
+    regions: "Regionen",
+    whatAwaits: "Was dich erwartet",
+    perfectTrip: "Alles was du für deinen perfekten Ausflug brauchst",
+    discoverTrips: "Ausflüge entdecken",
+    dayPlanning: "Tagesplanung",
+    shareWithFriends: "Mit Freunden teilen",
+    planAdventures: "Teile deine Lieblingsausflüge und plane gemeinsame Abenteuer",
+    // Planner
+    myPlans: "Meine Pläne",
+    noPlansYet: "Noch keine Pläne erstellt",
+    createFirstPlan: "Erstelle deinen ersten Tagesplan",
   },
   en: {
     // Navigation
@@ -506,6 +534,20 @@ const translations: Record<Language, Translations> = {
     deleteAccountConfirm: "Delete account",
     deleteAllData: "All your data will be permanently deleted. Continue?",
     continueAction: "Continue",
+    // Home Screen Extended
+    statistics: "Statistics",
+    statsActivities: "Activities",
+    regions: "Regions",
+    whatAwaits: "What awaits you",
+    perfectTrip: "Everything you need for your perfect trip",
+    exploreDiscoverTrips: "Discover trips",
+    dayPlanning: "Day planning",
+    shareWithFriends: "Share with friends",
+    planAdventures: "Share your favorite trips and plan adventures together",
+    // Planner
+    myPlans: "My Plans",
+    noPlansYet: "No plans created yet",
+    createFirstPlan: "Create your first day plan",
   },
   fr: {
     // Navigation
@@ -673,6 +715,20 @@ const translations: Record<Language, Translations> = {
     deleteAccountConfirm: "Supprimer le compte",
     deleteAllData: "Toutes vos données seront définitivement supprimées. Continuer?",
     continueAction: "Continuer",
+    // Home Screen Extended
+    statistics: "Statistiques",
+    statsActivities: "Activités",
+    regions: "Régions",
+    whatAwaits: "Ce qui vous attend",
+    perfectTrip: "Tout ce dont vous avez besoin pour votre excursion parfaite",
+    exploreDiscoverTrips: "Découvrir des excursions",
+    dayPlanning: "Planification de journée",
+    shareWithFriends: "Partager avec des amis",
+    planAdventures: "Partagez vos excursions préférées et planifiez des aventures ensemble",
+    // Planner
+    myPlans: "Mes plans",
+    noPlansYet: "Aucun plan créé",
+    createFirstPlan: "Créez votre premier plan de journée",
   },
   it: {
     // Navigation
@@ -840,6 +896,20 @@ const translations: Record<Language, Translations> = {
     deleteAccountConfirm: "Elimina account",
     deleteAllData: "Tutti i tuoi dati saranno eliminati permanentemente. Continuare?",
     continueAction: "Continua",
+    // Home Screen Extended
+    statistics: "Statistiche",
+    statsActivities: "Attività",
+    regions: "Regioni",
+    whatAwaits: "Cosa ti aspetta",
+    perfectTrip: "Tutto ciò di cui hai bisogno per la tua escursione perfetta",
+    exploreDiscoverTrips: "Scopri escursioni",
+    dayPlanning: "Pianificazione giornaliera",
+    shareWithFriends: "Condividi con gli amici",
+    planAdventures: "Condividi le tue escursioni preferite e pianifica avventure insieme",
+    // Planner
+    myPlans: "I miei piani",
+    noPlansYet: "Nessun piano creato",
+    createFirstPlan: "Crea il tuo primo piano giornaliero",
   },
 };
 
