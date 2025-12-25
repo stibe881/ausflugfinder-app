@@ -29,6 +29,7 @@ import { supabase } from "@/lib/supabase";
 import { useAdmin } from "@/contexts/admin-context";
 import { getLoginUrl } from "@/constants/oauth";
 import { trpc } from "@/lib/trpc";
+import { useLanguage } from "@/contexts/language-context";
 
 type SettingItemProps = {
   icon: string;
@@ -172,6 +173,7 @@ export default function ProfileScreen() {
   const colors = Colors[colorScheme ?? "light"];
   const { user: manusUser, isAuthenticated: manusAuth, loading: manusLoading } = useAuth();
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
+  const { t } = useLanguage();
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -238,19 +240,19 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      "Konto löschen",
-      "Bist du sicher, dass du dein Konto löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.",
+      t.deleteAccountConfirm,
+      t.deleteAllData,
       [
-        { text: "Abbrechen", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Löschen",
+          text: t.delete,
           style: "destructive",
           onPress: () => {
             Alert.alert(
-              "Letzte Warnung",
-              "Alle deine Daten werden unwiderruflich gelöscht. Fortfahren?",
+              t.deleteAccountConfirm,
+              t.deleteAllData,
               [
-                { text: "Abbrechen", style: "cancel" },
+                { text: t.cancel, style: "cancel" },
                 {
                   text: "Endgültig löschen",
                   style: "destructive",
