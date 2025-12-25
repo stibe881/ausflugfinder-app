@@ -610,20 +610,20 @@ export default function TripDetailScreen() {
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>{t.detailsTitle}</ThemedText>
 
-              {trip.region ? (
-                <InfoRow icon="location.fill" label="Region" value={trip.region} />
+              {trip.hundefreundlich !== undefined ? (
+                <InfoRow icon="pawprint.fill" label={t.dogFriendly} value={trip.hundefreundlich ? "Ja" : "Nein"} />
               ) : null}
 
-              {trip.land ? (
-                <InfoRow icon="flag.fill" label="Land" value={trip.land} />
+              {trip.dauer ? (
+                <InfoRow icon="clock.fill" label={t.duration} value={trip.dauer} />
               ) : null}
 
-              {trip.parkplatz ? (
-                <InfoRow icon="parkingsign" label="Parkplatz" value={trip.parkplatz} />
+              {trip.parkplaetze !== undefined ? (
+                <InfoRow icon="parkingsign.circle.fill" label={t.parking} value={trip.parkplaetze ? "Ja" : "Nein"} />
               ) : null}
 
-              {trip.altersempfehlung ? (
-                <InfoRow icon="person.2.fill" label="Altersempfehlung" value={trip.altersempfehlung} />
+              {trip.oeffentlicher_verkehr !== undefined ? (
+                <InfoRow icon="tram.fill" label={t.publicTransport} value={trip.oeffentlicher_verkehr ? "Ja" : "Nein"} />
               ) : null}
 
               {trip.jahreszeiten ? (
@@ -638,7 +638,7 @@ export default function TripDetailScreen() {
             {/* Nice to Know */}
             {trip.nice_to_know ? (
               <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>Gut zu wissen</ThemedText>
+                <ThemedText style={styles.sectionTitle}>{t.goodToKnow}</ThemedText>
                 <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <IconSymbol name="lightbulb.fill" size={20} color={colors.primary} />
                   <ThemedText style={[styles.infoBoxText, { color: colors.textSecondary }]}>

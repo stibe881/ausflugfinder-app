@@ -197,6 +197,16 @@ type Translations = {
   tripSeason: string;  // Renamed from season to avoid duplicate
   difficulty: string;
   accessibility: string;
+  // Detail Labels
+  region: string;
+  goodToKnow: string;
+  parking: string;
+  publicTransport: string;
+  restaurantNearby: string;
+  wheelchairAccessible: string;
+  dogFriendly: string;
+  childFriendly: string;
+  openingHours: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -393,6 +403,16 @@ const translations: Record<Language, Translations> = {
     tripSeason: "Saison",
     difficulty: "Schwierigkeit",
     accessibility: "Zugänglichkeit",
+    // Detail Labels
+    region: "Region",
+    goodToKnow: "Gut zu wissen",
+    parking: "Parkplätze",
+    publicTransport: "Öffentlicher Verkehr",
+    restaurantNearby: "Restaurant in der Nähe",
+    wheelchairAccessible: "Rollstuhlgängig",
+    dogFriendly: "Hundefreundlich",
+    childFriendly: "Kinderfreundlich",
+    openingHours: "Öffnungszeiten",
   },
   en: {
     // Navigation
@@ -587,6 +607,16 @@ const translations: Record<Language, Translations> = {
     tripSeason: "Season",
     difficulty: "Difficulty",
     accessibility: "Accessibility",
+    // Detail Labels
+    region: "Region",
+    goodToKnow: "Good to know",
+    parking: "Parking",
+    publicTransport: "Public transport",
+    restaurantNearby: "Restaurant nearby",
+    wheelchairAccessible: "Wheelchair accessible",
+    dogFriendly: "Dog friendly",
+    childFriendly: "Child friendly",
+    openingHours: "Opening hours",
   },
   fr: {
     // Navigation
@@ -781,6 +811,16 @@ const translations: Record<Language, Translations> = {
     tripSeason: "Saison",
     difficulty: "Difficulté",
     accessibility: "Accessibilité",
+    // Detail Labels
+    region: "Région",
+    goodToKnow: "Bon à savoir",
+    parking: "Parking",
+    publicTransport: "Transports publics",
+    restaurantNearby: "Restaurant à proximité",
+    wheelchairAccessible: "Accessible en fauteuil roulant",
+    dogFriendly: "Accepte les chiens",
+    childFriendly: "Adapté aux enfants",
+    openingHours: "Heures d'ouverture",
   },
   it: {
     // Navigation
@@ -975,6 +1015,16 @@ const translations: Record<Language, Translations> = {
     tripSeason: "Stagione",
     difficulty: "Difficoltà",
     accessibility: "Accessibilità",
+    // Detail Labels
+    region: "Regione",
+    goodToKnow: "Buono a sapersi",
+    parking: "Parcheggio",
+    publicTransport: "Trasporti pubblici",
+    restaurantNearby: "Ristorante nelle vicinanze",
+    wheelchairAccessible: "Accessibile in sedia a rotelle",
+    dogFriendly: "Accetta cani",
+    childFriendly: "Adatto ai bambini",
+    openingHours: "Orari di apertura",
   },
 };
 
