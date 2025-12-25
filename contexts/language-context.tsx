@@ -216,22 +216,22 @@ type Translations = {
   login: string;
   register: string;
   generalSection: string;
-  location: string;
+  profileLocation: string;  // Renamed from location
   locationSubtitle: string;
-  notifications: string;
+  profileNotifications: string;  // Renamed from notifications
   notificationsSubtitle: string;
-  language: string;
-  appearance: string;
+  profileLanguage: string;  // Renamed from language
+  profileAppearance: string;  // Renamed from appearance
   appearanceSubtitle: string;
   socialSection: string;
-  friends: string;
+  profileFriends: string;  // Renamed from friends
   friendsSubtitle: string;
-  share: string;
+  profileShare: string;  // Renamed from share
   shareSubtitle: string;
   shareMessage: string;
   supportSection: string;
-  about: string;
-  privacy: string;
+  profileAbout: string;  // Renamed from about
+  profilePrivacy: string;  // Renamed from privacy
   sendFeedback: string;
   accountSection: string;
   logout: string;
@@ -460,22 +460,22 @@ const translations: Record<Language, Translations> = {
     login: "Anmelden",
     register: "Registrieren",
     generalSection: "ALLGEMEIN",
-    location: "Standort",
+    profileLocation: "Standort",
     locationSubtitle: "Standort & Nähe-Benachrichtigungen",
-    notifications: "Benachrichtigungen",
+    profileNotifications: "Benachrichtigungen",
     notificationsSubtitle: "Push-Benachrichtigungen verwalten",
-    language: "Sprache",
-    appearance: "Erscheinungsbild",
+    profileLanguage: "Sprache",
+    profileAppearance: "Erscheinungsbild",
     appearanceSubtitle: "Systemeinstellung",
     socialSection: "SOZIAL",
-    friends: "Freunde",
+    profileFriends: "Freunde",
     friendsSubtitle: "Freunde verwalten",
-    share: "Teilen",
+    profileShare: "Teilen",
     shareSubtitle: "App mit Freunden teilen",
     shareMessage: "Schau dir AusflugFinder an! Entdecke tolle Ausflugsziele in deiner Nähe. 🏞️",
     supportSection: "SUPPORT",
-    about: "Über AusflugFinder",
-    privacy: "Datenschutz",
+    profileAbout: "Über AusflugFinder",
+    profilePrivacy: "Datenschutz",
     sendFeedback: "Feedback senden",
     accountSection: "KONTO",
     logout: "Abmelden",
