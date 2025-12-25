@@ -58,21 +58,23 @@ function translateSeasons(seasons: string, t: any): string {
   if (!seasons) return '';
 
   const seasonMap: Record<string, string> = {
-    'Frühling': t.spring,
-    'Sommer': t.summer,
-    'Herbst': t.autumn,
-    'Winter': t.winter,
-    'Spring': t.spring,
-    'Summer': t.summer,
-    'Autumn': t.autumn,
-    'Fall': t.autumn,
+    // German (already translated)
+    'frühling': t.spring,
+    'sommer': t.summer,
+    'herbst': t.autumn,
+    // English
+    'spring': t.spring,
+    'summer': t.summer,
+    'autumn': t.autumn,
+    'fall': t.autumn,
+    'winter': t.winter,
   };
 
-  // Split by comma and translate each season
+  // Split by comma and translate each season (case-insensitive)
   return seasons
     .split(',')
     .map(s => s.trim())
-    .map(s => seasonMap[s] || s)
+    .map(s => seasonMap[s.toLowerCase()] || s)
     .join(', ');
 }
 
@@ -389,6 +391,17 @@ export default function TripDetailScreen() {
           )}
           <View style={styles.heroOverlay} />
 
+          {/* Category Badge */}
+          {trip?.kategorie_alt && (
+            <View style={styles.categoryBadge}>
+              {trip.kategorie_alt.split(',').map((cat, index) => (
+                <View key={index} style={styles.categoryBadgeItem}>
+                  <ThemedText style={styles.categoryBadgeText}>{cat.trim()}</ThemedText>
+                </View>
+              ))}
+            </View>
+          )}
+
           {/* Cost Badge */}
           <View style={[styles.costBadge, { backgroundColor: costColor }]}>
             <ThemedText style={styles.costBadgeText}>{costLabel}</ThemedText>
@@ -681,6 +694,26 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  categoryBadge: {
+    position: "absolute",
+    left: Spacing.md,
+    bottom: Spacing.md,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.xs,
+    maxWidth: "50%",
+  },
+  categoryBadgeItem: {
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+  },
+  categoryBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "500",
   },
   content: {
     padding: Spacing.lg,

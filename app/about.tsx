@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import Constants from "expo-constants";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -36,9 +37,13 @@ export default function AboutScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
 
+  // Get version and build number from app config
+  const version = Constants.expoConfig?.version || "1.0.0";
+  const buildNumber = Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || "1";
+
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Über AusflugFinder" }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: "Über AusflugFinder", headerBackTitle: "Zurück" }} />
       <ThemedView style={styles.container}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -56,14 +61,16 @@ export default function AboutScreen() {
               Entdecke die schönsten Ausflugsziele der Schweiz
             </ThemedText>
             <View style={[styles.versionBadge, { backgroundColor: colors.primary + "15" }]}>
-              <ThemedText style={[styles.versionText, { color: colors.primary }]}>Version 1.0.0</ThemedText>
+              <ThemedText style={[styles.versionText, { color: colors.primary }]}>
+                Version {version} (Build {buildNumber})
+              </ThemedText>
             </View>
           </View>
 
           {/* Description */}
           <View style={[styles.descriptionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <ThemedText style={[styles.description, { color: colors.text }]}>
-              AusflugFinder hilft dir, die besten Ausflugsziele in der Schweiz und Umgebung zu entdecken. 
+              AusflugFinder hilft dir, die besten Ausflugsziele in der Schweiz und Umgebung zu entdecken.
               Plane deine Ausflüge, erstelle Packlisten, verwalte dein Budget und teile Erlebnisse mit Freunden.
             </ThemedText>
           </View>
@@ -86,8 +93,8 @@ export default function AboutScreen() {
             <ThemedText style={styles.sectionTitle}>Information</ThemedText>
             <InfoItem icon="globe" title="Website" value="ausflugfinder.ch" onPress={() => Linking.openURL("https://ausflugfinder.ch")} />
             <InfoItem icon="paperplane.fill" title="E-Mail" value="info@ausflugfinder.ch" onPress={() => Linking.openURL("mailto:info@ausflugfinder.ch")} />
-            <InfoItem icon="doc.text.fill" title="Datenschutz" value="Datenschutzerklärung" onPress={() => {}} />
-            <InfoItem icon="doc.text.fill" title="Nutzungsbedingungen" value="AGB" onPress={() => {}} />
+            <InfoItem icon="doc.text.fill" title="Datenschutz" value="Datenschutzerklärung" onPress={() => { }} />
+            <InfoItem icon="doc.text.fill" title="Nutzungsbedingungen" value="AGB" onPress={() => { }} />
           </View>
 
           {/* Credits */}

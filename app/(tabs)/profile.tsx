@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
+import Constants from "expo-constants";
 import {
   ActivityIndicator,
   Alert,
@@ -8,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   View,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
@@ -18,6 +20,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { EditProfileModal } from "@/components/edit-profile-modal";
+import { FeedbackModal } from "@/components/feedback-modal";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
@@ -171,6 +174,7 @@ export default function ProfileScreen() {
   const { user: supabaseUser, loading: supabaseLoading, signOut } = useSupabaseAuth();
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Load avatar from users table
@@ -334,6 +338,12 @@ export default function ProfileScreen() {
             </Pressable>
 
             {/* Edit Profile Modal */}
+            {/* Feedback Modal */}
+            <FeedbackModal
+              visible={showFeedbackModal}
+              onClose={() => setShowFeedbackModal(false)}
+            />
+
             <EditProfileModal
               visible={showEditModal}
               onClose={() => setShowEditModal(false)}
@@ -387,7 +397,16 @@ export default function ProfileScreen() {
                 iconColor={BrandColors.secondary}
                 title="Teilen"
                 subtitle="App mit Freunden teilen"
-                onPress={() => { }}
+                onPress={async () => {
+                  try {
+                    await Share.share({
+                      message: "Schau dir AusflugFinder an! Entdecke tolle Ausflugsziele in deiner Nähe. 🏔️",
+                      title: "AusflugFinder App",
+                    });
+                  } catch (error) {
+                    console.error("Share error:", error);
+                  }
+                }}
               />
             </SettingSection>
 
@@ -433,12 +452,12 @@ export default function ProfileScreen() {
               <SettingItem
                 icon="doc.text.fill"
                 title="Datenschutz"
-                onPress={() => { }}
+                onPress={() => WebBrowser.openBrowserAsync("https://ausflugfinder.ch/privacy-policy")}
               />
               <SettingItem
                 icon="bubble.left.fill"
                 title="Feedback senden"
-                onPress={() => { }}
+                onPress={() => setShowFeedbackModal(true)}
               />
             </SettingSection>
 
@@ -462,7 +481,7 @@ export default function ProfileScreen() {
             {/* App Version */}
             <View style={styles.versionContainer}>
               <ThemedText style={[styles.versionText, { color: colors.textDisabled }]}>
-                AusflugFinder v1.0.0
+                AusflugFinder v{Constants.expoConfig?.version || "1.0.0"} (Build {Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || "1"})
               </ThemedText>
             </View>
           </>

@@ -89,7 +89,7 @@ export default function NotificationSettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Benachrichtigungen" }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: "Benachrichtigungen", headerBackTitle: "Zurück" }} />
       <ThemedView style={styles.container}>
         <View style={styles.content}>
           {/* Master Switch */}

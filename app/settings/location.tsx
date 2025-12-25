@@ -1,6 +1,6 @@
-import { Stack } from "expo-router";
+import { Stack, useFocusEffect } from "expo-router";
 import { StyleSheet, Switch, View, Pressable, Platform, Linking, Alert } from "react-native";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -172,7 +172,7 @@ export default function LocationSettingsScreen() {
     if (Platform.OS === "web") {
         return (
             <>
-                <Stack.Screen options={{ headerShown: true, headerTitle: "Standort" }} />
+                <Stack.Screen options={{ headerShown: true, headerTitle: "Standort", headerBackTitle: "Zurück" }} />
                 <ThemedView style={styles.container}>
                     <View style={styles.content}>
                         <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -189,7 +189,7 @@ export default function LocationSettingsScreen() {
 
     return (
         <>
-            <Stack.Screen options={{ headerShown: true, headerTitle: "Standort" }} />
+            <Stack.Screen options={{ headerShown: true, headerTitle: "Standort", headerBackTitle: "Zurück" }} />
             <ThemedView style={styles.container}>
                 <View style={styles.content}>
                     {/* Location Permission */}

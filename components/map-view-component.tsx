@@ -266,7 +266,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
           longitudeDelta: lngDelta,
         }}
         provider={PROVIDER_DEFAULT}
-        showsUserLocation
+        showsUserLocation={false} // Disable default, use custom marker
         showsMyLocationButton
         clusterColor={BrandColors.primary}
         clusterTextColor="#FFFFFF"
@@ -274,6 +274,19 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
         spiralEnabled={false}
       >
         {tripsWithCoords.map((trip) => renderMarker(trip))}
+
+        {/* Custom User Location Marker with high zIndex */}
+        {userLocation && (
+          <Marker
+            coordinate={userLocation}
+            zIndex={9999} // Highest zIndex to appear on top
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={styles.userLocationMarker}>
+              <View style={styles.userLocationDot} />
+            </View>
+          </Marker>
+        )}
       </ClusteredMapView>
     </View>
   );
@@ -383,19 +396,26 @@ const styles = StyleSheet.create({
   },
   // User Location Marker Styles
   userLocationMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(66, 133, 244, 0.2)",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(74, 144, 226, 0.3)", // Larger, more visible
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "rgba(74, 144, 226, 0.5)",
   },
   userLocationDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#4285F4",
-    borderWidth: 3,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#4A90E2", // Brand color
+    borderWidth: 4,
     borderColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

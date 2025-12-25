@@ -25,7 +25,7 @@ export default function AppearanceSettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Erscheinungsbild" }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: "Erscheinungsbild", headerBackTitle: "Zurück" }} />
       <ThemedView style={styles.container}>
         <View style={styles.content}>
           <ThemedText style={[styles.description, { color: colors.textSecondary }]}>

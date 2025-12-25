@@ -51,6 +51,7 @@ type Trip = {
   adresse: string;
   kosten_stufe: number | null;
   region: string | null;
+  kategorie_alt?: string | null;
   lat: string | null;
   lng: string | null;
   primaryPhotoUrl?: string | null;
@@ -158,6 +159,19 @@ function TripCard({
             {trip.adresse}
           </ThemedText>
         </View>
+
+        {/* Category Badges */}
+        {trip.kategorie_alt && (
+          <View style={styles.tripCategories}>
+            {trip.kategorie_alt.split(',').slice(0, 2).map((cat: string, index: number) => (
+              <View key={index} style={[styles.tripCategoryBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ThemedText style={[styles.tripCategoryText, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {cat.trim()}
+                </ThemedText>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -200,10 +214,10 @@ function CategoryChip({
 
 const SORT_OPTIONS: Array<{ key: "name" | "cost_asc" | "cost_desc" | "region" | "distance"; label: string }> = [
   { key: "name", label: "Name" },
+  { key: "distance", label: "Entfernung" },
   { key: "cost_asc", label: "Preis aufsteigend" },
   { key: "cost_desc", label: "Preis absteigend" },
   { key: "region", label: "Region" },
-  { key: "distance", label: "Entfernung" },
 ];
 
 export default function ExploreScreen() {
@@ -240,12 +254,6 @@ export default function ExploreScreen() {
     }
   }, [params.view, params.cost]); // React to URL parameter changes
 
-  const SORT_OPTIONS = [
-    { key: "name", label: "Name (A-Z)" },
-    { key: "cost_asc", label: "Preis (aufsteigend)" },
-    { key: "cost_desc", label: "Preis (absteigend)" },
-    { key: "region", label: "Region" },
-  ] as const;
 
   // Fetch trips with filters and photos
   const fetchTrips = useCallback(async () => {
@@ -748,5 +756,21 @@ const styles = StyleSheet.create({
   tripLocationText: {
     fontSize: 12,
     flex: 1,
+  },
+  tripCategories: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  tripCategoryBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+  },
+  tripCategoryText: {
+    fontSize: 10,
+    fontWeight: "500",
   },
 });

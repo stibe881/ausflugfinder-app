@@ -25,6 +25,8 @@ import {
     uploadAusflugPhoto,
     deleteAusflugPhoto,
     setPhotoPrimary,
+    getNiceToKnowOptions,
+    getKategorieOptions,
     type Ausflug,
     type AusflugFoto,
 } from "@/lib/supabase-api";
@@ -49,7 +51,12 @@ export default function EditTripScreen() {
     const [adresse, setAdresse] = useState("");
     const [region, setRegion] = useState("");
     const [websiteUrl, setWebsiteUrl] = useState("");
-    const [niceToKnow, setNiceToKnow] = useState("");
+    const [niceToKnow, setNiceToKnow] = useState<string[]>([]);
+    const [kategorie, setKategorie] = useState<string[]>([]);
+    const [niceToKnowOptions, setNiceToKnowOptions] = useState<{ category: string; options: string[] }[]>([]);
+    const [kategorieOptions, setKategorieOptions] = useState<string[]>([]);
+    const [kategorieExpanded, setKategorieExpanded] = useState(false);
+    const [niceToKnowExpanded, setNiceToKnowExpanded] = useState(false);
 
     useEffect(() => {
         async function loadData() {
@@ -64,8 +71,18 @@ export default function EditTripScreen() {
                 setAdresse(tripData.adresse || "");
                 setRegion(tripData.region || "");
                 setWebsiteUrl(tripData.website_url || "");
-                setNiceToKnow(tripData.nice_to_know || "");
+
+                // Parse nice_to_know and kategorie_alt from comma-separated strings to arrays
+                setNiceToKnow(tripData.nice_to_know ? tripData.nice_to_know.split(',').map(v => v.trim()) : []);
+                setKategorie(tripData.kategorie_alt ? tripData.kategorie_alt.split(',').map(v => v.trim()) : []);
             }
+
+            // Load options
+            const niceToKnowOpts = await getNiceToKnowOptions();
+            setNiceToKnowOptions(niceToKnowOpts);
+
+            const kategorieOpts = await getKategorieOptions();
+            setKategorieOptions(kategorieOpts);
 
             const photosData = await getAusflugPhotos(Number(id));
             setPhotos(photosData);
@@ -85,7 +102,8 @@ export default function EditTripScreen() {
             adresse,
             region,
             website_url: websiteUrl,
-            nice_to_know: niceToKnow,
+            nice_to_know: niceToKnow.join(", "),
+            kategorie_alt: kategorie.join(", "),
         });
         setIsSaving(false);
 
@@ -328,16 +346,108 @@ export default function EditTripScreen() {
                     </View>
 
                     <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Gut zu wissen</ThemedText>
-                        <TextInput
-                            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={niceToKnow}
-                            onChangeText={setNiceToKnow}
-                            placeholder="Tipps und Hinweise"
-                            placeholderTextColor={colors.textDisabled}
-                            multiline
-                            numberOfLines={3}
-                        />
+                        <Pressable
+                            onPress={() => setKategorieExpanded(!kategorieExpanded)}
+                            style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                        >
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Kategorie</ThemedText>
+                            <IconSymbol
+                                name={kategorieExpanded ? "chevron.up" : "chevron.down"}
+                                size={20}
+                                color={colors.textSecondary}
+                            />
+                        </Pressable>
+                        {kategorieExpanded && (kategorieOptions && kategorieOptions.length > 0 ? (
+                            <View style={styles.checkboxContainer}>
+                                {kategorieOptions.map((kat) => (
+                                    <Pressable
+                                        key={kat}
+                                        onPress={() => {
+                                            const isSelected = kategorie.includes(kat);
+                                            setKategorie(isSelected
+                                                ? kategorie.filter(v => v !== kat)
+                                                : [...kategorie, kat]
+                                            );
+                                        }}
+                                        style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                    >
+                                        <View style={[
+                                            styles.checkbox,
+                                            {
+                                                backgroundColor: kategorie.includes(kat) ? colors.primary : colors.surface,
+                                                borderColor: kategorie.includes(kat) ? colors.primary : colors.border,
+                                            }
+                                        ]}>
+                                            {kategorie.includes(kat) && (
+                                                <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                            )}
+                                        </View>
+                                        <ThemedText style={styles.checkboxLabel}>{kat}</ThemedText>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        ) : (
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+                                Keine Kategorien verfügbar
+                            </ThemedText>
+                        ))}
+                    </View>
+
+                    <View style={styles.field}>
+                        <Pressable
+                            onPress={() => setNiceToKnowExpanded(!niceToKnowExpanded)}
+                            style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                        >
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Gut zu wissen</ThemedText>
+                            <IconSymbol
+                                name={niceToKnowExpanded ? "chevron.up" : "chevron.down"}
+                                size={20}
+                                color={colors.textSecondary}
+                            />
+                        </Pressable>
+                        {niceToKnowExpanded && (niceToKnowOptions && niceToKnowOptions.length > 0 ? (
+                            <View style={styles.checkboxContainer}>
+                                {niceToKnowOptions.map(({ category, options }) => (
+                                    <View key={category} style={styles.categorySection}>
+                                        <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
+                                            {category}
+                                        </ThemedText>
+                                        <View style={styles.categoryOptions}>
+                                            {options.map((option) => (
+                                                <Pressable
+                                                    key={option}
+                                                    onPress={() => {
+                                                        const isSelected = niceToKnow.includes(option);
+                                                        setNiceToKnow(isSelected
+                                                            ? niceToKnow.filter(v => v !== option)
+                                                            : [...niceToKnow, option]
+                                                        );
+                                                    }}
+                                                    style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                                >
+                                                    <View style={[
+                                                        styles.checkbox,
+                                                        {
+                                                            backgroundColor: niceToKnow.includes(option) ? colors.primary : colors.surface,
+                                                            borderColor: niceToKnow.includes(option) ? colors.primary : colors.border,
+                                                        }
+                                                    ]}>
+                                                        {niceToKnow.includes(option) && (
+                                                            <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                        )}
+                                                    </View>
+                                                    <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
+                                                </Pressable>
+                                            ))}
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : (
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+                                Keine Optionen verfügbar
+                            </ThemedText>
+                        ))}
                     </View>
                 </View>
             </ScrollView>
@@ -460,6 +570,52 @@ const styles = StyleSheet.create({
     textArea: {
         minHeight: 100,
         textAlignVertical: "top",
+    },
+    checkboxContainer: {
+        gap: Spacing.sm,
+    },
+    checkboxItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.md,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.sm,
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    checkboxLabel: {
+        flex: 1,
+        fontSize: 15,
+    },
+    categorySection: {
+        marginBottom: Spacing.lg,
+    },
+    categoryTitle: {
+        fontSize: 13,
+        fontWeight: "600",
+        marginBottom: Spacing.sm,
+        textTransform: "uppercase",
+    },
+    categoryOptions: {
+        gap: Spacing.sm,
+    },
+    collapsibleHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.sm,
     },
     saveContainer: {
         position: "absolute",

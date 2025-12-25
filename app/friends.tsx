@@ -111,7 +111,7 @@ export default function FriendsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Freunde" }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: "Freunde", headerBackTitle: "Zurück" }} />
       <ThemedView style={styles.container}>
         {/* Search Bar */}
         <View style={styles.searchContainer}>

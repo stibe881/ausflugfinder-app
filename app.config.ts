@@ -39,12 +39,14 @@ const config: ExpoConfig = {
     }
   },
   ios: {
+    icon: "./assets/images/icon.png",
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     config: {
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
     },
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["audio", "location", "fetch", "remote-notification"],
       NSLocationWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort, um Ausflugsziele in deiner Nähe anzuzeigen und dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
       NSLocationAlwaysAndWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
@@ -97,6 +99,13 @@ const config: ExpoConfig = {
         dark: {
           backgroundColor: "#000000",
         },
+      },
+    ],
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/images/icon.png", // For Android only
+        color: "#4A90E2",
       },
     ],
     [

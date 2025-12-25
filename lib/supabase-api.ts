@@ -234,6 +234,7 @@ export async function createAusflug(data: {
     altersempfehlung?: string;
     parkplatz?: string;
     parkplatz_kostenlos?: boolean;
+    kategorie_alt?: string;
     dauer_min?: string;
     dauer_max?: string;
     distanz_min?: string;
@@ -269,6 +270,123 @@ export async function createAusflug(data: {
     } catch (error: any) {
         console.error("[createAusflug] Unexpected error:", error);
         return { success: false, error: error.message };
+    }
+}
+
+// Get all unique "nice to know" entries from database, grouped by category
+export async function getNiceToKnowOptions(): Promise<{ category: string; options: string[] }[]> {
+    try {
+        const { data, error } = await supabase
+            .from("ausfluege")
+            .select("nice_to_know")
+            .not("nice_to_know", "is", null)
+            .not("nice_to_know", "eq", "");
+
+        if (error) {
+            console.error("[Supabase] Error fetching nice to know options:", error);
+            return [];
+        }
+
+        // Extract and deduplicate values
+        const allValues = new Set<string>();
+        data?.forEach(item => {
+            if (item.nice_to_know) {
+                // Split by common separators and trim
+                const values = item.nice_to_know
+                    .split(/[,;|\n]/)
+                    .map((v: string) => v.trim())
+                    .filter((v: string) => v.length > 0);
+                values.forEach((v: string) => allValues.add(v));
+            }
+        });
+
+        const allOptions = Array.from(allValues).sort();
+
+        // Categorize options
+        const categories: { [key: string]: string[] } = {
+            'Ausstattung': [],
+            'Verpflegung': [],
+            'Zugang': [],
+            'Besonderheiten': [],
+            'Sonstiges': []
+        };
+
+        allOptions.forEach(option => {
+            const lower = option.toLowerCase();
+            if (lower.includes('wc') || lower.includes('toilette') || lower.includes('wickel') ||
+                lower.includes('spielplatz') || lower.includes('picknick') || lower.includes('sitzbänke')) {
+                categories['Ausstattung'].push(option);
+            } else if (lower.includes('restaurant') || lower.includes('kiosk') || lower.includes('verpflegung') ||
+                lower.includes('essen') || lower.includes('grillstelle') || lower.includes('feuerstelle')) {
+                categories['Verpflegung'].push(option);
+            } else if (lower.includes('barrierefrei') || lower.includes('kinderwagen') || lower.includes('rollstuhl') ||
+                lower.includes('zugang') || lower.includes('erreichbar')) {
+                categories['Zugang'].push(option);
+            } else if (lower.includes('aussicht') || lower.includes('tiere') || lower.includes('natur') ||
+                lower.includes('führung') || lower.includes('museum') || lower.includes('historisch')) {
+                categories['Besonderheiten'].push(option);
+            } else {
+                categories['Sonstiges'].push(option);
+            }
+        });
+
+        // Return only non-empty categories
+        return Object.entries(categories)
+            .filter(([_, options]) => options.length > 0)
+            .map(([category, options]) => ({ category, options }));
+    } catch (error) {
+        console.error("[Supabase] Error in getNiceToKnowOptions:", error);
+        return [];
+    }
+}
+
+// Get all unique categories from database
+export async function getKategorieOptions(): Promise<string[]> {
+    // Standard categories that are always available
+    const standardCategories = [
+        "Natur & Wandern",
+        "Museum & Kultur",
+        "Sport & Abenteuer",
+        "Familie & Kinder",
+        "Wellness & Entspannung",
+        "Stadt & Sightseeing",
+        "Wasser & Seen",
+        "Berge & Alpen",
+        "Gastronomie",
+        "Events & Festivals",
+    ];
+
+    try {
+        const { data, error } = await supabase
+            .from("ausfluege")
+            .select("kategorie_alt")
+            .not("kategorie_alt", "is", null)
+            .not("kategorie_alt", "eq", "");
+
+        if (error) {
+            console.error("[Supabase] Error fetching kategorie options:", error);
+            return standardCategories; // Return standard categories on error
+        }
+
+        // Extract unique categories from database
+        const dbCategories = new Set<string>();
+        data?.forEach(item => {
+            if (item.kategorie_alt) {
+                // Split by comma in case multiple categories are stored together
+                item.kategorie_alt.split(',').forEach((cat: string) => {
+                    const trimmed = cat.trim();
+                    if (trimmed) dbCategories.add(trimmed);
+                });
+            }
+        });
+
+        // Merge standard categories with database categories
+        const allCategories = new Set([...standardCategories, ...Array.from(dbCategories)]);
+
+        return Array.from(allCategories).sort();
+    } catch (error) {
+        console.error("[Supabase] Error in getKategorieOptions:", error);
+        return standardCategories; // Return standard categories on error
     }
 }
 
@@ -632,6 +750,8 @@ export type UserTrip = {
     adresse: string;
     region: string | null;
     kosten_stufe: number | null;
+    lat?: string | null;
+    lng?: string | null;
     is_favorite: boolean;
     is_done: boolean;
     primaryPhotoUrl?: string | null;
@@ -671,7 +791,9 @@ export async function getUserTrips(): Promise<UserTrip[]> {
                 beschreibung,
                 adresse,
                 region,
-                kosten_stufe
+                kosten_stufe,
+                lat,
+                lng
             )
         `)
         .eq("user_id", userData.id);
@@ -697,6 +819,8 @@ export async function getUserTrips(): Promise<UserTrip[]> {
         adresse: ut.ausfluege.adresse,
         region: ut.ausfluege.region,
         kosten_stufe: ut.ausfluege.kosten_stufe,
+        lat: ut.ausfluege.lat,
+        lng: ut.ausfluege.lng,
         is_favorite: ut.is_favorite,
         is_done: ut.is_done,
         primaryPhotoUrl: photos[ut.ausfluege.id] || null,

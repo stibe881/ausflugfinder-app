@@ -22,7 +22,7 @@ export default function LanguageSettingsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Sprache" }} />
+      <Stack.Screen options={{ headerShown: true, headerTitle: "Sprache", headerBackTitle: "Zurück" }} />
       <ThemedView style={styles.container}>
         <View style={styles.content}>
           <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
