@@ -127,11 +127,11 @@ function LoginScreen() {
   const router = useRouter();
 
   const handleLogin = () => {
-    router.push("/auth/login" as any);
+    router.push("/auth/login");
   };
 
   const handleRegister = () => {
-    router.push("/auth/register" as any);
+    router.push("/auth/register");
   };
 
   return (
