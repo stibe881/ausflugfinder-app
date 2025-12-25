@@ -388,15 +388,16 @@ export default function TripDetailScreen() {
           ),
         }}
       />
-      <View style={styles.pageContainer}>
+      <View style={[styles.pageContainer, { backgroundColor: colors.background }]}>
         {/* Hero Image Gallery - Outside ScrollView */}
         <View style={styles.heroContainer}>
           {allPhotos.length > 0 ? (
             <>
               <PagerView
-                style={styles.heroImage}
+                style={styles.pagerView}
                 initialPage={0}
                 onPageSelected={(e) => setCurrentPhotoIndex(e.nativeEvent.position)}
+                collapsable={false}
               >
                 {allPhotos.map((photoUrl, index) => (
                   <View key={`page-${index}`} style={styles.page}>
@@ -683,7 +684,6 @@ const styles = StyleSheet.create({
   },
   pageContainer: {
     flex: 1,
-    backgroundColor: Colors.light.background,
   },
   scrollContent: {
     flex: 1,
@@ -728,6 +728,10 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  pagerView: {
     width: "100%",
     height: "100%",
   },
