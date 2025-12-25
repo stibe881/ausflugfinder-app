@@ -658,14 +658,14 @@ export default function TripDetailScreen() {
                     style={[styles.adminButton, { backgroundColor: colors.primary }]}
                   >
                     <IconSymbol name="pencil" size={20} color="#FFFFFF" />
-                    <ThemedText style={styles.adminButtonText}>Bearbeiten</ThemedText>
+                    <ThemedText style={styles.adminButtonText}>{t.edit}</ThemedText>
                   </Pressable>
                   <Pressable
                     onPress={handleDelete}
                     style={[styles.adminButton, { backgroundColor: "#EF4444" }]}
                   >
                     <IconSymbol name="trash.fill" size={20} color="#FFFFFF" />
-                    <ThemedText style={styles.adminButtonText}>Löschen</ThemedText>
+                    <ThemedText style={styles.adminButtonText}>{t.delete}</ThemedText>
                   </Pressable>
                 </View>
               </View>
