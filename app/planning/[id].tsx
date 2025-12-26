@@ -626,6 +626,18 @@ export default function PlanDetailScreen() {
                                 </Pressable>
                             </View>
                         </View>
+                        
+                        {/* Distance to next trip */ }
+                        {
+                            index<planTrips.length - 1 && distances[trip.id] && (
+                                <View style={{ paddingLeft: Spacing.lg, marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
+                                    <DistanceBadge
+                                        durationText={distances[trip.id].durationText}
+                                        distanceText={distances[trip.id].distanceText}
+                                    />
+                                </View>
+                            )
+                        }
                     ))}
                 </View>
 
