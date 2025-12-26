@@ -7,7 +7,9 @@ import {
     StyleSheet,
     ActivityIndicator,
     Alert,
+    Platform,
 } from "react-native";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
@@ -77,6 +79,10 @@ export default function PlanDetailScreen() {
 
     // Start location state
     const [showStartLocationModal, setShowStartLocationModal] = useState(false);
+
+    // Date picker state
+    const [editingTripIdForDate, setEditingTripIdForDate] = useState<string | null>(null);
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     useEffect(() => {
         loadPlan();

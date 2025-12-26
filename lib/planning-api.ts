@@ -483,6 +483,31 @@ export async function deletePlanTrip(tripId: string): Promise<{ success: boolean
     }
 }
 
+/**
+ * Update plan trip date
+ */
+export async function updatePlanTripDate(
+    tripId: string,
+    newDate: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_trips')
+            .update({ planned_date: newDate })
+            .eq('id', tripId);
+
+        if (error) {
+            console.error('[updatePlanTripDate] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[updatePlanTripDate] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 // ============================================================================
 // PARTICIPANTS
 // ============================================================================
