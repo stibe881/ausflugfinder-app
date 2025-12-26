@@ -493,7 +493,9 @@ export async function updatePlanTripDate(
     try {
         const { error } = await supabase
             .from('plan_trips')
-            .update({ planned_date: newDate })
+            .update({
+                planned_date: newDate
+            })
             .eq('id', tripId);
 
         if (error) {
