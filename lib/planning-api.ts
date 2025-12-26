@@ -983,25 +983,6 @@ export interface DistanceInfo {
     durationSeconds: number;
 }
 
-/**
- * Update trip date
- */
-export async function updatePlanTripDate(
-    tripId: string,
-    newDate: string
-): Promise<{ success: boolean; error?: string }> {
-    try {
-        const { error } = await supabase
-            .from('plan_trips')
-            .update({ planned_date: newDate })
-            .eq('id', tripId);
-
-        if (error) throw error;
-        return { success: true };
-    } catch (error) {
-        return { success: false, error: String(error) };
-    }
-}
 
 /**
  * Add accommodation
