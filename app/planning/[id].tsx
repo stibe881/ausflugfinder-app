@@ -123,19 +123,32 @@ export default function PlanDetailScreen() {
         }
 
         if (dateMode === 'start') {
-            // First pick start date, then immediately pick end date (simplified flow)
-            // In a real app, you might want two separate pickers or a range picker
+            // After selecting start date, prompt for end date
             const newStartDate = currentDate.toISOString();
+            updatePlanDate(newStartDate, undefined);
 
-            // For simplicity, just update the start date now. 
-            // Ideally we would ask for end date next.
-            updatePlanDate(newStartDate);
+            // Now prompt for end date
+            setTempDate(currentDate); // Default end date to same as start
+            setDateMode('end');
+            if (Platform.OS === 'android') {
+                // On Android, show date picker again
+                setTimeout(() => setShowDatePicker(true), 100);
+            }
+        } else if (dateMode === 'end') {
+            // Update end date
+            const newEndDate = currentDate.toISOString();
+            updatePlanDate(undefined, newEndDate);
+            setShowDatePicker(false);
         }
     };
 
-    const updatePlanDate = async (newStartDate: string) => {
+    const updatePlanDate = async (newStartDate?: string, newEndDate?: string) => {
         if (!id) return;
-        const res = await updatePlan(id, { start_date: newStartDate });
+        const updateData: any = {};
+        if (newStartDate) updateData.start_date = newStartDate;
+        if (newEndDate) updateData.end_date = newEndDate;
+
+        const res = await updatePlan(id, updateData);
         if (res.success) {
             loadPlan(); // Reload to refresh UI
         } else {
@@ -253,10 +266,19 @@ export default function PlanDetailScreen() {
                                     <Pressable onPress={() => setShowDatePicker(false)}>
                                         <ThemedText style={{ color: colors.primary }}>Abbrechen</ThemedText>
                                     </Pressable>
-                                    <ThemedText type="defaultSemiBold">Startdatum wählen</ThemedText>
+                                    <ThemedText type="defaultSemiBold">
+                                        {dateMode === 'start' ? 'Startdatum wählen' : 'Enddatum wählen'}
+                                    </ThemedText>
                                     <Pressable onPress={() => {
-                                        setShowDatePicker(false);
-                                        updatePlanDate(tempDate.toISOString());
+                                        if (dateMode === 'start') {
+                                            updatePlanDate(tempDate.toISOString(), undefined);
+                                            // Prompt for end date
+                                            setTempDate(tempDate);
+                                            setDateMode('end');
+                                        } else {
+                                            updatePlanDate(undefined, tempDate.toISOString());
+                                            setShowDatePicker(false);
+                                        }
                                     }}>
                                         <ThemedText style={{ color: colors.primary, fontWeight: 'bold' }}>Fertig</ThemedText>
                                     </Pressable>

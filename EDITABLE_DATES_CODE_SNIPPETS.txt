@@ -1,0 +1,92 @@
+// ============================================
+// 1. ADD TO TRIP CARD DATE DISPLAY (around line 588-589)
+// ============================================
+// FIND THIS: (in the tripMeta View)
+/*
+                                    </ThemedText>
+                                </View>
+*/
+
+// REPLACE WITH:
+/*
+                                    </ThemedText>
+                                    <Pressable 
+                                        onPress={() => handleEditTripDate(trip.id, trip.planned_date)}
+                                        style={{ marginLeft: Spacing.xs }}
+                                    >
+                                        <IconSymbol name="pencil.circle.fill" size={18} color={colors.primary} />
+                                    </Pressable>
+                                </View>
+*/
+
+// ============================================
+// 2. ADD DATETIMEPICKER MODAL (after line 750, after TripTimeEditor)
+// ============================================
+// ADD THIS AFTER THE TripTimeEditor closing tag:
+
+/*
+                {/* Date Picker Modal *}
+                {editingTripIdForDate && (
+                    <DateTimePicker
+                        value={selectedDate}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={handleDateChange}
+                        textColor={colors.text}
+                    />
+                )}
+
+                {Platform.OS === 'ios' && editingTripIdForDate && (
+                    <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                            <View style={{ padding: Spacing.md }}>
+                                <ThemedText style={{ fontSize: 18, fontWeight: '600', marginBottom: Spacing.md }}>
+                                    Datum ändern
+                                </ThemedText>
+                                <DateTimePicker
+                                    value={selectedDate}
+                                    mode="date"
+                                    display="inline"
+                                    onChange={handleDateChange}
+                                    textColor={colors.text}
+                                />
+                                <Pressable
+                                    style={[styles.button, { backgroundColor: colors.primary, marginTop: Spacing.md }]}
+                                    onPress={() => setEditingTripIdForDate(null)}
+                                >
+                                    <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
+                                        Schließen
+                                    </ThemedText>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
+*/
+
+// ============================================
+// 3. ADD STYLES (at the end of styles object)
+// ============================================
+// ADD THESE STYLES:
+/*
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        borderRadius: BorderRadius.lg,
+        minWidth: 300,
+        maxWidth: '90%',
+    },
+    button: {
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+    },
+*/

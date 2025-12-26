@@ -1,0 +1,23 @@
+// COPY-PASTE LÖSUNG FÜR ZEILEN 626-642
+// Ersetze die Zeilen 626-642 in app/planning/[id].tsx mit diesem Code:
+
+                                </Pressable>
+                            </View>
+                        </View>
+                        {index < planTrips.length - 1 && distances[trip.id] && (
+                            <View style={{ paddingLeft: Spacing.lg, marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
+                                <DistanceBadge 
+                                    durationText={distances[trip.id].durationText}
+                                    distanceText={distances[trip.id].distanceText}
+                                />
+                            </View>
+                        )}
+                    </View>
+                ))}
+                </View>
+
+// WICHTIG:
+// 1. KEIN JSX-Kommentar (Auto-formatter fügt Space hinzu!)
+// 2. Inline conditional: {index < planTrips... (mit Space nach {)
+// 3. Keine extra curly braces um die expression
+// 4. Proper closing: </View> dann ))} dann </View>
