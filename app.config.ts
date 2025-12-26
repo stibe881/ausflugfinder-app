@@ -121,6 +121,10 @@ const config: ExpoConfig = {
     //     googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
     //   },
     // ],
+    "./plugins/withDisableSandbox.cjs",
+    "./plugins/withPodfileFix.cjs",
+
+
   ],
   experiments: {
     typedRoutes: true,
