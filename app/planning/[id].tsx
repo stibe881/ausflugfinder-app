@@ -454,6 +454,14 @@ export default function PlanDetailScreen() {
                             {plan.description}
                         </ThemedText>
                     )}
+                    {plan.departure_location && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm }}>
+                            <IconSymbol name="mappin.circle.fill" size={16} color={colors.primary} />
+                            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+                                Start: {plan.departure_location}
+                            </ThemedText>
+                        </View>
+                    )}
                 </View>
 
                 {/* Trips */}
