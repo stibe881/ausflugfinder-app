@@ -661,12 +661,12 @@ export default function PlanDetailScreen() {
                                 styles.actionCard,
                                 { backgroundColor: colors.surface, borderColor: colors.border },
                             ]}
-                            onPress={() => Alert.alert("Coming Soon", "Teilnehmerverwaltung wird noch implementiert")}
+                            onPress={() => Alert.alert("Teilnehmer", `Aktuell ${budgetSummary.participantCount} Teilnehmer`)}
                         >
                             <IconSymbol name="person.2.fill" size={32} color={colors.primary} />
                             <ThemedText style={styles.actionLabel}>Teilnehmer</ThemedText>
                             <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                                Bald verfügbar
+                                {budgetSummary.participantCount} {budgetSummary.participantCount === 1 ? 'Person' : 'Personen'}
                             </ThemedText>
                         </Pressable>
 
@@ -675,12 +675,26 @@ export default function PlanDetailScreen() {
                                 styles.actionCard,
                                 { backgroundColor: colors.surface, borderColor: colors.border },
                             ]}
-                            onPress={() => Alert.alert("Coming Soon", "Budget-Tracking wird noch implementiert")}
+                            onPress={() => router.push("/planning/" + id + "#budget")}
                         >
                             <IconSymbol name="francsign.circle" size={32} color={colors.primary} />
                             <ThemedText style={styles.actionLabel}>Budget</ThemedText>
                             <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                                Bald verfügbar
+                                CHF {budgetSummary.total.toFixed(2)}
+                            </ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
+                            onPress={handleSetStartLocation}
+                        >
+                            <IconSymbol name="mappin.circle.fill" size={32} color={colors.primary} />
+                            <ThemedText style={styles.actionLabel}>Startort</ThemedText>
+                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
+                                {plan.departure_location || "Festlegen"}
                             </ThemedText>
                         </Pressable>
                     </View>

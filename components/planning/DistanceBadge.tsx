@@ -51,4 +51,14 @@ const styles = StyleSheet.create({
     distance: {
         fontSize: 12,
     },
+    trafficNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginLeft: Spacing.xs,
+    },
+    trafficText: {
+        fontSize: 10,
+        fontStyle: 'italic',
+    },
 });
