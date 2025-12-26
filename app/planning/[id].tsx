@@ -431,7 +431,7 @@ export default function PlanDetailScreen() {
         if (date && editingTripIdForDate) {
             const result = await updatePlanTripDate(editingTripIdForDate, date.toISOString().split('T')[0]);
             if (result.success) {
-                await loadGroupedDays();
+                await loadPlan();
                 if (Platform.OS === 'ios') {
                     setEditingTripIdForDate(null);
                 }
