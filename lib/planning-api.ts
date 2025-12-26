@@ -1289,3 +1289,315 @@ export async function getDistanceBetweenLocations(
         return { success: false, error: String(error) };
     }
 }
+
+// ============================================================================
+// PACKING LISTS
+// ============================================================================
+
+export type PackingCategory = 'clothing' | 'documents' | 'toiletries' | 'electronics' | 'medication' | 'other';
+
+export interface PackingItem {
+    id: string;
+    plan_id: string;
+    category: PackingCategory;
+    item_name: string;
+    quantity: number;
+    is_packed: boolean;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function getPackingList(planId: string): Promise<{ success: boolean; items?: PackingItem[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('packing_lists')
+            .select('*')
+            .eq('plan_id', planId)
+            .order('category')
+            .order('item_name');
+
+        if (error) {
+            console.error('[getPackingList] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, items: data as PackingItem[] };
+    } catch (error) {
+        console.error('[getPackingList] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function addPackingItem(
+    planId: string,
+    category: PackingCategory,
+    itemName: string,
+    quantity: number = 1,
+    notes?: string
+): Promise<{ success: boolean; item?: PackingItem; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('packing_lists')
+            .insert({
+                plan_id: planId,
+                category,
+                item_name: itemName,
+                quantity,
+                notes
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[addPackingItem] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, item: data as PackingItem };
+    } catch (error) {
+        console.error('[addPackingItem] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function togglePackingItem(itemId: string, isPacked: boolean): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('packing_lists')
+            .update({ is_packed: isPacked })
+            .eq('id', itemId);
+
+        if (error) {
+            console.error('[togglePackingItem] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[togglePackingItem] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function deletePackingItem(itemId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('packing_lists')
+            .delete()
+            .eq('id', itemId);
+
+        if (error) {
+            console.error('[deletePackingItem] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[deletePackingItem] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+// ============================================================================
+// TICKETS
+// ============================================================================
+
+export type TicketType = 'flight' | 'train' | 'bus' | 'ferry' | 'other';
+
+export interface Ticket {
+    id: string;
+    plan_id: string;
+    type: TicketType;
+    provider?: string;
+    booking_reference?: string;
+    departure_location: string;
+    arrival_location: string;
+    departure_time?: string;
+    arrival_time?: string;
+    seat_number?: string;
+    ticket_file_path?: string;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function getTickets(planId: string): Promise<{ success: boolean; tickets?: Ticket[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('tickets')
+            .select('*')
+            .eq('plan_id', planId)
+            .order('departure_time');
+
+        if (error) {
+            console.error('[getTickets] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, tickets: data as Ticket[] };
+    } catch (error) {
+        console.error('[getTickets] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function addTicket(ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; ticket?: Ticket; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('tickets')
+            .insert(ticket)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[addTicket] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, ticket: data as Ticket };
+    } catch (error) {
+        console.error('[addTicket] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function updateTicket(ticketId: string, updates: Partial<Ticket>): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('tickets')
+            .update(updates)
+            .eq('id', ticketId);
+
+        if (error) {
+            console.error('[updateTicket] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[updateTicket] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function deleteTicket(ticketId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('tickets')
+            .delete()
+            .eq('id', ticketId);
+
+        if (error) {
+            console.error('[deleteTicket] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[deleteTicket] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+// ============================================================================
+// BOOKINGS
+// ============================================================================
+
+export type BookingType = 'accommodation' | 'activity' | 'restaurant' | 'event' | 'other';
+
+export interface Booking {
+    id: string;
+    plan_id: string;
+    type: BookingType;
+    name: string;
+    booking_reference?: string;
+    date?: string;
+    time?: string;
+    location?: string;
+    address?: string;
+    cost?: number;
+    confirmation_file_path?: string;
+    confirmation_url?: string;
+    notes?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function getBookings(planId: string): Promise<{ success: boolean; bookings?: Booking[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('plan_id', planId)
+            .order('date');
+
+        if (error) {
+            console.error('[getBookings] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, bookings: data as Booking[] };
+    } catch (error) {
+        console.error('[getBookings] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function addBooking(booking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; booking?: Booking; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('bookings')
+            .insert(booking)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('[addBooking] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true, booking: data as Booking };
+    } catch (error) {
+        console.error('[addBooking] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function updateBooking(bookingId: string, updates: Partial<Booking>): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('bookings')
+            .update(updates)
+            .eq('id', bookingId);
+
+        if (error) {
+            console.error('[updateBooking] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[updateBooking] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
+
+export async function deleteBooking(bookingId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('bookings')
+            .delete()
+            .eq('id', bookingId);
+
+        if (error) {
+            console.error('[deleteBooking] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[deleteBooking] Exception:', error);
+        return { success: false, error: String(error) };
+    }
+}
