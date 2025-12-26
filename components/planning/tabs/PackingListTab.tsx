@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Pressable, Alert, TextInput } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable, TextInput } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getPackingList, addPackingItem, togglePackingItem, deletePackingItem, type PackingItem, type PackingCategory } from '@/lib/planning-api';
+import { InputDialog } from '@/components/InputDialog';
 
 interface PackingListTabProps {
     planId: string;
@@ -24,6 +25,8 @@ export function PackingListTab({ planId }: PackingListTabProps) {
     const colors = Colors[colorScheme ?? 'light'];
     const [items, setItems] = useState<PackingItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showInputDialog, setShowInputDialog] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<PackingCategory>('other');
 
     useEffect(() => {
         loadItems();
@@ -38,16 +41,16 @@ export function PackingListTab({ planId }: PackingListTabProps) {
     };
 
     const handleAddItem = (category: PackingCategory) => {
-        Alert.prompt(
-            'Item hinzufügen',
-            'Was möchtest du einpacken?',
-            async (text) => {
-                if (text && text.trim()) {
-                    const result = await addPackingItem(planId, category, text.trim());
-                    if (result.success) loadItems();
-                }
-            }
-        );
+        setSelectedCategory(category);
+        setShowInputDialog(true);
+    };
+
+    const handleConfirmAdd = async (text: string) => {
+        if (text && text.trim()) {
+            const result = await addPackingItem(planId, selectedCategory, text.trim());
+            if (result.success) loadItems();
+        }
+        setShowInputDialog(false);
     };
 
     const handleToggle = async (item: PackingItem) => {
@@ -116,6 +119,15 @@ export function PackingListTab({ planId }: PackingListTabProps) {
                     </View>
                 );
             })}
+
+            <InputDialog
+                visible={showInputDialog}
+                title="Item hinzufügen"
+                message="Was möchtest du einpacken?"
+                placeholder="z.B. T-Shirt"
+                onConfirm={handleConfirmAdd}
+                onCancel={() => setShowInputDialog(false)}
+            />
         </ScrollView>
     );
 }
