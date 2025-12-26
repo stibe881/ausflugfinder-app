@@ -46,6 +46,7 @@ const config: ExpoConfig = {
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
     },
     infoPlist: {
+      CFBundleIconName: "AppIcon",
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["audio", "location", "fetch", "remote-notification"],
       NSLocationWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort, um Ausflugsziele in deiner Nähe anzuzeigen und dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
@@ -101,17 +102,11 @@ const config: ExpoConfig = {
         },
       },
     ],
-    [
-      "expo-notifications",
-      {
-        icon: "./assets/images/notification-icon.png",
-        color: "#4A90E2",
-      },
-    ],
+    "expo-notifications",
     [
       "expo-location",
       {
-        locationAlwaysAndWhenInUsePermission: "AusflugFinder benötigt deinen Standort, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
+        "locationAlwaysAndWhenInUsePermission": "AusflugFinder benötigt deinen Standort, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
       },
     ],
     // Temporarily disabled - requires prebuild. Uncomment and run `npx expo prebuild --clean` to enable Route Map

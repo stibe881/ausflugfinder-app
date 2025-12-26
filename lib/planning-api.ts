@@ -32,6 +32,9 @@ export interface Plan {
     home_lng?: number;
     created_at: string;
     updated_at: string;
+    start_date?: string;
+    end_date?: string;
+    image_url?: string;
 }
 
 export interface PlanTrip {
@@ -166,6 +169,7 @@ export interface PlanWithDetails extends Plan {
     bookings: PlanBooking[];
     documents: PlanDocument[];
     transport?: PlanTransport;
+    trips: PlanTrip[];
 }
 
 export interface CostSummary {
@@ -313,6 +317,7 @@ export async function getPlan(planId: string): Promise<{ success: boolean; plan?
             { data: bookings },
             { data: documents },
             { data: transport },
+            { data: trips },
         ] = await Promise.all([
             supabase.from('plan_participants').select('*').eq('plan_id', planId),
             supabase.from('plan_tasks').select('*').eq('plan_id', planId).order('created_at'),
@@ -321,6 +326,7 @@ export async function getPlan(planId: string): Promise<{ success: boolean; plan?
             supabase.from('plan_bookings').select('*').eq('plan_id', planId),
             supabase.from('plan_documents').select('*').eq('plan_id', planId),
             supabase.from('plan_transport').select('*').eq('plan_id', planId).single(),
+            supabase.from('plan_trips').select('*, trip:trips(*)').eq('plan_id', planId).order('sequence'),
         ]);
 
         // Fetch user details for participants
@@ -347,6 +353,7 @@ export async function getPlan(planId: string): Promise<{ success: boolean; plan?
             bookings: bookings || [],
             documents: documents || [],
             transport: transport || undefined,
+            trips: trips || [],
         };
 
         return { success: true, plan: planWithDetails };
@@ -706,7 +713,9 @@ export async function getCostSummary(planId: string): Promise<{ success: boolean
         };
 
         costs?.forEach(c => {
-            breakdown[c.category] += Number(c.amount);
+            if (c.category in breakdown) {
+                breakdown[c.category] += Number(c.amount);
+            }
         });
 
         return {
