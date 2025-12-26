@@ -163,11 +163,17 @@ export default function PlanDetailScreen() {
 
     // --- Add Excursion Logic ---
     const handleAddExcursion = async () => {
-        // Fetch available trips first
-        const { data: trips } = await supabase.from('trips').select('*');
-        if (trips) {
+        // Fetch available trips (from ausfluege table)
+        const { data: trips } = await supabase
+            .from('ausfluege')
+            .select('id, name, beschreibung, region, adresse')
+            .order('name');
+
+        if (trips && trips.length > 0) {
             setAvailableTrips(trips);
             setShowTripPicker(true);
+        } else {
+            Alert.alert("Info", "Keine Ausflüge verfügbar.");
         }
     };
 
