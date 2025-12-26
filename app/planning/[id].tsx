@@ -388,6 +388,29 @@ export default function PlanDetailScreen() {
         }
     };
 
+    // Start location handler
+    const handleSetStartLocation = () => {
+        if (!plan) return;
+        Alert.prompt(
+            "Startort festlegen",
+            "Gib deinen Startort ein:",
+            async (text) => {
+                if (!text) return;
+                const result = await updatePlanLocation(plan.id, {
+                    departure_location: text
+                });
+                if (result.success) {
+                    setPlan({ ...plan, departure_location: text });
+                    Alert.alert("Erfolg", "Startort wurde gespeichert");
+                } else {
+                    Alert.alert("Fehler", result.error || "Fehler beim Speichern");
+                }
+            },
+            "plain-text",
+            plan.departure_location || ""
+        );
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
