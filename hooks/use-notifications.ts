@@ -16,15 +16,8 @@ Notifications.setNotificationHandler({
 export function useNotifications() {
   const [permissionGranted, setPermissionGranted] = useState(false);
 
-  useEffect(() => {
-    // Request permissions and register push token on mount
-    (async () => {
-      const granted = await requestPermissions();
-      if (granted) {
-        await registerPushToken();
-      }
-    })();
-  }, []);
+  // Removed auto-registration on mount. 
+  // Token registration is now handled by NotificationInitializer which respects auth state.
 
   const registerPushToken = async () => {
     if (Platform.OS === "web") {
@@ -132,6 +125,7 @@ export function useNotifications() {
     requestPermissions,
     scheduleNotification,
     scheduleTripReminder,
+    registerPushToken,
     cancelNotification,
     cancelAllNotifications,
   };
