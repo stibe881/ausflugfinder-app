@@ -98,7 +98,7 @@ export async function sendBroadcastNotification(
             data: { type: 'broadcast' },
             // Use app icon for notifications (matches iOS AppIcon)
             icon: './assets/images/icon.png',
-            color: '7C3AED', // Brand primary color (no # for Expo)
+            color: '#7C3AED', // Brand primary color
         }));
 
         const response = await fetch('https://exp.host/--/api/v2/push/send', {
