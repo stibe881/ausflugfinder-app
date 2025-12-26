@@ -781,6 +781,43 @@ export default function PlanDetailScreen() {
                         }}
                     />
                 )}
+
+                {/* Date Picker - Android */}
+                {editingTripIdForDate && Platform.OS === 'android' && (
+                    <DateTimePicker
+                        value={selectedDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleDateChange}
+                    />
+                )}
+
+                {/* Date Picker - iOS */}
+                {editingTripIdForDate && Platform.OS === 'ios' && (
+                    <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                            <View style={{ padding: Spacing.md }}>
+                                <ThemedText style={{ fontSize: 18, fontWeight: '600', marginBottom: Spacing.md }}>
+                                    Datum ändern
+                                </ThemedText>
+                                <DateTimePicker
+                                    value={selectedDate}
+                                    mode="date"
+                                    display="inline"
+                                    onChange={handleDateChange}
+                                />
+                                <Pressable
+                                    style={[styles.datePickerButton, { backgroundColor: colors.primary, marginTop: Spacing.md }]}
+                                    onPress={() => setEditingTripIdForDate(null)}
+                                >
+                                    <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
+                                        Schließen
+                                    </ThemedText>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                )}
             </ScrollView>
         </ThemedView>
     );
@@ -954,7 +991,7 @@ const styles = StyleSheet.create({
         minWidth: 300,
         maxWidth: '90%',
     },
-    button: {
+    datePickerButton: {
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.lg,
         borderRadius: BorderRadius.md,
