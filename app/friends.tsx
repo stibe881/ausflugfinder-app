@@ -158,6 +158,17 @@ export default function FriendsScreen() {
             renderItem={({ item }) => <FriendItem friend={item as Friend} />}
           />
         )}
+
+        {/* Add Friend FAB */}
+        <Pressable
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => {
+            // TODO: Implement friend invite dialog
+            alert('Freund hinzufügen - Feature kommt bald!');
+          }}
+        >
+          <IconSymbol name="person.badge.plus" size={24} color="#FFF" />
+        </Pressable>
       </ThemedView>
     </>
   );
@@ -252,4 +263,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
   },
+  fab: {
+    position: 'absolute',
+    bottom: Spacing.xl,
+    right: Spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
 });
+``
