@@ -626,226 +626,213 @@ export default function PlanDetailScreen() {
                                 </Pressable>
                             </View>
                         </View>
-                        
-                        {/* Distance to next trip */ }
-                        {
-                            index<planTrips.length - 1 && distances[trip.id] && (
-                                <View style={{ paddingLeft: Spacing.lg, marginTop: Spacing.sm, marginBottom: Spacing.sm }}>
-                                    <DistanceBadge
-                                        durationText={distances[trip.id].durationText}
-                                        distanceText={distances[trip.id].distanceText}
-                                    />
-                                </View>
-                            )
-                        }
+                    ))}
+                </View>
+
+                {/* Participants */}
+                <View style={styles.section}>
+                    <ThemedText style={styles.sectionTitle}>Teilnehmer</ThemedText>
+                    <ParticipantInvite planId={id!} onInvited={loadPlan} />
+                </View>
+
+                {/* Tasks */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <ThemedText style={styles.sectionTitle}>
+                            Aufgaben ({tasks.filter((t) => !t.is_completed).length}/{tasks.length})
+                        </ThemedText>
+                        <Pressable
+                            onPress={() => setShowAddTask(true)}
+                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+                        </Pressable>
                     </View>
-                ))}
-            </View>
-
-            {/* Participants */}
-            <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>Teilnehmer</ThemedText>
-                <ParticipantInvite planId={id!} onInvited={loadPlan} />
-            </View>
-
-            {/* Tasks */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <ThemedText style={styles.sectionTitle}>
-                        Aufgaben ({tasks.filter((t) => !t.is_completed).length}/{tasks.length})
-                    </ThemedText>
-                    <Pressable
-                        onPress={() => setShowAddTask(true)}
-                        style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
-                    >
-                        <IconSymbol name="plus" size={16} color="#FFFFFF" />
-                    </Pressable>
+                    {tasks.length === 0 ? (
+                        <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
+                            Noch keine Aufgaben
+                        </ThemedText>
+                    ) : (
+                        tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)
+                    )}
                 </View>
-                {tasks.length === 0 ? (
-                    <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-                        Noch keine Aufgaben
-                    </ThemedText>
-                ) : (
-                    tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)
-                )}
-            </View>
 
-            <AddTaskDialog
-                visible={showAddTask}
-                planId={id!}
-                onClose={() => setShowAddTask(false)}
-                onAdd={handleAddTask}
-            />
-
-            {/* Budget */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <ThemedText style={styles.sectionTitle}>Budget</ThemedText>
-                    <Pressable
-                        onPress={() => setShowAddCost(true)}
-                        style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
-                    >
-                        <IconSymbol name="plus" size={16} color="#FFFFFF" />
-                    </Pressable>
-                </View>
-                <BudgetSummary
-                    total={budgetSummary.total}
-                    perPerson={budgetSummary.perPerson}
-                    participantCount={budgetSummary.participantCount}
+                <AddTaskDialog
+                    visible={showAddTask}
+                    planId={id!}
+                    onClose={() => setShowAddTask(false)}
+                    onAdd={handleAddTask}
                 />
-            </View>
 
-            <AddCostDialog
-                visible={showAddCost}
-                planId={id!}
-                onClose={() => setShowAddCost(false)}
-                onAdd={handleAddCost}
-            />
-
-            {/* Quick Actions */}
-            <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>Schnellzugriff</ThemedText>
-                <View style={styles.quickActions}>
-                    <Pressable
-                        style={[
-                            styles.actionCard,
-                            { backgroundColor: colors.surface, borderColor: colors.border },
-                        ]}
-                        onPress={() => Alert.alert("Teilnehmer", `Aktuell ${budgetSummary.participantCount} Teilnehmer`)}
-                    >
-                        <IconSymbol name="person.2.fill" size={32} color={colors.primary} />
-                        <ThemedText style={styles.actionLabel}>Teilnehmer</ThemedText>
-                        <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                            {budgetSummary.participantCount} {budgetSummary.participantCount === 1 ? 'Person' : 'Personen'}
-                        </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                        style={[
-                            styles.actionCard,
-                            { backgroundColor: colors.surface, borderColor: colors.border },
-                        ]}
-                        onPress={() => router.push("/planning/" + id + "#budget")}
-                    >
-                        <IconSymbol name="francsign.circle" size={32} color={colors.primary} />
-                        <ThemedText style={styles.actionLabel}>Budget</ThemedText>
-                        <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                            CHF {budgetSummary.total.toFixed(2)}
-                        </ThemedText>
-                    </Pressable>
-
-                    <Pressable
-                        style={[
-                            styles.actionCard,
-                            { backgroundColor: colors.surface, borderColor: colors.border },
-                        ]}
-                        onPress={handleSetStartLocation}
-                    >
-                        <IconSymbol name="mappin.circle.fill" size={32} color={colors.primary} />
-                        <ThemedText style={styles.actionLabel}>Startort</ThemedText>
-                        <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                            {plan.departure_location || "Festlegen"}
-                        </ThemedText>
-                    </Pressable>
-                </View>
-                {plan.description && (
-                    <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                        {plan.description}
-                    </ThemedText>
-                )}
-                {plan.departure_location && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm }}>
-                        <IconSymbol name="mappin.circle.fill" size={16} color={colors.primary} />
-                        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                            Start: {plan.departure_location}
-                        </ThemedText>
+                {/* Budget */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <ThemedText style={styles.sectionTitle}>Budget</ThemedText>
+                        <Pressable
+                            onPress={() => setShowAddCost(true)}
+                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
+                        >
+                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
+                        </Pressable>
                     </View>
-                )}
-            </View>
+                    <BudgetSummary
+                        total={budgetSummary.total}
+                        perPerson={budgetSummary.perPerson}
+                        participantCount={budgetSummary.participantCount}
+                    />
+                </View>
 
-            {/* Trip Picker Modal */}
-            <TripPickerModal
-                visible={showTripPicker}
-                trips={availableTrips}
-                onSelectTrip={handleAddTrip}
-                onClose={() => setShowTripPicker(false)}
-            />
-
-            {/* Trip Time Editor */}
-            {editingTripTimeId && (
-                <TripTimeEditor
-                    visible={!!editingTripTimeId}
-                    tripId={editingTripTimeId}
-                    currentTimes={planTrips.find(t => t.id === editingTripTimeId)}
-                    onSave={handleSaveTripTimes}
-                    onClose={() => setEditingTripTimeId(null)}
+                <AddCostDialog
+                    visible={showAddCost}
+                    planId={id!}
+                    onClose={() => setShowAddCost(false)}
+                    onAdd={handleAddCost}
                 />
-            )}
 
-            {/* Activity Editor */}
-            {editingActivitiesTripId && (
-                <ActivityEditor
-                    visible={!!editingActivitiesTripId}
-                    planTripId={editingActivitiesTripId}
-                    activities={tripActivities[editingActivitiesTripId] || []}
-                    onAddActivity={handleAddActivity}
-                    onUpdateActivity={handleUpdateActivity}
-                    onDeleteActivity={handleDeleteActivity}
-                    onClose={() => setEditingActivitiesTripId(null)}
-                />
-            )}
-
-            {/* Accommodation Editor */}
-            {showAccommodationEditor && (
-                <MultiDayAccommodationEditor
-                    visible={showAccommodationEditor}
-                    accommodation={editingAccommodation}
-                    onSave={handleSaveAccommodation}
-                    onClose={() => {
-                        setShowAccommodationEditor(false);
-                        setEditingAccommodation(null);
-                    }}
-                />
-            )}
-
-            {/* Date Picker - Android */}
-            {editingTripIdForDate && Platform.OS === 'android' && (
-                <DateTimePicker
-                    value={selectedDate}
-                    mode="date"
-                    display="default"
-                    onChange={handleDateChange}
-                />
-            )}
-
-            {/* Date Picker - iOS */}
-            {editingTripIdForDate && Platform.OS === 'ios' && (
-                <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                    <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                        <View style={{ padding: Spacing.md }}>
-                            <ThemedText style={{ fontSize: 18, fontWeight: '600', marginBottom: Spacing.md }}>
-                                Datum ändern
+                {/* Quick Actions */}
+                <View style={styles.section}>
+                    <ThemedText style={styles.sectionTitle}>Schnellzugriff</ThemedText>
+                    <View style={styles.quickActions}>
+                        <Pressable
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
+                            onPress={() => Alert.alert("Teilnehmer", `Aktuell ${budgetSummary.participantCount} Teilnehmer`)}
+                        >
+                            <IconSymbol name="person.2.fill" size={32} color={colors.primary} />
+                            <ThemedText style={styles.actionLabel}>Teilnehmer</ThemedText>
+                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
+                                {budgetSummary.participantCount} {budgetSummary.participantCount === 1 ? 'Person' : 'Personen'}
                             </ThemedText>
-                            <DateTimePicker
-                                value={selectedDate}
-                                mode="date"
-                                display="inline"
-                                onChange={handleDateChange}
-                            />
-                            <Pressable
-                                style={[styles.datePickerButton, { backgroundColor: colors.primary, marginTop: Spacing.md }]}
-                                onPress={() => setEditingTripIdForDate(null)}
-                            >
-                                <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
-                                    Schließen
+                        </Pressable>
+
+                        <Pressable
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
+                            onPress={() => router.push("/planning/" + id + "#budget")}
+                        >
+                            <IconSymbol name="francsign.circle" size={32} color={colors.primary} />
+                            <ThemedText style={styles.actionLabel}>Budget</ThemedText>
+                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
+                                CHF {budgetSummary.total.toFixed(2)}
+                            </ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                            style={[
+                                styles.actionCard,
+                                { backgroundColor: colors.surface, borderColor: colors.border },
+                            ]}
+                            onPress={handleSetStartLocation}
+                        >
+                            <IconSymbol name="mappin.circle.fill" size={32} color={colors.primary} />
+                            <ThemedText style={styles.actionLabel}>Startort</ThemedText>
+                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
+                                {plan.departure_location || "Festlegen"}
+                            </ThemedText>
+                        </Pressable>
+                    </View>
+                    {plan.description && (
+                        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+                            {plan.description}
+                        </ThemedText>
+                    )}
+                    {plan.departure_location && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm }}>
+                            <IconSymbol name="mappin.circle.fill" size={16} color={colors.primary} />
+                            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
+                                Start: {plan.departure_location}
+                            </ThemedText>
+                        </View>
+                    )}
+                </View>
+
+                {/* Trip Picker Modal */}
+                <TripPickerModal
+                    visible={showTripPicker}
+                    trips={availableTrips}
+                    onSelectTrip={handleAddTrip}
+                    onClose={() => setShowTripPicker(false)}
+                />
+
+                {/* Trip Time Editor */}
+                {editingTripTimeId && (
+                    <TripTimeEditor
+                        visible={!!editingTripTimeId}
+                        tripId={editingTripTimeId}
+                        currentTimes={planTrips.find(t => t.id === editingTripTimeId)}
+                        onSave={handleSaveTripTimes}
+                        onClose={() => setEditingTripTimeId(null)}
+                    />
+                )}
+
+                {/* Activity Editor */}
+                {editingActivitiesTripId && (
+                    <ActivityEditor
+                        visible={!!editingActivitiesTripId}
+                        planTripId={editingActivitiesTripId}
+                        activities={tripActivities[editingActivitiesTripId] || []}
+                        onAddActivity={handleAddActivity}
+                        onUpdateActivity={handleUpdateActivity}
+                        onDeleteActivity={handleDeleteActivity}
+                        onClose={() => setEditingActivitiesTripId(null)}
+                    />
+                )}
+
+                {/* Accommodation Editor */}
+                {showAccommodationEditor && (
+                    <MultiDayAccommodationEditor
+                        visible={showAccommodationEditor}
+                        accommodation={editingAccommodation}
+                        onSave={handleSaveAccommodation}
+                        onClose={() => {
+                            setShowAccommodationEditor(false);
+                            setEditingAccommodation(null);
+                        }}
+                    />
+                )}
+
+                {/* Date Picker - Android */}
+                {editingTripIdForDate && Platform.OS === 'android' && (
+                    <DateTimePicker
+                        value={selectedDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleDateChange}
+                    />
+                )}
+
+                {/* Date Picker - iOS */}
+                {editingTripIdForDate && Platform.OS === 'ios' && (
+                    <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                            <View style={{ padding: Spacing.md }}>
+                                <ThemedText style={{ fontSize: 18, fontWeight: '600', marginBottom: Spacing.md }}>
+                                    Datum ändern
                                 </ThemedText>
-                            </Pressable>
+                                <DateTimePicker
+                                    value={selectedDate}
+                                    mode="date"
+                                    display="inline"
+                                    onChange={handleDateChange}
+                                />
+                                <Pressable
+                                    style={[styles.datePickerButton, { backgroundColor: colors.primary, marginTop: Spacing.md }]}
+                                    onPress={() => setEditingTripIdForDate(null)}
+                                >
+                                    <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
+                                        Schließen
+                                    </ThemedText>
+                                </Pressable>
+                            </View>
                         </View>
                     </View>
-                </View>
-            )}
-        </ScrollView>
-        </ThemedView >
+                )}
+            </ScrollView>
+        </ThemedView>
     );
 }
 
