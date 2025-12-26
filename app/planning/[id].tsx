@@ -586,6 +586,12 @@ export default function PlanDetailScreen() {
                                             year: "numeric",
                                         })}
                                     </ThemedText>
+                                    <Pressable
+                                        onPress={() => handleEditTripDate(trip.id, trip.planned_date)}
+                                        style={{ marginLeft: Spacing.xs }}
+                                    >
+                                        <IconSymbol name="pencil.circle.fill" size={18} color={colors.primary} />
+                                    </Pressable>
                                 </View>
                                 {trip.trip?.beschreibung && (
                                     <ThemedText
@@ -933,5 +939,25 @@ const styles = StyleSheet.create({
     },
     tripActionButton: {
         padding: Spacing.sm,
+    },
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        borderRadius: BorderRadius.lg,
+        minWidth: 300,
+        maxWidth: '90%',
+    },
+    button: {
+        paddingVertical: Spacing.md,
+        paddingHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
     },
 });
