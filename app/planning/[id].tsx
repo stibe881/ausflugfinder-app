@@ -417,6 +417,31 @@ export default function PlanDetailScreen() {
         );
     };
 
+    // Date picker handlers
+    const handleEditTripDate = (tripId: string, currentDate: string) => {
+        setEditingTripIdForDate(tripId);
+        setSelectedDate(new Date(currentDate));
+    };
+
+    const handleDateChange = async (event: any, date?: Date) => {
+        if (Platform.OS === 'android') {
+            setEditingTripIdForDate(null);
+        }
+
+        if (date && editingTripIdForDate) {
+            const result = await updatePlanTripDate(editingTripIdForDate, date.toISOString().split('T')[0]);
+            if (result.success) {
+                await loadGroupedDays();
+                if (Platform.OS === 'ios') {
+                    setEditingTripIdForDate(null);
+                }
+                Alert.alert("Erfolg", "Datum wurde geändert");
+            } else {
+                Alert.alert("Fehler", result.error || "Fehler beim Ändern");
+            }
+        }
+    };
+
     if (isLoading) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
