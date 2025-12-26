@@ -29,6 +29,12 @@ export function DistanceBadge({ durationText, distanceText, mode = 'car' }: Dist
             <ThemedText style={[styles.distance, { color: colors.textSecondary }]}>
                 ({distanceText})
             </ThemedText>
+            <View style={styles.trafficNote}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={10} color={colors.textSecondary} />
+                <ThemedText style={[styles.trafficText, { color: colors.textSecondary }]}>
+                    Verkehrsdaten folgen
+                </ThemedText>
+            </View>
         </View>
     );
 }
