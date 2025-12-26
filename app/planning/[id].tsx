@@ -117,9 +117,7 @@ export default function PlanDetailScreen() {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
                 <View style={styles.loadingContainer}>
-                    <Activity
-
-                        Indicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                     <ThemedText style={styles.loadingText}>Plan wird geladen...</ThemedText>
                 </View>
             </ThemedView>
