@@ -2,51 +2,29 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import {
     View,
-    ScrollView,
-    Pressable,
     StyleSheet,
     ActivityIndicator,
-    Alert,
-    Platform,
+    useWindowDimensions,
+    Pressable,
 } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { Colors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { StatusBadge } from "@/components/planning/StatusBadge";
-import { ParticipantInvite } from "@/components/planning/ParticipantInvite";
-import { TaskItem } from "@/components/planning/TaskItem";
-import { AddTaskDialog } from "@/components/planning/AddTaskDialog";
-import { AddCostDialog } from "@/components/planning/AddCostDialog";
-import { BudgetSummary } from "@/components/planning/BudgetSummary";
-import { TripPickerModal } from "@/components/planning/TripPickerModal";
-import { TripTimeEditor } from "@/components/planning/TripTimeEditor";
-import { ActivityEditor } from "@/components/planning/ActivityEditor";
-import { AccommodationCard } from "@/components/planning/AccommodationCard";
-import { MultiDayAccommodationEditor } from "@/components/planning/MultiDayAccommodationEditor";
-import { DistanceBadge } from "@/components/planning/DistanceBadge";
-import { getPlan, updatePlanStatus, updatePlanLocation, addTask, addCost, getCostSummary, addPlanTrip, deletePlanTrip, updatePlanTripTimes, getTripActivities, addTripActivity, updateTripActivity, deleteTripActivity, updatePlanTripDate, addAccommodation, updateAccommodation, deleteAccommodation, getPlanTripsGroupedByDay, autoInsertAccommodations, getDistanceBetweenLocations, type Plan, type PlanTask, type TripActivity, type Accommodation, type DistanceInfo } from "@/lib/planning-api";
+import { PlanHeader } from "@/components/planning/PlanHeader";
+import {
+    TimelineTab,
+    RouteTab,
+    PackingListTab,
+    BudgetTab,
+    ChecklistTab,
+    TicketsTab,
+    BookingsTab
+} from "@/components/planning/tabs";
+import { getPlan, getCostSummary, type Plan, type PlanTask } from "@/lib/planning-api";
 import { supabase } from "@/lib/supabase";
-import { getAllAusfluege } from "@/lib/supabase-api";
-
-interface PlanTrip {
-    id: string;
-    trip_id?: number;
-    custom_location?: string;
-    planned_date: string;
-    departure_time?: string;
-    arrival_time?: string;
-    notes?: string;
-    buffer_time_minutes?: number;
-    trip?: {
-        id: number;
-        name: string;
-        beschreibung?: string;
-    };
-}
 
 export default function PlanDetailScreen() {
     const router = useRouter();
@@ -54,35 +32,24 @@ export default function PlanDetailScreen() {
     const insets = useSafeAreaInsets();
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
+    const layout = useWindowDimensions();
 
     const [plan, setPlan] = useState<Plan | null>(null);
-    const [planTrips, setPlanTrips] = useState<PlanTrip[]>([]);
     const [tasks, setTasks] = useState<PlanTask[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [showAddTask, setShowAddTask] = useState(false);
-    const [showAddCost, setShowAddCost] = useState(false);
     const [budgetSummary, setBudgetSummary] = useState({ total: 0, perPerson: 0, participantCount: 1 });
-    const [showTripPicker, setShowTripPicker] = useState(false);
-    const [availableTrips, setAvailableTrips] = useState<any[]>([]);
 
-    // Timeline state
-    const [editingTripTimeId, setEditingTripTimeId] = useState<string | null>(null);
-    const [editingActivitiesTripId, setEditingActivitiesTripId] = useState<string | null>(null);
-    const [tripActivities, setTripActivities] = useState<Record<string, TripActivity[]>>({});
-
-    // Multi-day trip state
-    const [groupedDays, setGroupedDays] = useState<Array<{ date: string; items: any[] }>>([]);
-    const [editingAccommodation, setEditingAccommodation] = useState<Accommodation | null>(null);
-    const [showAccommodationEditor, setShowAccommodationEditor] = useState(false);
-    const [distances, setDistances] = useState<Record<string, DistanceInfo>>({});
-    const [loadingDistances, setLoadingDistances] = useState(false);
-
-    // Start location state
-    const [showStartLocationModal, setShowStartLocationModal] = useState(false);
-
-    // Date picker state
-    const [editingTripIdForDate, setEditingTripIdForDate] = useState<string | null>(null);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    // Tab navigation state
+    const [index, setIndex] = useState(0);
+    const [routes] = useState([
+        { key: 'timeline', title: 'Timeline' },
+        { key: 'route', title: 'Route' },
+        { key: 'packing', title: 'Packliste' },
+        { key: 'budget', title: 'Budget' },
+        { key: 'checklist', title: 'Checkliste' },
+        { key: 'tickets', title: 'Tickets' },
+        { key: 'bookings', title: 'Buchungen' },
+    ]);
 
     useEffect(() => {
         loadPlan();
@@ -97,20 +64,6 @@ export default function PlanDetailScreen() {
         const result = await getPlan(id);
         if (result.success && result.plan) {
             setPlan(result.plan);
-        }
-
-        // Load plan trips
-        const { data: trips } = await supabase
-            .from("plan_trips")
-            .select(`
-        *,
-        trip:ausfluege(id, name, beschreibung)
-      `)
-            .eq("plan_id", id)
-            .order("sequence");
-
-        if (trips) {
-            setPlanTrips(trips as any);
         }
 
         // Load tasks
@@ -134,335 +87,40 @@ export default function PlanDetailScreen() {
             });
         }
 
-        // Load grouped days for multi-day display
-        await loadGroupedDays();
-
-        // Load available trips for adding
-        const allTrips = await getAllAusfluege();
-        console.log('[Plan Detail] Loaded trips for picker:', allTrips?.length || 0, allTrips);
-        setAvailableTrips(allTrips || []);
-
         setIsLoading(false);
     };
 
-    const updateStatus = async (newStatus: Plan["status"]) => {
-        if (!plan) return;
+    const renderScene = SceneMap({
+        timeline: () => <TimelineTab planId={id!} />,
+        route: () => <RouteTab planId={id!} />,
+        packing: () => <PackingListTab planId={id!} />,
+        budget: () => <BudgetTab planId={id!} />,
+        checklist: () => <ChecklistTab planId={id!} />,
+        tickets: () => <TicketsTab planId={id!} />,
+        bookings: () => <BookingsTab planId={id!} />,
+    });
 
-        const result = await updatePlanStatus(plan.id, newStatus);
+    const renderTabBar = (props: any) => (
+        <TabBar
+            {...props}
+            scrollEnabled
+            indicatorStyle={{ backgroundColor: colors.primary }}
+            style={{ backgroundColor: colors.surface }}
+            tabStyle={{ width: 'auto', minWidth: 100 }}
+            labelStyle={{ fontSize: 13, fontWeight: '600', textTransform: 'none' }}
+            activeColor={colors.primary}
+            inactiveColor={colors.textSecondary}
+        />
+    );
 
-        if (result.success) {
-            setPlan({ ...plan, status: newStatus });
-            Alert.alert("Erfolg", "Status wurde geändert");
-        } else {
-            Alert.alert("Fehler", result.error || "Status konnte nicht geändert werden");
-        }
-    };
-
-    const toggleTask = async (taskId: string) => {
-        const task = tasks.find((t) => t.id === taskId);
-        if (!task) return;
-
-        const { data, error } = await supabase
-            .from("plan_tasks")
-            .update({ is_completed: !task.is_completed })
-            .eq("id", taskId)
-            .select()
-            .single();
-
-        if (data) {
-            setTasks(tasks.map((t) => (t.id === taskId ? (data as PlanTask) : t)));
-        }
-    };
-
-    const handleAddTask = async (taskData: {
-        title: string;
-        description?: string;
-        priority: "low" | "medium" | "high";
-        task_type: "general" | "packing" | "booking";
-        due_date?: string;
-    }) => {
-        if (!plan) return;
-
-        const result = await addTask(plan.id, taskData);
-
-        if (result.success && result.task) {
-            setTasks([result.task, ...tasks]);
-            Alert.alert("Erfolg", "Aufgabe wurde hinzugefügt");
-        } else {
-            throw new Error(result.error || "Aufgabe konnte nicht erstellt werden");
-        }
-    };
-
-    const handleAddCost = async (costData: {
-        category: "entrance" | "parking" | "transport" | "food" | "other";
-        description: string;
-        amount: number;
-        per_person?: boolean;
-    }) => {
-        if (!plan) return;
-
-        const result = await addCost(plan.id, costData);
-
-        if (result.success) {
-            // Reload budget summary
-            const costResult = await getCostSummary(plan.id);
-            if (costResult.success && costResult.summary) {
-                setBudgetSummary({
-                    total: costResult.summary.total,
-                    perPerson: costResult.summary.per_person,
-                    participantCount: 1,
-                });
-            }
-            Alert.alert("Erfolg", "Kosten wurden hinzugefügt");
-        } else {
-            throw new Error(result.error || "Kosten konnten nicht hinzugefügt werden");
-        }
-    };
-
-    const handleAddTrip = async (tripId: number) => {
-        console.log('[handleAddTrip] CALLED! tripId:', tripId, 'plan.id:', plan?.id);
-
-        if (!plan) {
-            console.log('[handleAddTrip] ERROR: No plan!');
-            return;
-        }
-
-        console.log('[handleAddTrip] Calling addPlanTrip...');
-        const result = await addPlanTrip(plan.id, {
-            trip_id: tripId,
-            planned_date: new Date().toISOString(),
-        });
-
-        console.log('[handleAddTrip] Result:', result);
-
-        if (result.success) {
-            console.log('[handleAddTrip] Success! Reloading trips...');
-            const { data: trips, error } = await supabase
-                .from("plan_trips")
-                .select(`*, trip:ausfluege(id, name, beschreibung)`)
-                .eq("plan_id", plan.id)
-                .order("sequence");
-
-            console.log('[handleAddTrip] Loaded', trips?.length, 'trips');
-            console.log('[handleAddTrip] Error:', JSON.stringify(error, null, 2));
-
-            if (trips) setPlanTrips(trips as any);
-            setShowTripPicker(false);
-            Alert.alert("Erfolg", "Ausflug wurde hinzugefügt");
-        } else {
-            console.log('[handleAddTrip] FAILED:', result.error);
-            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
-        }
-    };
-
-    const handleDeleteTrip = async (tripId: string) => {
-        const result = await deletePlanTrip(tripId);
-        if (result.success) {
-            setPlanTrips(planTrips.filter((t) => t.id !== tripId));
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler beim Löschen");
-        }
-    };
-
-    // Timeline handlers
-    const handleSaveTripTimes = async (times: { departure_time?: string; arrival_time?: string; notes?: string; buffer_time_minutes?: number }) => {
-        if (!editingTripTimeId) return;
-        const result = await updatePlanTripTimes(editingTripTimeId, times);
-        if (result.success) {
-            setPlanTrips(planTrips.map(trip => trip.id === editingTripTimeId ? { ...trip, ...times } : trip));
-            setEditingTripTimeId(null);
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler beim Speichern");
-        }
-    };
-
-    const loadTripActivities = async (tripId: string) => {
-        const result = await getTripActivities(tripId);
-        if (result.success && result.activities) {
-            setTripActivities(prev => ({ ...prev, [tripId]: result.activities || [] }));
-        }
-    };
-
-    const handleOpenActivityEditor = async (tripId: string) => {
-        setEditingActivitiesTripId(tripId);
-        if (!tripActivities[tripId]) await loadTripActivities(tripId);
-    };
-
-    const handleAddActivity = async (activity: any) => {
-        if (!editingActivitiesTripId) return;
-        const result = await addTripActivity(editingActivitiesTripId, activity);
-        if (result.success && result.activity) {
-            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: [...(prev[editingActivitiesTripId] || []), result.activity!] }));
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
-        }
-    };
-
-    const handleUpdateActivity = async (activityId: string, updates: any) => {
-        if (!editingActivitiesTripId) return;
-        const result = await updateTripActivity(activityId, updates);
-        if (result.success) {
-            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: (prev[editingActivitiesTripId] || []).map(act => act.id === activityId ? { ...act, ...updates } : act) }));
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler");
-        }
-    };
-
-    const handleDeleteActivity = async (activityId: string) => {
-        if (!editingActivitiesTripId) return;
-        const result = await deleteTripActivity(activityId);
-        if (result.success) {
-            setTripActivities(prev => ({ ...prev, [editingActivitiesTripId]: (prev[editingActivitiesTripId] || []).filter(act => act.id !== activityId) }));
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler");
-        }
-    };
-
-    // Multi-day trip handlers
-    const loadGroupedDays = async () => {
-        if (!id) return;
-        const result = await getPlanTripsGroupedByDay(id);
-        if (result.success && result.days) {
-            setGroupedDays(result.days);
-        }
-    };
-
-    const handleAddAccommodation = async (accommodationData: any) => {
-        if (!id) return;
-        const result = await addAccommodation(id, accommodationData);
-        if (result.success) {
-            await loadGroupedDays();
-            setShowAccommodationEditor(false);
-            setEditingAccommodation(null);
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler beim Hinzufügen");
-        }
-    };
-
-    const handleEditAccommodation = (accommodation: any) => {
-        setEditingAccommodation(accommodation);
-        setShowAccommodationEditor(true);
-    };
-
-    const handleSaveAccommodation = async (accommodationData: any) => {
-        if (editingAccommodation) {
-            // Update existing
-            const result = await updateAccommodation(editingAccommodation.id, accommodationData);
-            if (result.success) {
-                await loadGroupedDays();
-                setShowAccommodationEditor(false);
-                setEditingAccommodation(null);
-            } else {
-                Alert.alert("Fehler", result.error || "Fehler beim Aktualisieren");
-            }
-        } else {
-            // Create new
-            await handleAddAccommodation(accommodationData);
-        }
-    };
-
-    const handleDeleteAccommodation = async (accommodationId: string) => {
-        Alert.alert(
-            "Unterkunft löschen",
-            "Möchtest du diese Unterkunft wirklich löschen?",
-            [
-                { text: "Abbrechen", style: "cancel" },
-                {
-                    text: "Löschen",
-                    style: "destructive",
-                    onPress: async () => {
-                        const result = await deleteAccommodation(accommodationId);
-                        if (result.success) {
-                            await loadGroupedDays();
-                        } else {
-                            Alert.alert("Fehler", result.error || "Fehler beim Löschen");
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-    const handleAutoInsertAccommodations = async () => {
-        if (!id) return;
-        const result = await autoInsertAccommodations(id);
-        if (result.success) {
-            await loadGroupedDays();
-            Alert.alert("Erfolg", `${result.inserted || 0} Unterkunft(en) hinzugefügt`);
-        } else {
-            Alert.alert("Fehler", result.error || "Fehler");
-        }
-    };
-
-    // Start location handler
-    const handleSetStartLocation = () => {
-        if (!plan) return;
-        Alert.prompt(
-            "Startort festlegen",
-            "Gib deinen Startort ein:",
-            async (text) => {
-                if (!text) return;
-                const result = await updatePlanLocation(plan.id, {
-                    departure_location: text
-                });
-                if (result.success) {
-                    setPlan({ ...plan, departure_location: text });
-                    Alert.alert("Erfolg", "Startort wurde gespeichert");
-                } else {
-                    Alert.alert("Fehler", result.error || "Fehler beim Speichern");
-                }
-            },
-            "plain-text",
-            plan.departure_location || ""
-        );
-    };
-
-    // Date picker handlers
-    const handleEditTripDate = (tripId: string, currentDate: string) => {
-        setEditingTripIdForDate(tripId);
-        setSelectedDate(new Date(currentDate));
-    };
-
-    const handleDateChange = async (event: any, date?: Date) => {
-        if (Platform.OS === 'android') {
-            setEditingTripIdForDate(null);
-        }
-
-        if (date && editingTripIdForDate) {
-            const result = await updatePlanTripDate(editingTripIdForDate, date.toISOString().split('T')[0]);
-            if (result.success) {
-                await loadPlan();
-                if (Platform.OS === 'ios') {
-                    setEditingTripIdForDate(null);
-                }
-                Alert.alert("Erfolg", "Datum wurde geändert");
-            } else {
-                Alert.alert("Fehler", result.error || "Fehler beim Ändern");
-            }
-        }
-    };
-
-    if (isLoading) {
+    if (isLoading || !plan) {
         return (
             <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-            </ThemedView>
-        );
-    }
+                    <Activity
 
-    if (!plan) {
-        return (
-            <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-                <View style={styles.emptyContainer}>
-                    <ThemedText>Plan nicht gefunden</ThemedText>
-                    <Pressable
-                        onPress={() => router.back()}
-                        style={[styles.button, { backgroundColor: colors.primary }]}
-                    >
-                        <ThemedText style={styles.buttonText}>Zurück</ThemedText>
-                    </Pressable>
+                        Indicator size="large" color={colors.primary} />
+                    <ThemedText style={styles.loadingText}>Plan wird geladen...</ThemedText>
                 </View>
             </ThemedView>
         );
@@ -470,368 +128,22 @@ export default function PlanDetailScreen() {
 
     return (
         <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Pressable onPress={() => router.back()} style={styles.backButton}>
-                    <IconSymbol name="chevron.left" size={24} color={colors.text} />
-                </Pressable>
-                <ThemedText style={styles.headerTitle}>Plan Details</ThemedText>
-                <Pressable
-                    style={styles.menuButton}
-                    onPress={() =>
-                        Alert.alert("Status ändern", "Wähle einen neuen Status", [
-                            { text: "Abbrechen", style: "cancel" },
-                            { text: "Idee", onPress: () => updateStatus("idea") },
-                            { text: "In Planung", onPress: () => updateStatus("planning") },
-                            { text: "Fix", onPress: () => updateStatus("confirmed") },
-                            { text: "Erledigt", onPress: () => updateStatus("completed") },
-                            { text: "Abgesagt", onPress: () => updateStatus("cancelled") },
-                        ])
-                    }
-                >
-                    <IconSymbol name="ellipsis.circle" size={24} color={colors.text} />
-                </Pressable>
-            </View>
+            {/* Plan Header - Always visible */}
+            <PlanHeader
+                plan={plan}
+                participantCount={budgetSummary.participantCount}
+                totalBudget={budgetSummary.total}
+                taskProgress={{ completed: tasks.filter(t => t.is_completed).length, total: tasks.length }}
+            />
 
-            <ScrollView style={styles.scrollView}>
-                {/* Plan Info */}
-                <View style={styles.section}>
-                    <ThemedText style={styles.planTitle}>{plan.title}</ThemedText>
-                    <View style={styles.statusRow}>
-                        <StatusBadge status={plan.status} />
-                        <ThemedText style={[styles.createdDate, { color: colors.textSecondary }]}>
-                            Erstellt am {new Date(plan.created_at).toLocaleDateString("de-DE")}
-                        </ThemedText>
-                    </View>
-                    {plan.description && (
-                        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                            {plan.description}
-                        </ThemedText>
-                    )}
-                    {plan.departure_location && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm }}>
-                            <IconSymbol name="mappin.circle.fill" size={16} color={colors.primary} />
-                            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                                Start: {plan.departure_location}
-                            </ThemedText>
-                        </View>
-                    )}
-                </View>
-
-                {/* Trips */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <ThemedText style={styles.sectionTitle}>Ausflüge ({planTrips.length})</ThemedText>
-                        <Pressable
-                            onPress={() => setShowTripPicker(true)}
-                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
-                        >
-                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
-                        </Pressable>
-                    </View>
-
-                    {/* Accommodation Buttons */}
-                    <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
-                        <Pressable
-                            style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, flex: 1 }]}
-                            onPress={() => setShowAccommodationEditor(true)}
-                        >
-                            <IconSymbol name="bed.double.fill" size={20} color={colors.primary} />
-                            <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
-                                Unterkunft hinzufügen
-                            </ThemedText>
-                        </Pressable>
-                        <Pressable
-                            style={[styles.addButton, { backgroundColor: colors.card, borderColor: colors.border, flex: 1 }]}
-                            onPress={handleAutoInsertAccommodations}
-                        >
-                            <IconSymbol name="sparkles" size={20} color={colors.primary} />
-                            <ThemedText style={{ color: colors.text, fontWeight: '600' }}>
-                                Auto-Einfügen
-                            </ThemedText>
-                        </Pressable>
-                    </View>
-
-                    {planTrips.map((trip) => (
-                        <View
-                            key={trip.id}
-                            style={[
-                                styles.tripCard,
-                                {
-                                    backgroundColor: colors.surface,
-                                    borderColor: colors.border,
-                                    flexDirection: "row",
-                                    alignItems: "flex-start",
-                                },
-                            ]}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <View style={styles.tripHeader}>
-                                    <IconSymbol
-                                        name={trip.trip_id ? "mappin.circle.fill" : "location.fill"}
-                                        size={20}
-                                        color={colors.primary}
-                                    />
-                                    <ThemedText style={styles.tripTitle}>
-                                        {trip.trip?.name || trip.custom_location || "Eigener Ort"}
-                                    </ThemedText>
-                                </View>
-                                <View style={styles.tripMeta}>
-                                    <IconSymbol name="calendar" size={14} color={colors.textSecondary} />
-                                    <ThemedText style={[styles.tripDate, { color: colors.textSecondary }]}>
-                                        {new Date(trip.planned_date).toLocaleDateString("de-DE", {
-                                            weekday: "short",
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                        })}
-                                    </ThemedText>
-                                    <Pressable
-                                        onPress={() => handleEditTripDate(trip.id, trip.planned_date)}
-                                        style={{ marginLeft: Spacing.xs }}
-                                    >
-                                        <IconSymbol name="pencil.circle.fill" size={18} color={colors.primary} />
-                                    </Pressable>
-                                </View>
-                                {trip.trip?.beschreibung && (
-                                    <ThemedText
-                                        style={[styles.tripDescription, { color: colors.textSecondary }]}
-                                        numberOfLines={2}
-                                    >
-                                        {trip.trip.beschreibung}
-                                    </ThemedText>
-                                )}
-                            </View>
-                            <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-                                <Pressable
-                                    onPress={() => setEditingTripTimeId(trip.id)}
-                                    style={styles.tripActionButton}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <IconSymbol name="clock" size={18} color={colors.tint} />
-                                </Pressable>
-                                <Pressable
-                                    onPress={() => handleOpenActivityEditor(trip.id)}
-                                    style={styles.tripActionButton}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <IconSymbol name="list.bullet" size={18} color={colors.tint} />
-                                </Pressable>
-                                <Pressable
-                                    onPress={() => handleDeleteTrip(trip.id)}
-                                    style={styles.tripActionButton}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <IconSymbol name="trash" size={18} color="#FF3B30" />
-                                </Pressable>
-                            </View>
-                        </View>
-                    ))}
-                </View>
-
-                {/* Participants */}
-                <View style={styles.section}>
-                    <ThemedText style={styles.sectionTitle}>Teilnehmer</ThemedText>
-                    <ParticipantInvite planId={id!} onInvited={loadPlan} />
-                </View>
-
-                {/* Tasks */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <ThemedText style={styles.sectionTitle}>
-                            Aufgaben ({tasks.filter((t) => !t.is_completed).length}/{tasks.length})
-                        </ThemedText>
-                        <Pressable
-                            onPress={() => setShowAddTask(true)}
-                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
-                        >
-                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
-                        </Pressable>
-                    </View>
-                    {tasks.length === 0 ? (
-                        <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
-                            Noch keine Aufgaben
-                        </ThemedText>
-                    ) : (
-                        tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} />)
-                    )}
-                </View>
-
-                <AddTaskDialog
-                    visible={showAddTask}
-                    planId={id!}
-                    onClose={() => setShowAddTask(false)}
-                    onAdd={handleAddTask}
-                />
-
-                {/* Budget */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <ThemedText style={styles.sectionTitle}>Budget</ThemedText>
-                        <Pressable
-                            onPress={() => setShowAddCost(true)}
-                            style={[styles.addTaskButton, { backgroundColor: colors.primary }]}
-                        >
-                            <IconSymbol name="plus" size={16} color="#FFFFFF" />
-                        </Pressable>
-                    </View>
-                    <BudgetSummary
-                        total={budgetSummary.total}
-                        perPerson={budgetSummary.perPerson}
-                        participantCount={budgetSummary.participantCount}
-                    />
-                </View>
-
-                <AddCostDialog
-                    visible={showAddCost}
-                    planId={id!}
-                    onClose={() => setShowAddCost(false)}
-                    onAdd={handleAddCost}
-                />
-
-                {/* Quick Actions */}
-                <View style={styles.section}>
-                    <ThemedText style={styles.sectionTitle}>Schnellzugriff</ThemedText>
-                    <View style={styles.quickActions}>
-                        <Pressable
-                            style={[
-                                styles.actionCard,
-                                { backgroundColor: colors.surface, borderColor: colors.border },
-                            ]}
-                            onPress={() => Alert.alert("Teilnehmer", `Aktuell ${budgetSummary.participantCount} Teilnehmer`)}
-                        >
-                            <IconSymbol name="person.2.fill" size={32} color={colors.primary} />
-                            <ThemedText style={styles.actionLabel}>Teilnehmer</ThemedText>
-                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                                {budgetSummary.participantCount} {budgetSummary.participantCount === 1 ? 'Person' : 'Personen'}
-                            </ThemedText>
-                        </Pressable>
-
-                        <Pressable
-                            style={[
-                                styles.actionCard,
-                                { backgroundColor: colors.surface, borderColor: colors.border },
-                            ]}
-                            onPress={() => router.push("/planning/" + id + "#budget")}
-                        >
-                            <IconSymbol name="francsign.circle" size={32} color={colors.primary} />
-                            <ThemedText style={styles.actionLabel}>Budget</ThemedText>
-                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                                CHF {budgetSummary.total.toFixed(2)}
-                            </ThemedText>
-                        </Pressable>
-
-                        <Pressable
-                            style={[
-                                styles.actionCard,
-                                { backgroundColor: colors.surface, borderColor: colors.border },
-                            ]}
-                            onPress={handleSetStartLocation}
-                        >
-                            <IconSymbol name="mappin.circle.fill" size={32} color={colors.primary} />
-                            <ThemedText style={styles.actionLabel}>Startort</ThemedText>
-                            <ThemedText style={[styles.actionCount, { color: colors.textSecondary }]}>
-                                {plan.departure_location || "Festlegen"}
-                            </ThemedText>
-                        </Pressable>
-                    </View>
-                    {plan.description && (
-                        <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                            {plan.description}
-                        </ThemedText>
-                    )}
-                    {plan.departure_location && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm }}>
-                            <IconSymbol name="mappin.circle.fill" size={16} color={colors.primary} />
-                            <ThemedText style={[styles.description, { color: colors.textSecondary }]}>
-                                Start: {plan.departure_location}
-                            </ThemedText>
-                        </View>
-                    )}
-                </View>
-
-                {/* Trip Picker Modal */}
-                <TripPickerModal
-                    visible={showTripPicker}
-                    trips={availableTrips}
-                    onSelectTrip={handleAddTrip}
-                    onClose={() => setShowTripPicker(false)}
-                />
-
-                {/* Trip Time Editor */}
-                {editingTripTimeId && (
-                    <TripTimeEditor
-                        visible={!!editingTripTimeId}
-                        tripId={editingTripTimeId}
-                        currentTimes={planTrips.find(t => t.id === editingTripTimeId)}
-                        onSave={handleSaveTripTimes}
-                        onClose={() => setEditingTripTimeId(null)}
-                    />
-                )}
-
-                {/* Activity Editor */}
-                {editingActivitiesTripId && (
-                    <ActivityEditor
-                        visible={!!editingActivitiesTripId}
-                        planTripId={editingActivitiesTripId}
-                        activities={tripActivities[editingActivitiesTripId] || []}
-                        onAddActivity={handleAddActivity}
-                        onUpdateActivity={handleUpdateActivity}
-                        onDeleteActivity={handleDeleteActivity}
-                        onClose={() => setEditingActivitiesTripId(null)}
-                    />
-                )}
-
-                {/* Accommodation Editor */}
-                {showAccommodationEditor && (
-                    <MultiDayAccommodationEditor
-                        visible={showAccommodationEditor}
-                        accommodation={editingAccommodation}
-                        onSave={handleSaveAccommodation}
-                        onClose={() => {
-                            setShowAccommodationEditor(false);
-                            setEditingAccommodation(null);
-                        }}
-                    />
-                )}
-
-                {/* Date Picker - Android */}
-                {editingTripIdForDate && Platform.OS === 'android' && (
-                    <DateTimePicker
-                        value={selectedDate}
-                        mode="date"
-                        display="default"
-                        onChange={handleDateChange}
-                    />
-                )}
-
-                {/* Date Picker - iOS */}
-                {editingTripIdForDate && Platform.OS === 'ios' && (
-                    <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                            <View style={{ padding: Spacing.md }}>
-                                <ThemedText style={{ fontSize: 18, fontWeight: '600', marginBottom: Spacing.md }}>
-                                    Datum ändern
-                                </ThemedText>
-                                <DateTimePicker
-                                    value={selectedDate}
-                                    mode="date"
-                                    display="inline"
-                                    onChange={handleDateChange}
-                                />
-                                <Pressable
-                                    style={[styles.datePickerButton, { backgroundColor: colors.primary, marginTop: Spacing.md }]}
-                                    onPress={() => setEditingTripIdForDate(null)}
-                                >
-                                    <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
-                                        Schließen
-                                    </ThemedText>
-                                </Pressable>
-                            </View>
-                        </View>
-                    </View>
-                )}
-            </ScrollView>
+            {/* Tab View */}
+            <TabView
+                navigationState={{ index, routes }}
+                renderScene={renderScene}
+                renderTabBar={renderTabBar}
+                onIndexChange={setIndex}
+                initialLayout={{ width: layout.width }}
+            />
         </ThemedView>
     );
 }
@@ -840,174 +152,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: "600",
-    },
-    menuButton: {
-        width: 44,
-        height: 44,
-        justifyContent: "center",
-        alignItems: "center",
-    },
     loadingContainer: {
         flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        gap: Spacing.lg,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    section: {
-        padding: Spacing.lg,
-        gap: Spacing.md,
-    },
-    planTitle: {
-        fontSize: 28,
-        fontWeight: "bold",
-    },
-    statusRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.md,
-    },
-    createdDate: {
-        fontSize: 12,
-    },
-    description: {
-        fontSize: 14,
-        lineHeight: 20,
-        marginTop: Spacing.sm,
-    },
-    sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-    },
-    tripCard: {
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        gap: Spacing.sm,
-    },
-    tripHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.sm,
-    },
-    tripTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        flex: 1,
-    },
-    tripMeta: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: Spacing.xs,
-    },
-    tripDate: {
-        fontSize: 12,
-    },
-    tripDescription: {
-        fontSize: 13,
-        lineHeight: 18,
-    },
-    addTaskButton: {
-        width: 32,
-        height: 32,
-        borderRadius: BorderRadius.full,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    addButton: {
-        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: Spacing.sm,
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-    },
-    emptyText: {
-        fontSize: 14,
-        fontStyle: "italic",
-        textAlign: "center",
-        padding: Spacing.lg,
-    },
-    quickActions: {
-        flexDirection: "row",
         gap: Spacing.md,
     },
-    actionCard: {
-        flex: 1,
-        padding: Spacing.lg,
-        borderRadius: BorderRadius.lg,
-        borderWidth: 1,
-        alignItems: "center",
-        gap: Spacing.sm,
-    },
-    actionLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-    },
-    actionCount: {
-        fontSize: 12,
-    },
-    button: {
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.md,
-    },
-    buttonText: {
-        color: "#FFFFFF",
+    loadingText: {
         fontSize: 16,
-        fontWeight: "600",
-    },
-    tripActionButton: {
-        padding: Spacing.sm,
-    },
-    modalOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalContent: {
-        borderRadius: BorderRadius.lg,
-        minWidth: 300,
-        maxWidth: '90%',
-    },
-    datePickerButton: {
-        paddingVertical: Spacing.md,
-        paddingHorizontal: Spacing.lg,
-        borderRadius: BorderRadius.md,
-        alignItems: 'center',
+        opacity: 0.6,
     },
 });
