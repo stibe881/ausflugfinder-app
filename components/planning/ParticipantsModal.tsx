@@ -49,6 +49,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
     const [customName, setCustomName] = useState('');
     const [adults, setAdults] = useState('1');
     const [children, setChildren] = useState('0');
+    const [editEmail, setEditEmail] = useState('');
 
     useEffect(() => {
         if (visible) {
@@ -138,14 +139,21 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
         setEditingParticipant(participant);
         setAdults(participant.adults_count.toString());
         setChildren(participant.children_count.toString());
+        setEditEmail(participant.email || '');
     };
 
     const saveParticipantEdit = async () => {
         if (!editingParticipant) return;
 
+        if (!editEmail.trim()) {
+            Alert.alert('Fehler', 'Bitte einen Namen/Email eingeben');
+            return;
+        }
+
         const { error } = await supabase
             .from('plan_participants')
             .update({
+                email: editEmail.trim(),
                 adults_count: parseInt(adults) || 1,
                 children_count: parseInt(children) || 0
             })
@@ -155,6 +163,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
             setEditingParticipant(null);
             setAdults('1');
             setChildren('0');
+            setEditEmail('');
             loadData();
             onDataChanged?.(); // Notify parent
         } else {
@@ -419,6 +428,25 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                                     {editingParticipant.user?.username || editingParticipant.email}
                                 </ThemedText>
 
+                                {/* Name/Email Field */}
+                                <View style={{ marginBottom: Spacing.md }}>
+                                    <ThemedText style={[styles.counterLabel, { color: colors.textSecondary, marginBottom: Spacing.xs }]}>
+                                        Name/Email
+                                    </ThemedText>
+                                    <TextInput
+                                        style={[styles.emailInput, {
+                                            backgroundColor: colors.background,
+                                            color: colors.text,
+                                            borderColor: colors.border
+                                        }]}
+                                        value={editEmail}
+                                        onChangeText={setEditEmail}
+                                        placeholder="z.B. Max Mustermann"
+                                        placeholderTextColor={colors.textSecondary}
+                                        autoCapitalize="words"
+                                    />
+                                </View>
+
                                 <View style={styles.countersRow}>
                                     <View style={styles.counter}>
                                         <ThemedText style={[styles.counterLabel, { color: colors.textSecondary }]}>
@@ -459,6 +487,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                                             setEditingParticipant(null);
                                             setAdults('1');
                                             setChildren('0');
+                                            setEditEmail('');
                                         }}
                                         style={[styles.formButton, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
                                     >
@@ -637,6 +666,12 @@ const styles = StyleSheet.create({
     counterLabel: {
         fontSize: 13,
         marginBottom: Spacing.xs,
+    },
+    emailInput: {
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        padding: Spacing.md,
+        fontSize: 15,
     },
     counterInput: {
         borderWidth: 1,
