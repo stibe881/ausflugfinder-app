@@ -27,6 +27,7 @@ import { getPlan, getCostSummary, updatePlan, addPlanTrip, type Plan, type PlanW
 import { supabase } from "@/lib/supabase";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TripPickerModal } from "@/components/planning/TripPickerModal";
+import { InputDialog } from "@/components/InputDialog";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Platform, Alert, Modal } from "react-native";
 
@@ -51,6 +52,7 @@ export default function PlanDetailScreen() {
     // Trip Picker State
     const [showTripPicker, setShowTripPicker] = useState(false);
     const [availableTrips, setAvailableTrips] = useState<any[]>([]);
+    const [showCustomTripDialog, setShowCustomTripDialog] = useState(false);
 
     // Participant Modal State (Placeholder)
     const [showParticipantsModal, setShowParticipantsModal] = useState(false);
@@ -192,6 +194,33 @@ export default function PlanDetailScreen() {
         }
     };
 
+    const handleAddCustomTrip = () => {
+        setShowTripPicker(false);
+        setShowCustomTripDialog(true);
+    };
+
+    const handleConfirmCustomTrip = async (locationName: string) => {
+        if (!id || !plan || !locationName.trim()) {
+            setShowCustomTripDialog(false);
+            return;
+        }
+
+        // Add custom trip to plan (with undefined trip_id and custom_location)
+        const res = await addPlanTrip(id, {
+            custom_location: locationName.trim(),
+            planned_date: plan.start_date || new Date().toISOString()
+        });
+
+        setShowCustomTripDialog(false);
+
+        if (res.success) {
+            loadPlan(); // Reload
+            Alert.alert("Erfolg", `Eigener Ausflug "${locationName}" wurde hinzugefügt.`);
+        } else {
+            Alert.alert("Fehler", "Eigener Ausflug konnte nicht hinzugefügt werden.");
+        }
+    };
+
     const renderScene = SceneMap({
         timeline: () => <TimelineTab planId={id!} />,
         route: () => <RouteTab planId={id!} />,
@@ -310,7 +339,18 @@ export default function PlanDetailScreen() {
                 visible={showTripPicker}
                 trips={availableTrips}
                 onSelectTrip={onSelectTrip}
+                onAddCustom={handleAddCustomTrip}
                 onClose={() => setShowTripPicker(false)}
+            />
+
+            {/* Custom Trip Input Dialog */}
+            <InputDialog
+                visible={showCustomTripDialog}
+                title="Eigener Ausflug"
+                message="Gib den Namen oder Ort deines Ausflugs ein:"
+                placeholder="z.B. Geheimtipp Wanderweg"
+                onConfirm={handleConfirmCustomTrip}
+                onCancel={() => setShowCustomTripDialog(false)}
             />
 
             {/* Participant Modal (Placeholder) */}

@@ -8,10 +8,11 @@ interface TripPickerModalProps {
     visible: boolean;
     trips: any[];
     onSelectTrip: (tripId: number) => void;
+    onAddCustom?: () => void;
     onClose: () => void;
 }
 
-export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripPickerModalProps) {
+export function TripPickerModal({ visible, trips, onSelectTrip, onAddCustom, onClose }: TripPickerModalProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
 
@@ -28,9 +29,20 @@ export function TripPickerModal({ visible, trips, onSelectTrip, onClose }: TripP
                 <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                     <View style={styles.modalHeader}>
                         <ThemedText style={styles.modalTitle}>Ausflug hinzufügen</ThemedText>
-                        <Pressable onPress={onClose} style={styles.closeButton}>
-                            <IconSymbol name="xmark.circle.fill" size={28} color={colors.textSecondary} />
-                        </Pressable>
+                        <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+                            {onAddCustom && (
+                                <Pressable
+                                    onPress={onAddCustom}
+                                    style={[styles.customButton, { backgroundColor: colors.primary }]}
+                                >
+                                    <IconSymbol name="plus.circle.fill" size={20} color="#FFF" />
+                                    <ThemedText style={styles.customButtonText}>Eigener</ThemedText>
+                                </Pressable>
+                            )}
+                            <Pressable onPress={onClose} style={styles.closeButton}>
+                                <IconSymbol name="xmark.circle.fill" size={28} color={colors.textSecondary} />
+                            </Pressable>
+                        </View>
                     </View>
 
                     <FlatList
@@ -120,5 +132,18 @@ const styles = StyleSheet.create({
     emptyText: {
         textAlign: "center",
         padding: Spacing.xl,
+    },
+    customButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: Spacing.xs,
+        borderRadius: BorderRadius.md,
+    },
+    customButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
