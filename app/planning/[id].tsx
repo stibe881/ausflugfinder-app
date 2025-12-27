@@ -99,13 +99,18 @@ export default function PlanDetailScreen() {
         // Load budget summary with real participant count
         const { data: participantsData } = await supabase
             .from('plan_participants')
-            .select('adults_count, children_count')
+            .select('id, adults_count, children_count, email')
             .eq('plan_id', id);
+
+        // Debug: Log participants to check for duplicates
+        console.log('Plan Participants:', participantsData);
 
         const totalParticipants = participantsData?.reduce(
             (sum, p) => sum + (p.adults_count || 0) + (p.children_count || 0),
             0
         ) || 1; // Default to 1 if no participants
+
+        console.log('Total participants calculated:', totalParticipants);
 
         const costResult = await getCostSummary(id);
         if (costResult.success && costResult.summary) {
