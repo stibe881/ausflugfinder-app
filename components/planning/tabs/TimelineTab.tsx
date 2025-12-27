@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Animated } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Animated, Modal, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -19,8 +21,8 @@ interface PlanTrip {
     custom_location?: string;
     custom_address?: string;
     planned_date: string;
-    departure_time?: string;
-    arrival_time?: string;
+    start_time?: string;
+    end_time?: string;
     sequence: number;
     trip?: {
         id: number;
@@ -38,6 +40,12 @@ export function TimelineTab({ planId }: TimelineTabProps) {
     const [loading, setLoading] = useState(true);
     const [editingTrip, setEditingTrip] = useState<PlanTrip | null>(null);
     const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
+
+    // Time picker state
+    const [timePickerTrip, setTimePickerTrip] = useState<PlanTrip | null>(null);
+    const [timePickerType, setTimePickerType] = useState<'start' | 'end'>('start');
+    const [selectedTime, setSelectedTime] = useState(new Date());
+    const [showTimePicker, setShowTimePicker] = useState(false);
 
     useEffect(() => {
         loadTrips();
@@ -122,6 +130,53 @@ export function TimelineTab({ planId }: TimelineTabProps) {
         // Close swipeable
         swipeableRefs.current[trip.id]?.close();
         setEditingTrip(trip);
+    };
+
+    const openTimePicker = (trip: PlanTrip, type: 'start' | 'end') => {
+        setTimePickerTrip(trip);
+        setTimePickerType(type);
+
+        // Parse existing time or use current time
+        const existingTime = type === 'start' ? trip.start_time : trip.end_time;
+        if (existingTime) {
+            const [hours, minutes] = existingTime.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, minutes, 0, 0);
+            setSelectedTime(date);
+        } else {
+            setSelectedTime(new Date());
+        }
+
+        setShowTimePicker(true);
+    };
+
+    const saveTime = async (time: Date | null) => {
+        if (!timePickerTrip || !time) {
+            setShowTimePicker(false);
+            return;
+        }
+
+        const timeString = `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}`;
+
+        const updateData: any = {};
+        if (timePickerType === 'start') {
+            updateData.start_time = timeString;
+        } else {
+            updateData.end_time = timeString;
+        }
+
+        const { error } = await supabase
+            .from('plan_trips')
+            .update(updateData)
+            .eq('id', timePickerTrip.id);
+
+        if (!error) {
+            loadTrips();
+        } else {
+            Alert.alert('Fehler', 'Zeit konnte nicht gespeichert werden');
+        }
+
+        setShowTimePicker(false);
     };
 
     const handleConfirmEdit = async (newName: string, newAddress?: string) => {
@@ -304,14 +359,26 @@ export function TimelineTab({ planId }: TimelineTabProps) {
                                                 </ThemedText>
                                             </View>
 
-                                            {trip.departure_time && (
-                                                <View style={styles.timeRow}>
-                                                    <IconSymbol name="clock.fill" size={12} color={colors.textSecondary} />
-                                                    <ThemedText style={[styles.metaText, { color: colors.textSecondary }]}>
-                                                        {trip.departure_time}
-                                                    </ThemedText>
-                                                </View>
-                                            )}
+                                            {/* Time Range - Clickable */}
+                                            <Pressable
+                                                style={styles.timeContainer}
+                                                onPress={() => openTimePicker(trip, 'start')}
+                                            >
+                                                <IconSymbol name="clock.fill" size={12} color={colors.primary} />
+                                                <ThemedText style={[styles.timeText, { color: trip.start_time ? colors.text : colors.textSecondary }]}>
+                                                    {trip.start_time || 'Start'}
+                                                </ThemedText>
+                                                {trip.start_time && trip.end_time && (
+                                                    <ThemedText style={[styles.timeSeparator, { color: colors.textSecondary }]}>-</ThemedText>
+                                                )}
+                                                {trip.start_time && (
+                                                    <Pressable onPress={(e) => { e.stopPropagation(); openTimePicker(trip, 'end'); }}>
+                                                        <ThemedText style={[styles.timeText, { color: trip.end_time ? colors.text : colors.textSecondary }]}>
+                                                            {trip.end_time || 'Ende'}
+                                                        </ThemedText>
+                                                    </Pressable>
+                                                )}
+                                            </Pressable>
                                         </View>
                                     </View>
 
@@ -366,6 +433,62 @@ export function TimelineTab({ planId }: TimelineTabProps) {
                     onConfirm={handleConfirmEdit}
                     onCancel={() => setEditingTrip(null)}
                 />
+            )}
+
+            {/* Time Picker Modal */}
+            {showTimePicker && (
+                <Modal
+                    transparent
+                    animationType="slide"
+                    visible={showTimePicker}
+                    onRequestClose={() => setShowTimePicker(false)}
+                >
+                    <View style={styles.timePickerModalOverlay}>
+                        <ThemedView style={styles.timePickerModal}>
+                            <View style={styles.timePickerHeader}>
+                                <ThemedText style={styles.timePickerTitle}>
+                                    {timePickerType === 'start' ? 'Startzeit' : 'Endzeit'} wählen
+                                </ThemedText>
+                            </View>
+
+                            <DateTimePicker
+                                value={selectedTime}
+                                mode="time"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                onChange={(event, date) => {
+                                    if (Platform.OS === 'android') {
+                                        if (event.type === 'set' && date) {
+                                            saveTime(date);
+                                        } else {
+                                            setShowTimePicker(false);
+                                        }
+                                    } else {
+                                        if (date) setSelectedTime(date);
+                                    }
+                                }}
+                            />
+
+                            {Platform.OS === 'ios' && (
+                                <View style={styles.timePickerButtons}>
+                                    <Pressable
+                                        style={[styles.timePickerButton, styles.timePickerCancelButton]}
+                                        onPress={() => setShowTimePicker(false)}
+                                    >
+                                        <ThemedText>Abbrechen</ThemedText>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.timePickerButton, styles.timePickerSaveButton]}
+                                        onPress={() => saveTime(selectedTime)}
+                                    >
+                                        <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
+                                            Speichern
+                                        </ThemedText>
+                                    </Pressable>
+                                </View>
+                            )}
+                        </ThemedView>
+                    </View>
+                </Modal>
             )}
         </>
     );
@@ -535,5 +658,58 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         backgroundColor: '#EF4444',
+    },
+    // Time picker styles
+    timeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: BorderRadius.sm,
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    },
+    timeText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    timeSeparator: {
+        fontSize: 12,
+        marginHorizontal: 4,
+    },
+    timePickerModalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    timePickerModal: {
+        borderTopLeftRadius: BorderRadius.xl,
+        borderTopRightRadius: BorderRadius.xl,
+        padding: Spacing.lg,
+    },
+    timePickerHeader: {
+        marginBottom: Spacing.md,
+    },
+    timePickerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    timePickerButtons: {
+        flexDirection: 'row',
+        gap: Spacing.sm,
+        marginTop: Spacing.md,
+    },
+    timePickerButton: {
+        flex: 1,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        alignItems: 'center',
+    },
+    timePickerCancelButton: {
+        backgroundColor: '#F3F4F6',
+    },
+    timePickerSaveButton: {
+        backgroundColor: '#3B82F6',
     },
 });
