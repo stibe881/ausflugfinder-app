@@ -96,17 +96,26 @@ export default function PlanDetailScreen() {
             setTasks(tasksData as PlanTask[]);
         }
 
-        // Load budget summary
+        // Load budget summary with real participant count
+        const { data: participantsData } = await supabase
+            .from('plan_participants')
+            .select('adults_count, children_count')
+            .eq('plan_id', id);
+
+        const totalParticipants = participantsData?.reduce(
+            (sum, p) => sum + (p.adults_count || 0) + (p.children_count || 0),
+            0
+        ) || 1; // Default to 1 if no participants
+
         const costResult = await getCostSummary(id);
         if (costResult.success && costResult.summary) {
             setBudgetSummary({
                 total: costResult.summary.total,
-                perPerson: costResult.summary.per_person,
-                participantCount: 1,
+                perPerson: totalParticipants > 0 ? costResult.summary.total / totalParticipants : 0,
+                participantCount: totalParticipants,
             });
         }
 
-        setIsLoading(false);
         setIsLoading(false);
     };
 
