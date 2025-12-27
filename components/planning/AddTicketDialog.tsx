@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, View, ScrollView, StyleSheet, Pressable, TextInput, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/components/themed-text';
@@ -9,21 +9,30 @@ import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { addTicket, updateTicket, type Ticket, type TicketType } from '@/lib/planning-api';
 import { uploadFile } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 interface AddTicketDialogProps {
     visible: boolean;
     planId: string;
-    ticket?: Ticket; // For edit mode
+    ticket?: Ticket;
     onClose: () => void;
     onSaved: () => void;
 }
 
-const TICKET_TYPES: { value: TicketType; label: string; icon: string }[] = [
-    { value: 'flight', label: 'Flug', icon: 'airplane' },
-    { value: 'train', label: 'Zug', icon: 'tram' },
-    { value: 'bus', label: 'Bus', icon: 'bus' },
-    { value: 'ferry', label: 'Fähre', icon: 'ferry' },
-    { value: 'other', label: 'Sonstiges', icon: 'ticket' },
+interface Participant {
+    id: string;
+    email: string;
+    adults_count: number;
+    children_count: number;
+}
+
+const TICKET_TYPES: { value: TicketType; label: string; icon: string; category: 'transport' | 'entrance' }[] = [
+    { value: 'flight', label: 'Flug', icon: 'airplane', category: 'transport' },
+    { value: 'train', label: 'Zug', icon: 'tram', category: 'transport' },
+    { value: 'bus', label: 'Bus', icon: 'bus', category: 'transport' },
+    { value: 'ferry', label: 'Fähre', icon: 'ferry', category: 'transport' },
+    { value: 'entrance', label: 'Eintritt', icon: 'ticket', category: 'entrance' },
+    { value: 'other', label: 'Sonstiges', icon: 'ellipsis.circle', category: 'transport' },
 ];
 
 export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: AddTicketDialogProps) {
@@ -45,10 +54,52 @@ export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: A
     const [file, setFile] = useState<{ uri: string; name: string; type?: string } | null>(null);
     const [saving, setSaving] = useState(false);
 
+    // New fields for price and participants
+    const [price, setPrice] = useState(ticket?.price?.toString() || '');
+    const [participants, setParticipants] = useState<Participant[]>([]);
+    const [selectedParticipants, setSelectedParticipants] = useState<string[]>(ticket?.participant_ids || []);
+
+    const currentType = TICKET_TYPES.find(t => t.value === type);
+    const isTransport = currentType?.category === 'transport';
+
+    useEffect(() => {
+        if (visible) {
+            loadParticipants();
+        }
+    }, [visible, planId]);
+
+    const loadParticipants = async () => {
+        const { data } = await supabase
+            .from('plan_participants')
+            .select('*')
+            .eq('plan_id', planId);
+
+        if (data) {
+            setParticipants(data as Participant[]);
+        }
+    };
+
+    const toggleParticipant = (participantId: string) => {
+        setSelectedParticipants(prev =>
+            prev.includes(participantId)
+                ? prev.filter(id => id !== participantId)
+                : [...prev, participantId]
+        );
+    };
+
     const handleSave = async () => {
-        if (!departure.trim() || !arrival.trim()) {
-            Alert.alert('Fehler', 'Bitte Abfahrts- und Ankunftsort eingeben');
-            return;
+        // Validation based on type
+        if (isTransport) {
+            if (!departure.trim() || !arrival.trim()) {
+                Alert.alert('Fehler', 'Bitte Abfahrts- und Ankunftsort eingeben');
+                return;
+            }
+        } else {
+            // For entrance tickets, only departure (event location) is required
+            if (!departure.trim()) {
+                Alert.alert('Fehler', 'Bitte Ort/Veranstaltung eingeben');
+                return;
+            }
         }
 
         setSaving(true);
@@ -70,12 +121,14 @@ export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: A
                 provider: provider.trim() || undefined,
                 booking_reference: bookingRef.trim() || undefined,
                 departure_location: departure.trim(),
-                arrival_location: arrival.trim(),
+                arrival_location: isTransport ? arrival.trim() : undefined,
                 departure_time: departureTime.toISOString(),
-                arrival_time: arrivalTime.toISOString(),
+                arrival_time: isTransport ? arrivalTime.toISOString() : undefined,
                 seat_number: seatNumber.trim() || undefined,
                 ticket_file_path: filePath,
                 notes: notes.trim() || undefined,
+                price: price ? parseFloat(price) : undefined,
+                participant_ids: selectedParticipants.length > 0 ? selectedParticipants : undefined,
             };
 
             if (isEdit && ticket) {
@@ -115,7 +168,7 @@ export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: A
                 <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
                     {/* Type Selection */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.label}>Transportmittel</ThemedText>
+                        <ThemedText style={styles.label}>Kategorie</ThemedText>
                         <View style={styles.typeRow}>
                             {TICKET_TYPES.map(t => (
                                 <Pressable
@@ -142,12 +195,14 @@ export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: A
 
                     {/* Provider */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.label}>Anbieter (optional)</ThemedText>
+                        <ThemedText style={styles.label}>
+                            {isTransport ? 'Anbieter (optional)' : 'Veranstalter (optional)'}
+                        </ThemedText>
                         <TextInput
                             style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                             value={provider}
                             onChangeText={setProvider}
-                            placeholder="z.B. Swiss, SBB, FlixBus"
+                            placeholder={isTransport ? "z.B. Swiss, SBB, FlixBus" : "z.B. Museum, Theater"}
                             placeholderTextColor={colors.textSecondary}
                         />
                     </View>
@@ -164,83 +219,175 @@ export function AddTicketDialog({ visible, planId, ticket, onClose, onSaved }: A
                         />
                     </View>
 
-                    {/* Locations */}
+                    {/* Dynamic Fields based on Type */}
+                    {isTransport ? (
+                        <>
+                            {/* Transport Fields */}
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Abfahrtsort *</ThemedText>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                                    value={departure}
+                                    onChangeText={setDeparture}
+                                    placeholder="Zürich HB"
+                                    placeholderTextColor={colors.textSecondary}
+                                />
+                            </View>
+
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Ankunftsort *</ThemedText>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                                    value={arrival}
+                                    onChangeText={setArrival}
+                                    placeholder="Bern"
+                                    placeholderTextColor={colors.textSecondary}
+                                />
+                            </View>
+
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Abfahrtszeit</ThemedText>
+                                <Pressable
+                                    style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                    onPress={() => setShowDepartureTime(true)}
+                                >
+                                    <ThemedText>{departureTime.toLocaleString('de-CH')}</ThemedText>
+                                </Pressable>
+                                {showDepartureTime && (
+                                    <DateTimePicker
+                                        value={departureTime}
+                                        mode="datetime"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(event, date) => {
+                                            setShowDepartureTime(Platform.OS === 'ios');
+                                            if (date) setDepartureTime(date);
+                                        }}
+                                    />
+                                )}
+                            </View>
+
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Ankunftszeit</ThemedText>
+                                <Pressable
+                                    style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                    onPress={() => setShowArrivalTime(true)}
+                                >
+                                    <ThemedText>{arrivalTime.toLocaleString('de-CH')}</ThemedText>
+                                </Pressable>
+                                {showArrivalTime && (
+                                    <DateTimePicker
+                                        value={arrivalTime}
+                                        mode="datetime"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(event, date) => {
+                                            setShowArrivalTime(Platform.OS === 'ios');
+                                            if (date) setArrivalTime(date);
+                                        }}
+                                    />
+                                )}
+                            </View>
+
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Sitzplatznummer (optional)</ThemedText>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                                    value={seatNumber}
+                                    onChangeText={setSeatNumber}
+                                    placeholder="12A"
+                                    placeholderTextColor={colors.textSecondary}
+                                />
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            {/* Entrance Fields */}
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Ort/Veranstaltung *</ThemedText>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
+                                    value={departure}
+                                    onChangeText={setDeparture}
+                                    placeholder="Museum XY, Theater, Konzert..."
+                                    placeholderTextColor={colors.textSecondary}
+                                />
+                            </View>
+
+                            <View style={styles.section}>
+                                <ThemedText style={styles.label}>Datum/Uhrzeit</ThemedText>
+                                <Pressable
+                                    style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                                    onPress={() => setShowDepartureTime(true)}
+                                >
+                                    <ThemedText>{departureTime.toLocaleString('de-CH')}</ThemedText>
+                                </Pressable>
+                                {showDepartureTime && (
+                                    <DateTimePicker
+                                        value={departureTime}
+                                        mode="datetime"
+                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                        onChange={(event, date) => {
+                                            setShowDepartureTime(Platform.OS === 'ios');
+                                            if (date) setDepartureTime(date);
+                                        }}
+                                    />
+                                )}
+                            </View>
+                        </>
+                    )}
+
+                    {/* Price */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.label}>Abfahrtsort *</ThemedText>
+                        <ThemedText style={styles.label}>Preis (CHF)</ThemedText>
                         <TextInput
                             style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                            value={departure}
-                            onChangeText={setDeparture}
-                            placeholder="Zürich HB"
+                            value={price}
+                            onChangeText={setPrice}
+                            placeholder="0.00"
                             placeholderTextColor={colors.textSecondary}
+                            keyboardType="decimal-pad"
                         />
                     </View>
 
-                    <View style={styles.section}>
-                        <ThemedText style={styles.label}>Ankunftsort *</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                            value={arrival}
-                            onChangeText={setArrival}
-                            placeholder="Bern"
-                            placeholderTextColor={colors.textSecondary}
-                        />
-                    </View>
-
-                    {/* Times */}
-                    <View style={styles.section}>
-                        <ThemedText style={styles.label}>Abfahrtszeit</ThemedText>
-                        <Pressable
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                            onPress={() => setShowDepartureTime(true)}
-                        >
-                            <ThemedText>{departureTime.toLocaleString('de-CH')}</ThemedText>
-                        </Pressable>
-                        {showDepartureTime && (
-                            <DateTimePicker
-                                value={departureTime}
-                                mode="datetime"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                onChange={(event, date) => {
-                                    setShowDepartureTime(Platform.OS === 'ios');
-                                    if (date) setDepartureTime(date);
-                                }}
-                            />
-                        )}
-                    </View>
-
-                    <View style={styles.section}>
-                        <ThemedText style={styles.label}>Ankunftszeit</ThemedText>
-                        <Pressable
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                            onPress={() => setShowArrivalTime(true)}
-                        >
-                            <ThemedText>{arrivalTime.toLocaleString('de-CH')}</ThemedText>
-                        </Pressable>
-                        {showArrivalTime && (
-                            <DateTimePicker
-                                value={arrivalTime}
-                                mode="datetime"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                onChange={(event, date) => {
-                                    setShowArrivalTime(Platform.OS === 'ios');
-                                    if (date) setArrivalTime(date);
-                                }}
-                            />
-                        )}
-                    </View>
-
-                    {/* Seat */}
-                    <View style={styles.section}>
-                        <ThemedText style={styles.label}>Sitzplatznummer (optional)</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                            value={seatNumber}
-                            onChangeText={setSeatNumber}
-                            placeholder="12A"
-                            placeholderTextColor={colors.textSecondary}
-                        />
-                    </View>
+                    {/* Participant Selection */}
+                    {participants.length > 0 && (
+                        <View style={styles.section}>
+                            <ThemedText style={styles.label}>Für wen? (optional - leer = alle)</ThemedText>
+                            <ThemedText style={[styles.hint, { color: colors.textSecondary }]}>
+                                Wähle die Personen aus, für die dieses Ticket gilt
+                            </ThemedText>
+                            {participants.map(participant => (
+                                <Pressable
+                                    key={participant.id}
+                                    style={[
+                                        styles.participantCheckbox,
+                                        {
+                                            backgroundColor: selectedParticipants.includes(participant.id)
+                                                ? colors.surface
+                                                : colors.background,
+                                            borderColor: selectedParticipants.includes(participant.id)
+                                                ? colors.primary
+                                                : colors.border
+                                        }
+                                    ]}
+                                    onPress={() => toggleParticipant(participant.id)}
+                                >
+                                    <IconSymbol
+                                        name={selectedParticipants.includes(participant.id) ? 'checkmark.square.fill' : 'square'}
+                                        size={20}
+                                        color={selectedParticipants.includes(participant.id) ? colors.primary : colors.textSecondary}
+                                    />
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText style={styles.participantText}>
+                                            {participant.email}
+                                        </ThemedText>
+                                        <ThemedText style={[styles.participantMeta, { color: colors.textSecondary }]}>
+                                            {participant.adults_count} Erw. · {participant.children_count} Kinder
+                                        </ThemedText>
+                                    </View>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
 
                     {/* File Upload */}
                     <View style={styles.section}>
@@ -311,6 +458,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: Spacing.xs,
     },
+    hint: {
+        fontSize: 12,
+        marginBottom: Spacing.sm,
+    },
     typeRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -344,5 +495,22 @@ const styles = StyleSheet.create({
         fontSize: 15,
         minHeight: 100,
         textAlignVertical: 'top',
+    },
+    participantCheckbox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        padding: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.xs,
+    },
+    participantText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    participantMeta: {
+        fontSize: 11,
+        marginTop: 2,
     },
 });
