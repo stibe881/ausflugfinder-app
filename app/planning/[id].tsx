@@ -169,12 +169,8 @@ export default function PlanDetailScreen() {
             .select('id, name, beschreibung, region, adresse')
             .order('name');
 
-        if (trips && trips.length > 0) {
-            setAvailableTrips(trips);
-            setShowTripPicker(true);
-        } else {
-            Alert.alert("Info", "Keine Ausflüge verfügbar.");
-        }
+        setAvailableTrips(trips || []);
+        setShowTripPicker(true);
     };
 
     const onSelectTrip = async (tripId: number) => {
@@ -197,13 +193,13 @@ export default function PlanDetailScreen() {
     };
 
     const renderScene = SceneMap({
-        timeline: () => <TimelineTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        route: () => <RouteTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        packing: () => <PackingListTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        budget: () => <BudgetTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        checklist: () => <ChecklistTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        tickets: () => <TicketsTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
-        bookings: () => <BookingsTab planId={id!} plan={plan!} budgetSummary={budgetSummary} />,
+        timeline: () => <TimelineTab planId={id!} />,
+        route: () => <RouteTab planId={id!} />,
+        packing: () => <PackingListTab planId={id!} />,
+        budget: () => <BudgetTab planId={id!} />,
+        checklist: () => <ChecklistTab planId={id!} />,
+        tickets: () => <TicketsTab planId={id!} />,
+        bookings: () => <BookingsTab planId={id!} />,
     });
 
     const renderTabBar = (props: any) => (
