@@ -1566,9 +1566,11 @@ export interface Booking {
     location?: string;
     address?: string;
     cost?: number;
+    price?: number; // New field for budget integration
     confirmation_file_path?: string;
     confirmation_url?: string;
     notes?: string;
+    participant_ids?: string[]; // New field for participant tracking
     created_at: string;
     updated_at: string;
 }
