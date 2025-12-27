@@ -20,6 +20,11 @@ interface TripLocation {
     sequence: number;
 }
 
+interface RouteLeg {
+    distance: number; // in km
+    duration: number; // in seconds
+}
+
 export function RouteTab({ planId }: RouteTabProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
@@ -27,6 +32,7 @@ export function RouteTab({ planId }: RouteTabProps) {
     const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
     const [routeDistance, setRouteDistance] = useState(0); // in km
     const [routeDuration, setRouteDuration] = useState(0); // in seconds
+    const [routeLegs, setRouteLegs] = useState<RouteLeg[]>([]); // Segments between stops
     const [loading, setLoading] = useState(true);
     const [region, setRegion] = useState({
         latitude: 46.8182,
@@ -127,8 +133,8 @@ export function RouteTab({ planId }: RouteTabProps) {
             // Build OSRM coordinates string: lng,lat;lng,lat;...
             const coords = locs.map(loc => `${loc.lng},${loc.lat}`).join(';');
 
-            // Use OSRM public API (OpenStreetMap routing)
-            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+            // Use OSRM public API (OpenStreetMap routing) with steps for leg information
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -145,6 +151,15 @@ export function RouteTab({ planId }: RouteTabProps) {
                 setRouteCoordinates(routeCoords);
                 setRouteDistance(route.distance / 1000); // Convert meters to km
                 setRouteDuration(route.duration); // Duration in seconds
+
+                // Extract leg information (segments between waypoints)
+                if (route.legs && route.legs.length > 0) {
+                    const legs = route.legs.map((leg: any) => ({
+                        distance: leg.distance / 1000, // Convert to  km
+                        duration: leg.duration // seconds
+                    }));
+                    setRouteLegs(legs);
+                }
             } else {
                 // Fallback to straight lines if routing fails
                 console.log('Routing failed, using straight lines');
@@ -287,15 +302,24 @@ export function RouteTab({ planId }: RouteTabProps) {
                 showsMyLocationButton
             >
                 {/* Markers for each location */}
-                {locations.map((loc, index) => (
-                    <Marker
-                        key={loc.id}
-                        coordinate={{ latitude: loc.lat, longitude: loc.lng }}
-                        title={loc.name}
-                        description={`Stop ${index + 1}`}
-                        pinColor={index === 0 ? '#34C759' : index === locations.length - 1 ? '#FF3B30' : colors.primary}
-                    />
-                ))}
+                {locations.map((loc, index) => {
+                    // Build description with next leg info
+                    let description = `Stop ${index + 1}`;
+                    if (index < locations.length - 1 && routeLegs[index]) {
+                        const leg = routeLegs[index];
+                        description += `\n→ ${formatDuration(leg.duration)} (${leg.distance.toFixed(1)} km)`;
+                    }
+
+                    return (
+                        <Marker
+                            key={loc.id}
+                            coordinate={{ latitude: loc.lat, longitude: loc.lng }}
+                            title={loc.name}
+                            description={description}
+                            pinColor={index === 0 ? '#34C759' : index === locations.length - 1 ? '#FF3B30' : colors.primary}
+                        />
+                    );
+                })}
 
                 {/* Route polyline - uses actual driving route from OSRM */}
                 {routeCoordinates.length > 1 && (
