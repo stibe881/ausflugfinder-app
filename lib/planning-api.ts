@@ -730,7 +730,6 @@ export async function getCostSummary(planId: string): Promise<{ success: boolean
             },
         };
     } catch (error: any) {
-        ```
         console.error('[getCostSummary] Exception:', error);
         return { success: false, error: error.message };
     }
@@ -1239,7 +1238,7 @@ export async function autoInsertAccommodations(
             if (!existing) {
                 // Insert accommodation
                 const result = await addAccommodation(planId, {
-                    name: `Unterkunft(${ currentDate } - ${ nextDate })`,
+                    name: `Unterkunft(${currentDate} - ${nextDate})`,
                     check_in_date: currentDate,
                     check_out_date: nextDate
                 });
@@ -1295,7 +1294,7 @@ export async function getDistanceBetweenLocations(
 
         // Call Google Maps API
         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?` +
-        `origins=${originLat},${originLng}&` +
+            `origins=${originLat},${originLng}&` +
             `destinations=${destLat},${destLng}&` +
             `key=${googleMapsKey}`;
 
@@ -1451,7 +1450,7 @@ export async function deletePackingItem(itemId: string): Promise<{ success: bool
 // TICKETS
 // ============================================================================
 
-export type TicketType = 'flight' | 'train' | 'bus' | 'ferry' | 'other';
+export type TicketType = 'flight' | 'train' | 'bus' | 'ferry' | 'entrance' | 'other';
 
 export interface Ticket {
     id: string;
@@ -1460,12 +1459,14 @@ export interface Ticket {
     provider?: string;
     booking_reference?: string;
     departure_location: string;
-    arrival_location: string;
+    arrival_location?: string; // Optional for entrance tickets
     departure_time?: string;
     arrival_time?: string;
     seat_number?: string;
     ticket_file_path?: string;
     notes?: string;
+    price?: number;
+    participant_ids?: string[];
     created_at: string;
     updated_at: string;
 }
