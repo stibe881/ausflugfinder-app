@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, View, ScrollView, StyleSheet, Pressable, TextInput, Alert, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/components/themed-text';
@@ -9,13 +9,21 @@ import { Colors, Spacing, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { addBooking, updateBooking, type Booking, type BookingType } from '@/lib/planning-api';
 import { uploadFile } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 
 interface AddBookingDialogProps {
     visible: boolean;
     planId: string;
-    booking?: Booking; // For edit mode
+    booking?: Booking;
     onClose: () => void;
     onSaved: () => void;
+}
+
+interface Participant {
+    id: string;
+    email: string;
+    adults_count: number;
+    children_count: number;
 }
 
 const BOOKING_TYPES: { value: BookingType; label: string; icon: string }[] = [
@@ -39,11 +47,40 @@ export function AddBookingDialog({ visible, planId, booking, onClose, onSaved }:
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [location, setLocation] = useState(booking?.location || '');
     const [address, setAddress] = useState(booking?.address || '');
-    const [cost, setCost] = useState(booking?.cost?.toString() || '');
+    const [cost, setCost] = useState(booking?.cost?.toString() || booking?.price?.toString() || '');
     const [confirmationUrl, setConfirmationUrl] = useState(booking?.confirmation_url || '');
     const [notes, setNotes] = useState(booking?.notes || '');
     const [file, setFile] = useState<{ uri: string; name: string; type?: string } | null>(null);
     const [saving, setSaving] = useState(false);
+
+    // New: Participant selection
+    const [participants, setParticipants] = useState<Participant[]>([]);
+    const [selectedParticipants, setSelectedParticipants] = useState<string[]>(booking?.participant_ids || []);
+
+    useEffect(() => {
+        if (visible) {
+            loadParticipants();
+        }
+    }, [visible, planId]);
+
+    const loadParticipants = async () => {
+        const { data } = await supabase
+            .from('plan_participants')
+            .select('*')
+            .eq('plan_id', planId);
+
+        if (data) {
+            setParticipants(data as Participant[]);
+        }
+    };
+
+    const toggleParticipant = (participantId: string) => {
+        setSelectedParticipants(prev =>
+            prev.includes(participantId)
+                ? prev.filter(id => id !== participantId)
+                : [...prev, participantId]
+        );
+    };
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -74,9 +111,11 @@ export function AddBookingDialog({ visible, planId, booking, onClose, onSaved }:
                 location: location.trim() || undefined,
                 address: address.trim() || undefined,
                 cost: cost ? parseFloat(cost) : undefined,
+                price: cost ? parseFloat(cost) : undefined, // Use both for compatibility
                 confirmation_file_path: filePath,
                 confirmation_url: confirmationUrl.trim() || undefined,
                 notes: notes.trim() || undefined,
+                participant_ids: selectedParticipants.length > 0 ? selectedParticipants : undefined,
             };
 
             if (isEdit && booking) {
@@ -223,9 +262,9 @@ export function AddBookingDialog({ visible, planId, booking, onClose, onSaved }:
                         />
                     </View>
 
-                    {/* Cost */}
+                    {/* Price */}
                     <View style={styles.section}>
-                        <ThemedText style={styles.label}>Kosten (CHF, optional)</ThemedText>
+                        <ThemedText style={styles.label}>Preis (CHF)</ThemedText>
                         <TextInput
                             style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                             value={cost}
@@ -235,6 +274,47 @@ export function AddBookingDialog({ visible, planId, booking, onClose, onSaved }:
                             placeholderTextColor={colors.textSecondary}
                         />
                     </View>
+
+                    {/* Participant Selection */}
+                    {participants.length > 0 && (
+                        <View style={styles.section}>
+                            <ThemedText style={styles.label}>Für wen? (optional - leer = alle)</ThemedText>
+                            <ThemedText style={[styles.hint, { color: colors.textSecondary }]}>
+                                Wähle die Personen aus, für die diese Buchung gilt
+                            </ThemedText>
+                            {participants.map(participant => (
+                                <Pressable
+                                    key={participant.id}
+                                    style={[
+                                        styles.participantCheckbox,
+                                        {
+                                            backgroundColor: selectedParticipants.includes(participant.id)
+                                                ? colors.surface
+                                                : colors.background,
+                                            borderColor: selectedParticipants.includes(participant.id)
+                                                ? colors.primary
+                                                : colors.border
+                                        }
+                                    ]}
+                                    onPress={() => toggleParticipant(participant.id)}
+                                >
+                                    <IconSymbol
+                                        name={selectedParticipants.includes(participant.id) ? 'checkmark.square.fill' : 'square'}
+                                        size={20}
+                                        color={selectedParticipants.includes(participant.id) ? colors.primary : colors.textSecondary}
+                                    />
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText style={styles.participantText}>
+                                            {participant.email}
+                                        </ThemedText>
+                                        <ThemedText style={[styles.participantMeta, { color: colors.textSecondary }]}>
+                                            {participant.adults_count} Erw. · {participant.children_count} Kinder
+                                        </ThemedText>
+                                    </View>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
 
                     {/* File Upload */}
                     <View style={styles.section}>
@@ -319,6 +399,10 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: Spacing.xs,
     },
+    hint: {
+        fontSize: 12,
+        marginBottom: Spacing.sm,
+    },
     typeRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -352,5 +436,22 @@ const styles = StyleSheet.create({
         fontSize: 15,
         minHeight: 100,
         textAlignVertical: 'top',
+    },
+    participantCheckbox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        padding: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.xs,
+    },
+    participantText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    participantMeta: {
+        fontSize: 11,
+        marginTop: 2,
     },
 });
