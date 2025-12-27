@@ -359,8 +359,10 @@ export function TimelineTab({ planId }: TimelineTabProps) {
                     visible={true}
                     title="Ausflug bearbeiten"
                     message="Ändere Name und/oder Adresse:"
-                    placeholder={editingTrip.custom_location || ''}
-                    secondPlaceholder={editingTrip.custom_address || 'Adresse (optional)'}
+                    placeholder="Name des Ausflugs"
+                    initialValue={editingTrip.custom_location || ''}
+                    secondPlaceholder="Adresse (optional)"
+                    initialValue2={editingTrip.custom_address || ''}
                     onConfirm={handleConfirmEdit}
                     onCancel={() => setEditingTrip(null)}
                 />

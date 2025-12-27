@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, View, StyleSheet, TextInput, Pressable } from 'react-native';
 import { ThemedText } from './themed-text';
 import { Colors, Spacing, BorderRadius } from '@/constants/theme';
@@ -9,7 +9,9 @@ interface InputDialogProps {
     title: string;
     message?: string;
     placeholder?: string;
+    initialValue?: string;
     secondPlaceholder?: string; // For address field
+    initialValue2?: string;
     onConfirm: (text: string, text2?: string) => void;
     onCancel: () => void;
 }
@@ -19,7 +21,9 @@ export function InputDialog({
     title,
     message,
     placeholder,
+    initialValue,
     secondPlaceholder,
+    initialValue2,
     onConfirm,
     onCancel,
 }: InputDialogProps) {
@@ -27,6 +31,14 @@ export function InputDialog({
     const colors = Colors[colorScheme ?? 'light'];
     const [inputValue, setInputValue] = useState('');
     const [inputValue2, setInputValue2] = useState('');
+
+    // Set initial values when dialog opens
+    useEffect(() => {
+        if (visible) {
+            setInputValue(initialValue || '');
+            setInputValue2(initialValue2 || '');
+        }
+    }, [visible, initialValue, initialValue2]);
 
     const handleConfirm = () => {
         onConfirm(inputValue, secondPlaceholder ? inputValue2 : undefined);
