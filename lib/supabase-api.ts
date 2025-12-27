@@ -1423,8 +1423,8 @@ export async function sendBroadcastNotification(
             title,
             body,
             data: { type: 'broadcast' },
-            // relying on default app icon
-            color: '#7C3AED',
+            // Color for Android (must be hex without #)
+            color: '7C3AED',
         }));
 
         const response = await fetch('https://exp.host/--/api/v2/push/send', {
