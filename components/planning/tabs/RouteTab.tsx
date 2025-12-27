@@ -24,6 +24,8 @@ export function RouteTab({ planId }: RouteTabProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const [locations, setLocations] = useState<TripLocation[]>([]);
+    const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
+    const [routeDistance, setRouteDistance] = useState(0); // in km
     const [loading, setLoading] = useState(true);
     const [region, setRegion] = useState({
         latitude: 46.8182,
@@ -85,6 +87,11 @@ export function RouteTab({ planId }: RouteTabProps) {
 
                 setLocations(locs);
 
+                // Fetch driving route
+                if (locs.length > 1) {
+                    await fetchDrivingRoute(locs);
+                }
+
                 // Calculate center and zoom to fit all markers
                 if (locs.length > 0) {
                     const lats = locs.map(l => l.lat);
@@ -111,6 +118,48 @@ export function RouteTab({ planId }: RouteTabProps) {
             console.error('Load locations error:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDrivingRoute = async (locs: TripLocation[]) => {
+        try {
+            // Build OSRM coordinates string: lng,lat;lng,lat;...
+            const coords = locs.map(loc => `${loc.lng},${loc.lat}`).join(';');
+
+            // Use OSRM public API (OpenStreetMap routing)
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                const route = data.routes[0];
+
+                // Convert GeoJSON coordinates [lng, lat] to map coordinates
+                const routeCoords = route.geometry.coordinates.map((coord: [number, number]) => ({
+                    latitude: coord[1],
+                    longitude: coord[0]
+                }));
+
+                setRouteCoordinates(routeCoords);
+                setRouteDistance(route.distance / 1000); // Convert meters to km
+            } else {
+                // Fallback to straight lines if routing fails
+                console.log('Routing failed, using straight lines');
+                const straightLine = locs.map(loc => ({
+                    latitude: loc.lat,
+                    longitude: loc.lng
+                }));
+                setRouteCoordinates(straightLine);
+            }
+        } catch (error) {
+            console.error('Routing error:', error);
+            // Fallback to straight lines
+            const straightLine = locs.map(loc => ({
+                latitude: loc.lat,
+                longitude: loc.lng
+            }));
+            setRouteCoordinates(straightLine);
         }
     };
 
@@ -156,6 +205,12 @@ export function RouteTab({ planId }: RouteTabProps) {
     };
 
     const calculateTotalDistance = () => {
+        // Use route distance from OSRM if available
+        if (routeDistance > 0) {
+            return routeDistance;
+        }
+
+        // Fallback to straight-line distance
         if (locations.length < 2) return 0;
 
         let total = 0;
@@ -230,12 +285,14 @@ export function RouteTab({ planId }: RouteTabProps) {
                     />
                 ))}
 
-                {/* Route polyline */}
-                {locations.length > 1 && (
+                {/* Route polyline - uses actual driving route from OSRM */}
+                {routeCoordinates.length > 1 && (
                     <Polyline
-                        coordinates={locations.map(loc => ({ latitude: loc.lat, longitude: loc.lng }))}
+                        coordinates={routeCoordinates}
                         strokeColor={colors.primary}
-                        strokeWidth={3}
+                        strokeWidth={4}
+                        lineCap="round"
+                        lineJoin="round"
                     />
                 )}
             </MapView>
