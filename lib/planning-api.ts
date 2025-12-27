@@ -730,7 +730,45 @@ export async function getCostSummary(planId: string): Promise<{ success: boolean
             },
         };
     } catch (error: any) {
+        ```
         console.error('[getCostSummary] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Add cost to plan (new budget system)
+ */
+export async function addPlanCost(
+    planId: string,
+    data: {
+        description: string;
+        amount: number;
+        category: string;
+        split_type?: 'all' | 'adults_only' | 'specific';
+        split_participant_ids?: string[];
+    }
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_costs')
+            .insert({
+                plan_id: planId,
+                description: data.description,
+                amount: data.amount,
+                category: data.category,
+                split_type: data.split_type || 'all',
+                split_participant_ids: data.split_participant_ids || null,
+            });
+
+        if (error) {
+            console.error('[addPlanCost] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[addPlanCost] Exception:', error);
         return { success: false, error: error.message };
     }
 }
@@ -1134,8 +1172,8 @@ export async function getPlanTripsGroupedByDay(
         const { data, error } = await supabase
             .from('plan_trips')
             .select(`
-                *,
-                trip:ausfluege(id, name, beschreibung)
+            *,
+            trip: ausfluege(id, name, beschreibung)
             `)
             .eq('plan_id', planId)
             .order('planned_date', { ascending: true })
@@ -1201,7 +1239,7 @@ export async function autoInsertAccommodations(
             if (!existing) {
                 // Insert accommodation
                 const result = await addAccommodation(planId, {
-                    name: `Unterkunft (${currentDate} - ${nextDate})`,
+                    name: `Unterkunft(${ currentDate } - ${ nextDate })`,
                     check_in_date: currentDate,
                     check_out_date: nextDate
                 });
@@ -1257,7 +1295,7 @@ export async function getDistanceBetweenLocations(
 
         // Call Google Maps API
         const url = `https://maps.googleapis.com/maps/api/distancematrix/json?` +
-            `origins=${originLat},${originLng}&` +
+        `origins=${originLat},${originLng}&` +
             `destinations=${destLat},${destLng}&` +
             `key=${googleMapsKey}`;
 
