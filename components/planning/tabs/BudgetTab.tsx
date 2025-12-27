@@ -25,7 +25,11 @@ interface CostItem {
     amount: number;
     category: string;
     created_at: string;
+    split_type?: 'all' | 'adults_only' | 'specific';
+    split_participant_ids?: string[];
 }
+
+type SplitType = 'all' | 'adults_only' | 'specific';
 
 const COST_CATEGORIES = [
     'Transport',
@@ -50,6 +54,8 @@ export function BudgetTab({ planId }: BudgetTabProps) {
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(COST_CATEGORIES[0]);
+    const [splitType, setSplitType] = useState<SplitType>('all');
+    const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
 
     useEffect(() => {
         loadBudgetData();
@@ -91,6 +97,14 @@ export function BudgetTab({ planId }: BudgetTabProps) {
         setLoading(false);
     };
 
+    const toggleParticipant = (participantId: string) => {
+        setSelectedParticipants(prev =>
+            prev.includes(participantId)
+                ? prev.filter(id => id !== participantId)
+                : [...prev, participantId]
+        );
+    };
+
     const handleAddCost = async () => {
         if (!description.trim()) {
             Alert.alert('Fehler', 'Bitte Beschreibung eingeben');
@@ -103,16 +117,25 @@ export function BudgetTab({ planId }: BudgetTabProps) {
             return;
         }
 
+        if (splitType === 'specific' && selectedParticipants.length === 0) {
+            Alert.alert('Fehler', 'Bitte mindestens eine Person auswählen');
+            return;
+        }
+
         const result = await addPlanCost(planId, {
             description: description.trim(),
             amount: amountNumber,
-            category: selectedCategory
+            category: selectedCategory,
+            split_type: splitType,
+            split_participant_ids: splitType === 'specific' ? selectedParticipants : undefined
         });
 
         if (result.success) {
             setDescription('');
             setAmount('');
             setSelectedCategory(COST_CATEGORIES[0]);
+            setSplitType('all');
+            setSelectedParticipants([]);
             setShowAddDialog(false);
             loadBudgetData();
         } else {
@@ -297,6 +320,109 @@ export function BudgetTab({ planId }: BudgetTabProps) {
                                 </Pressable>
                             ))}
                         </View>
+
+                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Aufteilen auf</ThemedText>
+                        <View style={styles.splitOptions}>
+                            <Pressable
+                                style={[
+                                    styles.splitOption,
+                                    {
+                                        backgroundColor: splitType === 'all' ? colors.primary : colors.background,
+                                        borderColor: splitType === 'all' ? colors.primary : colors.border
+                                    }
+                                ]}
+                                onPress={() => setSplitType('all')}
+                            >
+                                <IconSymbol
+                                    name={splitType === 'all' ? 'checkmark.circle.fill' : 'circle'}
+                                    size={20}
+                                    color={splitType === 'all' ? '#FFF' : colors.textSecondary}
+                                />
+                                <ThemedText style={{ color: splitType === 'all' ? '#FFF' : colors.text }}>
+                                    Alle Personen
+                                </ThemedText>
+                            </Pressable>
+
+                            <Pressable
+                                style={[
+                                    styles.splitOption,
+                                    {
+                                        backgroundColor: splitType === 'adults_only' ? colors.primary : colors.background,
+                                        borderColor: splitType === 'adults_only' ? colors.primary : colors.border
+                                    }
+                                ]}
+                                onPress={() => setSplitType('adults_only')}
+                            >
+                                <IconSymbol
+                                    name={splitType === 'adults_only' ? 'checkmark.circle.fill' : 'circle'}
+                                    size={20}
+                                    color={splitType === 'adults_only' ? '#FFF' : colors.textSecondary}
+                                />
+                                <ThemedText style={{ color: splitType === 'adults_only' ? '#FFF' : colors.text }}>
+                                    Nur Erwachsene
+                                </ThemedText>
+                            </Pressable>
+
+                            <Pressable
+                                style={[
+                                    styles.splitOption,
+                                    {
+                                        backgroundColor: splitType === 'specific' ? colors.primary : colors.background,
+                                        borderColor: splitType === 'specific' ? colors.primary : colors.border
+                                    }
+                                ]}
+                                onPress={() => setSplitType('specific')}
+                            >
+                                <IconSymbol
+                                    name={splitType === 'specific' ? 'checkmark.circle.fill' : 'circle'}
+                                    size={20}
+                                    color={splitType === 'specific' ? '#FFF' : colors.textSecondary}
+                                />
+                                <ThemedText style={{ color: splitType === 'specific' ? '#FFF' : colors.text }}>
+                                    Bestimmte Personen
+                                </ThemedText>
+                            </Pressable>
+                        </View>
+
+                        {/* Participant Selection (only for 'specific') */}
+                        {splitType === 'specific' && participants.length > 0 && (
+                            <View style={styles.participantSelection}>
+                                <ThemedText style={[styles.label, { color: colors.textSecondary, marginBottom: Spacing.sm }]}>
+                                    Personen auswählen
+                                </ThemedText>
+                                {participants.map(participant => (
+                                    <Pressable
+                                        key={participant.id}
+                                        style={[
+                                            styles.participantCheckbox,
+                                            {
+                                                backgroundColor: selectedParticipants.includes(participant.id)
+                                                    ? colors.surface
+                                                    : colors.background,
+                                                borderColor: selectedParticipants.includes(participant.id)
+                                                    ? colors.primary
+                                                    : colors.border
+                                            }
+                                        ]}
+                                        onPress={() => toggleParticipant(participant.id)}
+                                    >
+                                        <IconSymbol
+                                            name={selectedParticipants.includes(participant.id) ? 'checkmark.square.fill' : 'square'}
+                                            size={20}
+                                            color={selectedParticipants.includes(participant.id) ? colors.primary : colors.textSecondary}
+                                        />
+                                        <View style={{ flex: 1 }}>
+                                            <ThemedText style={styles.participantCheckboxText}>
+                                                {participant.email}
+                                            </ThemedText>
+                                            <ThemedText style={[styles.participantCheckboxMeta, { color: colors.textSecondary }]}>
+                                                {participant.adults_count} Erw. · {participant.children_count} Kinder
+                                            </ThemedText>
+                                        </View>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
 
                         <View style={styles.dialogButtons}>
                             <Pressable
@@ -503,5 +629,38 @@ const styles = StyleSheet.create({
         padding: Spacing.md,
         borderRadius: BorderRadius.md,
         alignItems: 'center',
+    },
+    splitOptions: {
+        gap: Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    splitOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        padding: Spacing.md,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+    },
+    participantSelection: {
+        marginTop: Spacing.sm,
+        marginBottom: Spacing.md,
+    },
+    participantCheckbox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        padding: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+        marginBottom: Spacing.xs,
+    },
+    participantCheckboxText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    participantCheckboxMeta: {
+        fontSize: 11,
+        marginTop: 2,
     },
 });
