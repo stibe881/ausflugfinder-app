@@ -715,7 +715,7 @@ export async function getCostSummary(planId: string): Promise<{ success: boolean
 
         costs?.forEach(c => {
             if (c.category in breakdown) {
-                breakdown[c.category] += Number(c.amount);
+                breakdown[c.category as CostCategory] += Number(c.amount);
             }
         });
 
