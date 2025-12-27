@@ -45,7 +45,8 @@ export function RouteTab({ planId }: RouteTabProps) {
                     id,
                     sequence,
                     custom_location,
-                    trip:ausfluege(id, name, lat, lng)
+                    custom_address,
+                    trip:ausfluege(id, name, adresse, lat, lng)
                 `)
                 .eq('plan_id', planId)
                 .order('sequence');
@@ -55,6 +56,7 @@ export function RouteTab({ planId }: RouteTabProps) {
 
                 for (const pt of planTrips as any[]) {
                     if (pt.trip?.lat && pt.trip?.lng) {
+                        // Database trip with coordinates
                         locs.push({
                             id: pt.id,
                             name: pt.trip.name,
@@ -62,9 +64,22 @@ export function RouteTab({ planId }: RouteTabProps) {
                             lng: parseFloat(pt.trip.lng),
                             sequence: pt.sequence,
                         });
-                    } else if (pt.custom_location) {
-                        // Custom locations don't have coordinates yet
-                        // Could be enhanced with geocoding in future
+                    } else if (pt.custom_location && pt.custom_address) {
+                        // Custom location - try to geocode the address
+                        try {
+                            const geocoded = await geocodeAddress(pt.custom_address);
+                            if (geocoded) {
+                                locs.push({
+                                    id: pt.id,
+                                    name: pt.custom_location,
+                                    lat: geocoded.lat,
+                                    lng: geocoded.lng,
+                                    sequence: pt.sequence,
+                                });
+                            }
+                        } catch (error) {
+                            console.log('Geocoding failed for:', pt.custom_address);
+                        }
                     }
                 }
 
@@ -96,6 +111,29 @@ export function RouteTab({ planId }: RouteTabProps) {
             console.error('Load locations error:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Simple geocoding using Google Maps Geocoding API
+    const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
+        try {
+            // Using a free geocoding service (Nominatim)
+            const encoded = encodeURIComponent(address);
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`
+            );
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                return {
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                };
+            }
+            return null;
+        } catch (error) {
+            console.error('Geocoding error:', error);
+            return null;
         }
     };
 
