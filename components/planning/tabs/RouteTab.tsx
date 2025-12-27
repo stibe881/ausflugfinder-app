@@ -26,6 +26,7 @@ export function RouteTab({ planId }: RouteTabProps) {
     const [locations, setLocations] = useState<TripLocation[]>([]);
     const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
     const [routeDistance, setRouteDistance] = useState(0); // in km
+    const [routeDuration, setRouteDuration] = useState(0); // in seconds
     const [loading, setLoading] = useState(true);
     const [region, setRegion] = useState({
         latitude: 46.8182,
@@ -143,6 +144,7 @@ export function RouteTab({ planId }: RouteTabProps) {
 
                 setRouteCoordinates(routeCoords);
                 setRouteDistance(route.distance / 1000); // Convert meters to km
+                setRouteDuration(route.duration); // Duration in seconds
             } else {
                 // Fallback to straight lines if routing fails
                 console.log('Routing failed, using straight lines');
@@ -243,6 +245,16 @@ export function RouteTab({ planId }: RouteTabProps) {
         return deg * (Math.PI / 180);
     };
 
+    const formatDuration = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.round((seconds % 3600) / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}min`;
+        }
+        return `${minutes}min`;
+    };
+
     const totalDistance = calculateTotalDistance();
 
     if (loading) {
@@ -306,11 +318,20 @@ export function RouteTab({ planId }: RouteTabProps) {
                     </ThemedText>
                 </View>
                 <View style={styles.infoRow}>
-                    <IconSymbol name="road.lanes" size={20} color={colors.primary} />
+                    <IconSymbol name="speedometer" size={20} color={colors.primary} />
                     <ThemedText style={styles.infoText}>
-                        ~{totalDistance.toFixed(0)} km
+                        {totalDistance.toFixed(1)} km
                     </ThemedText>
                 </View>
+
+                {routeDuration > 0 && (
+                    <View style={styles.infoRow}>
+                        <IconSymbol name="clock.fill" size={20} color={colors.primary} />
+                        <ThemedText style={styles.infoText}>
+                            {formatDuration(routeDuration)}
+                        </ThemedText>
+                    </View>
+                )}
             </View>
 
             {/* Google Maps Button */}
