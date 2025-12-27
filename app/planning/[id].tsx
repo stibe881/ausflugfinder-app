@@ -27,6 +27,7 @@ import { getPlan, getCostSummary, updatePlan, addPlanTrip, type Plan, type PlanW
 import { supabase } from "@/lib/supabase";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { TripPickerModal } from "@/components/planning/TripPickerModal";
+import { ParticipantsModal } from "@/components/planning/ParticipantsModal";
 import { InputDialog } from "@/components/InputDialog";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Platform, Alert, Modal } from "react-native";
@@ -355,28 +356,12 @@ export default function PlanDetailScreen() {
                 onCancel={() => setShowCustomTripDialog(false)}
             />
 
-            {/* Participant Modal (Placeholder) */}
-            <Modal
+            {/* Participants Modal */}
+            <ParticipantsModal
                 visible={showParticipantsModal}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => setShowParticipantsModal(false)}
-            >
-                <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-                    <View style={styles.modalHeader}>
-                        <ThemedText type="title">Teilnehmer</ThemedText>
-                        <Pressable onPress={() => setShowParticipantsModal(false)}>
-                            <ThemedText style={{ color: colors.primary }}>Schließen</ThemedText>
-                        </Pressable>
-                    </View>
-                    <View style={{ padding: Spacing.lg, alignItems: 'center' }}>
-                        <ThemedText>Hier können Teilnehmer verwaltet werden.</ThemedText>
-                        <ThemedText style={{ color: colors.textSecondary, marginTop: Spacing.sm }}>
-                            (Funktion noch in Entwicklung)
-                        </ThemedText>
-                    </View>
-                </View>
-            </Modal>
+                planId={id!}
+                onClose={() => setShowParticipantsModal(false)}
+            />
         </ThemedView>
     );
 }
