@@ -444,6 +444,7 @@ export async function addPlanTrip(
     tripData: {
         trip_id?: number;
         custom_location?: string;
+        custom_address?: string;
         planned_date: string;
     }
 ): Promise<{ success: boolean; error?: string }> {

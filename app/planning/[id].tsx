@@ -199,7 +199,7 @@ export default function PlanDetailScreen() {
         setShowCustomTripDialog(true);
     };
 
-    const handleConfirmCustomTrip = async (locationName: string) => {
+    const handleConfirmCustomTrip = async (locationName: string, address?: string) => {
         if (!id || !plan || !locationName.trim()) {
             setShowCustomTripDialog(false);
             return;
@@ -208,6 +208,7 @@ export default function PlanDetailScreen() {
         // Add custom trip to plan (with undefined trip_id and custom_location)
         const res = await addPlanTrip(id, {
             custom_location: locationName.trim(),
+            custom_address: address?.trim(), // Store address for route/map
             planned_date: plan.start_date || new Date().toISOString()
         });
 
@@ -347,8 +348,9 @@ export default function PlanDetailScreen() {
             <InputDialog
                 visible={showCustomTripDialog}
                 title="Eigener Ausflug"
-                message="Gib den Namen oder Ort deines Ausflugs ein:"
-                placeholder="z.B. Geheimtipp Wanderweg"
+                message="Gib den Namen und die Adresse deines Ausflugs ein:"
+                placeholder="Name (z.B. Geheimtipp Wanderweg)"
+                secondPlaceholder="Adresse (für Route/Karte)"
                 onConfirm={handleConfirmCustomTrip}
                 onCancel={() => setShowCustomTripDialog(false)}
             />

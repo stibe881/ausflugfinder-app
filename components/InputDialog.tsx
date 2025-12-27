@@ -9,7 +9,8 @@ interface InputDialogProps {
     title: string;
     message?: string;
     placeholder?: string;
-    onConfirm: (text: string) => void;
+    secondPlaceholder?: string; // For address field
+    onConfirm: (text: string, text2?: string) => void;
     onCancel: () => void;
 }
 
@@ -18,21 +19,25 @@ export function InputDialog({
     title,
     message,
     placeholder,
+    secondPlaceholder,
     onConfirm,
     onCancel,
 }: InputDialogProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const [inputValue, setInputValue] = useState('');
+    const [inputValue2, setInputValue2] = useState('');
 
     const handleConfirm = () => {
-        onConfirm(inputValue);
+        onConfirm(inputValue, secondPlaceholder ? inputValue2 : undefined);
         setInputValue(''); // Reset
+        setInputValue2(''); // Reset
     };
 
     const handleCancel = () => {
         onCancel();
         setInputValue(''); // Reset
+        setInputValue2(''); // Reset
     };
 
     return (
@@ -66,6 +71,24 @@ export function InputDialog({
                         onChangeText={setInputValue}
                         autoFocus
                     />
+
+                    {secondPlaceholder && (
+                        <TextInput
+                            style={[
+                                styles.input,
+                                {
+                                    backgroundColor: colors.background,
+                                    borderColor: colors.border,
+                                    color: colors.text,
+                                    marginTop: Spacing.sm,
+                                },
+                            ]}
+                            placeholder={secondPlaceholder}
+                            placeholderTextColor={colors.textSecondary}
+                            value={inputValue2}
+                            onChangeText={setInputValue2}
+                        />
+                    )}
 
                     <View style={styles.buttons}>
                         <Pressable
