@@ -370,6 +370,7 @@ export default function PlanDetailScreen() {
                 visible={showParticipantsModal}
                 planId={id!}
                 onClose={() => setShowParticipantsModal(false)}
+                onDataChanged={loadPlan}
             />
         </ThemedView>
     );

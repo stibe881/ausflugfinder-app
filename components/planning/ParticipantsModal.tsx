@@ -10,6 +10,7 @@ interface ParticipantsModalProps {
     visible: boolean;
     planId: string;
     onClose: () => void;
+    onDataChanged?: () => void; // Callback when participants change
 }
 
 interface Friend {
@@ -35,7 +36,7 @@ interface Participant {
     };
 }
 
-export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModalProps) {
+export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: ParticipantsModalProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
 
@@ -43,6 +44,7 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
     const [friends, setFriends] = useState<Friend[]>([]);
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [showAddCustom, setShowAddCustom] = useState(false);
+    const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
     const [customEmail, setCustomEmail] = useState('');
     const [customName, setCustomName] = useState('');
     const [adults, setAdults] = useState('1');
@@ -96,6 +98,7 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
 
         if (!error) {
             loadData();
+            onDataChanged?.(); // Notify parent
         } else {
             Alert.alert('Fehler', 'Konnte nicht hinzugefügt werden');
         }
@@ -125,8 +128,37 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
             setChildren('0');
             setShowAddCustom(false);
             loadData();
+            onDataChanged?.(); // Notify parent
         } else {
             Alert.alert('Fehler', 'Konnte nicht hinzugefügt werden');
+        }
+    };
+
+    const editParticipant = (participant: Participant) => {
+        setEditingParticipant(participant);
+        setAdults(participant.adults_count.toString());
+        setChildren(participant.children_count.toString());
+    };
+
+    const saveParticipantEdit = async () => {
+        if (!editingParticipant) return;
+
+        const { error } = await supabase
+            .from('plan_participants')
+            .update({
+                adults_count: parseInt(adults) || 1,
+                children_count: parseInt(children) || 0
+            })
+            .eq('id', editingParticipant.id);
+
+        if (!error) {
+            setEditingParticipant(null);
+            setAdults('1');
+            setChildren('0');
+            loadData();
+            onDataChanged?.(); // Notify parent
+        } else {
+            Alert.alert('Fehler', 'Konnte nicht aktualisiert werden');
         }
     };
 
@@ -138,6 +170,7 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
 
         if (!error) {
             loadData();
+            onDataChanged?.(); // Notify parent
         } else {
             Alert.alert('Fehler', 'Konnte nicht entfernt werden');
         }
@@ -202,12 +235,20 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
                                                 </ThemedText>
                                             </View>
                                         </View>
-                                        <Pressable
-                                            onPress={() => removeParticipant(participant.id)}
-                                            style={styles.removeButton}
-                                        >
-                                            <IconSymbol name="trash" size={18} color="#EF4444" />
-                                        </Pressable>
+                                        <View style={styles.participantActions}>
+                                            <Pressable
+                                                onPress={() => editParticipant(participant)}
+                                                style={styles.actionButton}
+                                            >
+                                                <IconSymbol name="pencil" size={18} color={colors.primary} />
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={() => removeParticipant(participant.id)}
+                                                style={styles.actionButton}
+                                            >
+                                                <IconSymbol name="trash" size={18} color="#EF4444" />
+                                            </Pressable>
+                                        </View>
                                     </View>
                                 ))
                             )}
@@ -362,6 +403,80 @@ export function ParticipantsModal({ visible, planId, onClose }: ParticipantsModa
                         </View>
                     </ScrollView>
                 )}
+
+                {/* Edit Participant Dialog */}
+                {editingParticipant && (
+                    <Modal
+                        visible={true}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={() => setEditingParticipant(null)}
+                    >
+                        <View style={styles.dialogOverlay}>
+                            <View style={[styles.dialogContent, { backgroundColor: colors.surface }]}>
+                                <ThemedText style={styles.dialogTitle}>Teilnehmer bearbeiten</ThemedText>
+                                <ThemedText style={[styles.dialogMessage, { color: colors.textSecondary }]}>
+                                    {editingParticipant.user?.username || editingParticipant.email}
+                                </ThemedText>
+
+                                <View style={styles.countersRow}>
+                                    <View style={styles.counter}>
+                                        <ThemedText style={[styles.counterLabel, { color: colors.textSecondary }]}>
+                                            Erwachsene
+                                        </ThemedText>
+                                        <TextInput
+                                            style={[styles.counterInput, {
+                                                backgroundColor: colors.background,
+                                                color: colors.text,
+                                                borderColor: colors.border
+                                            }]}
+                                            value={adults}
+                                            onChangeText={setAdults}
+                                            keyboardType="number-pad"
+                                        />
+                                    </View>
+
+                                    <View style={styles.counter}>
+                                        <ThemedText style={[styles.counterLabel, { color: colors.textSecondary }]}>
+                                            Kinder
+                                        </ThemedText>
+                                        <TextInput
+                                            style={[styles.counterInput, {
+                                                backgroundColor: colors.background,
+                                                color: colors.text,
+                                                borderColor: colors.border
+                                            }]}
+                                            value={children}
+                                            onChangeText={setChildren}
+                                            keyboardType="number-pad"
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.formButtons}>
+                                    <Pressable
+                                        onPress={() => {
+                                            setEditingParticipant(null);
+                                            setAdults('1');
+                                            setChildren('0');
+                                        }}
+                                        style={[styles.formButton, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                                    >
+                                        <ThemedText>Abbrechen</ThemedText>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={saveParticipantEdit}
+                                        style={[styles.formButton, { backgroundColor: colors.primary }]}
+                                    >
+                                        <ThemedText style={{ color: '#FFF', fontWeight: '600' }}>
+                                            Speichern
+                                        </ThemedText>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    </Modal>
+                )}
             </View>
         </Modal>
     );
@@ -436,8 +551,39 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 2,
     },
-    removeButton: {
+    participantActions: {
+        flexDirection: 'row',
+        gap: Spacing.xs,
+    },
+    actionButton: {
         padding: Spacing.xs,
+    },
+    dialogOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: Spacing.lg,
+    },
+    dialogContent: {
+        width: '100%',
+        maxWidth: 400,
+        borderRadius: BorderRadius.lg,
+        padding: Spacing.lg,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    dialogTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: Spacing.xs,
+    },
+    dialogMessage: {
+        fontSize: 14,
+        marginBottom: Spacing.lg,
     },
     friendCard: {
         flexDirection: 'row',
