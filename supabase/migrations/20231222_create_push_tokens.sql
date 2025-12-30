@@ -20,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_token ON push_tokens(token);
 ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Users can insert/update their own tokens
+DROP POLICY IF EXISTS "Users can manage their own push tokens" ON push_tokens;
 CREATE POLICY "Users can manage their own push tokens"
     ON push_tokens
     FOR ALL
@@ -29,6 +30,7 @@ CREATE POLICY "Users can manage their own push tokens"
 
 -- Admins can read all tokens (for broadcast)
 -- Note: Admin status is checked in app code via email, not in database
+DROP POLICY IF EXISTS "Authenticated users can read all push tokens" ON push_tokens;
 CREATE POLICY "Authenticated users can read all push tokens"
     ON push_tokens
     FOR SELECT

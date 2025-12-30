@@ -7,122 +7,7 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, BrandColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useLocation, DISTANCE_OPTIONS, DEFAULT_LOCATION_SETTINGS, LocationSettings } from "@/hooks/use-location";
 
-function SettingToggle({
-    icon,
-    iconColor,
-    title,
-    description,
-    value,
-    onValueChange,
-    disabled,
-}: {
-    icon: string;
-    iconColor?: string;
-    title: string;
-    description: string;
-    value: boolean;
-    onValueChange: (value: boolean) => void;
-    disabled?: boolean;
-}) {
-    const colorScheme = useColorScheme();
-    const colors = Colors[colorScheme ?? "light"];
-
-    return (
-        <View
-            style={[
-                styles.settingItem,
-                {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    opacity: disabled ? 0.5 : 1,
-                },
-            ]}
-        >
-            <View style={[styles.settingIcon, { backgroundColor: (iconColor || colors.primary) + "15" }]}>
-                <IconSymbol name={icon as any} size={20} color={iconColor || colors.primary} />
-            </View>
-            <View style={styles.settingContent}>
-                <ThemedText style={styles.settingTitle}>{title}</ThemedText>
-                <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    {description}
-                </ThemedText>
-            </View>
-            <Switch
-                value={value}
-                onValueChange={onValueChange}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor="#FFFFFF"
-                disabled={disabled}
-            />
-        </View>
-    );
-}
-
-function DistanceSelector({
-    value,
-    onValueChange,
-    disabled,
-}: {
-    value: number;
-    onValueChange: (value: number) => void;
-    disabled?: boolean;
-}) {
-    const colorScheme = useColorScheme();
-    const colors = Colors[colorScheme ?? "light"];
-
-    return (
-        <View
-            style={[
-                styles.distanceContainer,
-                {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    opacity: disabled ? 0.5 : 1,
-                },
-            ]}
-        >
-            <View style={styles.distanceHeader}>
-                <View style={[styles.settingIcon, { backgroundColor: BrandColors.secondary + "15" }]}>
-                    <IconSymbol name="map.fill" size={20} color={BrandColors.secondary} />
-                </View>
-                <View style={styles.distanceHeaderText}>
-                    <ThemedText style={styles.settingTitle}>Benachrichtigungs-Entfernung</ThemedText>
-                    <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                        Wähle die Entfernung für Nähe-Benachrichtigungen
-                    </ThemedText>
-                </View>
-            </View>
-
-            <View style={styles.distanceOptions}>
-                {DISTANCE_OPTIONS.map((option) => (
-                    <Pressable
-                        key={option.value}
-                        onPress={() => !disabled && onValueChange(option.value)}
-                        style={[
-                            styles.distanceOption,
-                            {
-                                backgroundColor: value === option.value ? colors.primary : colors.surface,
-                                borderColor: value === option.value ? colors.primary : colors.border,
-                            },
-                        ]}
-                        disabled={disabled}
-                    >
-                        <ThemedText
-                            style={[
-                                styles.distanceOptionText,
-                                { color: value === option.value ? "#FFFFFF" : colors.text },
-                            ]}
-                        >
-                            {option.label}
-                        </ThemedText>
-                    </Pressable>
-                ))}
-            </View>
-        </View>
-    );
-}
 
 export default function LocationSettingsScreen() {
     const colorScheme = useColorScheme();
@@ -207,21 +92,7 @@ export default function LocationSettingsScreen() {
                         />
                     </View>
 
-                    {/* Proximity Notifications */}
-                    <View style={styles.section}>
-                        <ThemedText style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                            NÄHE-BENACHRICHTIGUNGEN
-                        </ThemedText>
-                        <SettingToggle
-                            icon="bell.fill"
-                            iconColor={BrandColors.primary}
-                            title="Benachrichtigungen aktivieren"
-                            description="Erhalte eine Benachrichtigung, wenn du in der Nähe eines Ausflugsziels bist"
-                            value={settings.proximityNotificationsEnabled}
-                            onValueChange={handleProximityToggle}
-                            disabled={!settings.locationEnabled}
-                        />
-                    </View>
+
 
                     {/* Distance Selector */}
                     <View style={styles.section}>

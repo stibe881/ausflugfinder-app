@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useEffect, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -153,15 +153,17 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadStats() {
-      setStatsLoading(true);
-      const result = await getAusflugeStatistics();
-      setStats(result);
-      setStatsLoading(false);
-    }
-    loadStats();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      async function loadStats() {
+        setStatsLoading(true);
+        const result = await getAusflugeStatistics();
+        setStats(result);
+        setStatsLoading(false);
+      }
+      loadStats();
+    }, [])
+  );
 
   return (
     <ScrollView

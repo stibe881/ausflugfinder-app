@@ -20,7 +20,7 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, toggleTripBookmarked, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
 import { useAdmin } from "@/contexts/admin-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
@@ -88,6 +88,7 @@ export default function TripDetailScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
 
@@ -132,10 +133,12 @@ export default function TripDetailScreen() {
           setIsSaved(true);
           setIsFavorite(savedTrip.is_favorite);
           setIsDone(savedTrip.is_done);
+          setIsBookmarked(savedTrip.is_bookmarked);
         } else {
           setIsSaved(false);
           setIsFavorite(false);
           setIsDone(false);
+          setIsBookmarked(false);
         }
       }
 
@@ -203,13 +206,41 @@ export default function TripDetailScreen() {
   };
 
   const handleOpenMap = () => {
-    if (trip?.lat && trip?.lng) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${trip.lat},${trip.lng}`;
-      Linking.openURL(url);
-    } else if (trip?.adresse) {
-      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.adresse)}`;
-      Linking.openURL(url);
-    }
+    const lat = trip?.lat;
+    const lng = trip?.lng;
+    const label = trip?.name || "Ziel";
+    const address = trip?.adresse || "";
+
+    if (!lat && !address) return;
+
+    Alert.alert(
+      "Karte öffnen",
+      "Wähle eine App zur Navigation",
+      [
+        {
+          text: "Apple Maps",
+          onPress: () => {
+            const url = lat && lng
+              ? `http://maps.apple.com/?ll=${lat},${lng}&q=${encodeURIComponent(label)}`
+              : `http://maps.apple.com/?q=${encodeURIComponent(address)}`;
+            Linking.openURL(url);
+          },
+        },
+        {
+          text: "Google Maps",
+          onPress: () => {
+            const url = lat && lng
+              ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+            Linking.openURL(url);
+          },
+        },
+        {
+          text: "Abbrechen",
+          style: "cancel",
+        },
+      ]
+    );
   };
 
   const handleOpenWebsite = () => {
@@ -278,6 +309,7 @@ export default function TripDetailScreen() {
               setIsSaved(false);
               setIsFavorite(false);
               setIsDone(false);
+              setIsBookmarked(false);
             } else {
               Alert.alert("Fehler", result.error || "Konnte nicht entfernt werden");
             }
@@ -304,6 +336,22 @@ export default function TripDetailScreen() {
       setIsDone(!isDone);
     } else {
       Alert.alert("Fehler", result.error || "Fehler beim Markieren");
+    }
+  };
+
+  const handleToggleBookmark = async () => {
+    if (!trip) return;
+
+    // Optimistic update
+    const newIsBookmarked = !isBookmarked;
+    setIsBookmarked(newIsBookmarked);
+    if (newIsBookmarked) setIsSaved(true);
+
+    const result = await toggleTripBookmarked(trip.id);
+    if (!result.success) {
+      // Revert on failure
+      setIsBookmarked(!newIsBookmarked);
+      Alert.alert("Fehler", result.error || "Fehler beim Merken");
     }
   };
 
@@ -348,12 +396,12 @@ export default function TripDetailScreen() {
   const costColor = costColors[kostenStufe] || costColors[0];
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: "",
           headerTransparent: true,
+          headerTitle: "",
           headerLeft: () => (
             <Pressable
               onPress={() => router.back()}
@@ -364,8 +412,8 @@ export default function TripDetailScreen() {
                 backgroundColor: "rgba(0, 0, 0, 0.5)",
                 justifyContent: "center",
                 alignItems: "center",
-                marginLeft: 16,
                 opacity: pressed ? 0.7 : 1,
+                marginLeft: 8,
               })}
             >
               <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
@@ -381,8 +429,8 @@ export default function TripDetailScreen() {
                 backgroundColor: "rgba(0, 0, 0, 0.5)",
                 justifyContent: "center",
                 alignItems: "center",
-                marginRight: 16,
                 opacity: pressed ? 0.7 : 1,
+                marginRight: 8,
               })}
             >
               <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
@@ -391,7 +439,7 @@ export default function TripDetailScreen() {
         }}
       />
       <View style={[styles.pageContainer, { backgroundColor: colors.background }]}>
-        {/* Hero Image Gallery - Outside ScrollView */}
+        {/* Fixed Hero Image Gallery */}
         <View style={styles.heroContainer}>
           {allPhotos.length > 0 ? (
             <>
@@ -440,7 +488,6 @@ export default function TripDetailScreen() {
           )}
           <View style={styles.heroOverlay} pointerEvents="none" />
 
-          {/* Category Badge */}
           {trip?.kategorie_alt && (
             <View style={styles.categoryBadge} pointerEvents="none">
               {trip.kategorie_alt.split(',').map((cat, index) => (
@@ -457,11 +504,13 @@ export default function TripDetailScreen() {
           </View>
         </View>
 
-        {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
         >
+
+          {/* Content */}
           <View style={styles.content}>
             {/* Title & Location */}
             <ThemedText style={styles.title}>{trip.name}</ThemedText>
@@ -488,7 +537,10 @@ export default function TripDetailScreen() {
                 {trip.website_url ? (
                   <Pressable
                     onPress={handleOpenWebsite}
-                    style={[styles.actionButtonHalf, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}
+                    style={[
+                      styles.actionButtonHalf,
+                      { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }
+                    ]}
                   >
                     <IconSymbol name="globe" size={20} color={colors.primary} />
                     <ThemedText style={[styles.actionButtonLargeText, { color: colors.text }]}>{t.website}</ThemedText>
@@ -513,9 +565,18 @@ export default function TripDetailScreen() {
                   onPress={handleToggleDone}
                   style={[styles.userTripButton, { backgroundColor: isDone ? "#10B981" : colors.surface, borderWidth: 1, borderColor: isDone ? "#10B981" : colors.border }]}
                 >
-                  <IconSymbol name="checkmark.circle.fill" size={20} color={isDone ? "#FFFFFF" : colors.text} />
+                  <IconSymbol name={isDone ? "checkmark.circle.fill" : "checkmark.circle"} size={20} color={isDone ? "#FFFFFF" : colors.text} />
                   <ThemedText style={[styles.userTripButtonText, { color: isDone ? "#FFFFFF" : colors.text }]}>
                     {isDone ? "Gemacht" : "Als gemacht"}
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={handleToggleBookmark}
+                  style={[styles.userTripButton, { backgroundColor: isBookmarked ? colors.primary : colors.surface, borderWidth: 1, borderColor: isBookmarked ? colors.primary : colors.border }]}
+                >
+                  <IconSymbol name={isBookmarked ? "bookmark.fill" : "bookmark"} size={20} color={isBookmarked ? "#FFFFFF" : colors.text} />
+                  <ThemedText style={[styles.userTripButtonText, { color: isBookmarked ? "#FFFFFF" : colors.text }]}>
+                    {isBookmarked ? "Gemerkt" : "Merken"}
                   </ThemedText>
                 </Pressable>
               </View>
@@ -622,6 +683,22 @@ export default function TripDetailScreen() {
                 <InfoRow icon="parkingsign" label={t.parkingLocation} value={trip.parkplatz} />
               ) : null}
 
+              {trip.parkplatz_anzahl ? (
+                <InfoRow
+                  icon="car.fill"
+                  label="Parkplätze"
+                  value={
+                    trip.parkplatz_anzahl === 'genuegend' ? "Genügend vorhanden" :
+                      trip.parkplatz_anzahl === 'maessig' ? "Mässig vorhanden" :
+                        "Keine vorhanden"
+                  }
+                />
+              ) : null}
+
+              {trip.parkplatz_kostenlos !== null && trip.parkplatz_kostenlos !== undefined ? (
+                <InfoRow icon="banknote" label="Parkplatz Kosten" value={trip.parkplatz_kostenlos ? "Gratis" : "Kostenpflichtig"} />
+              ) : null}
+
               {trip.altersempfehlung ? (
                 <InfoRow icon="person.2.fill" label={t.ageRecommendation} value={trip.altersempfehlung} />
               ) : null}
@@ -684,11 +761,12 @@ export default function TripDetailScreen() {
             )}
           </View>
 
-          {/* Bottom Spacing */}
-          <View style={{ height: insets.bottom + 32 }} />
+          {/* Bottom Spacing - Handled by contentContainerStyle */}
         </ScrollView>
+
+
       </View>
-    </>
+    </View>
   );
 }
 
@@ -698,6 +776,7 @@ const styles = StyleSheet.create({
   },
   pageContainer: {
     flex: 1,
+    position: "relative", // Ensure absolute children position relative to this
   },
   scrollContent: {
     flex: 1,
@@ -799,13 +878,23 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     position: "absolute",
-    left: Spacing.md,
-    bottom: Spacing.md,
+    bottom: Spacing.lg,
+    left: Spacing.lg,
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: Spacing.xs,
-    maxWidth: "50%",
+    flexWrap: "wrap",
+    maxWidth: "60%",
   },
+  fixedHeaderButtons: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    zIndex: 100, // Increased zIndex
+    elevation: 10, // Added elevation for Android
+  },
+
   categoryBadgeItem: {
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: Spacing.sm,

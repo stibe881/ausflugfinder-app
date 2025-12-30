@@ -1,5 +1,5 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,9 +19,21 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { MapViewComponent } from "@/components/map-view-component";
-import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
+import { Colors, BrandColors, SemanticColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { searchAusfluege, getAusflugeStatistics, type Ausflug, type AusflugWithPhoto, getPrimaryPhoto, addUserTrip, getUserTrips } from "@/lib/supabase-api";
+import {
+  searchAusfluege,
+  getAusflugeStatistics,
+  type Ausflug,
+  type AusflugWithPhoto,
+  getPrimaryPhoto,
+  addUserTrip,
+  getUserTrips,
+  toggleTripFavorite, // Added from instruction
+  toggleTripBookmarked, // Added from instruction
+  getKategorieOptions, // Added from instruction
+  getNiceToKnowOptions, // Added from instruction
+} from "@/lib/supabase-api";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
 import * as Location from "expo-location";
@@ -76,6 +88,8 @@ function TripCard({
   onAddToTrips,
   isSaved,
   isFavorite,
+  isBookmarked,
+  onBookmarkToggle,
 }: {
   trip: Trip;
   onPress: () => void;
@@ -83,26 +97,23 @@ function TripCard({
   onAddToTrips: () => void;
   isSaved?: boolean;
   isFavorite?: boolean;
+  isBookmarked?: boolean;
+  onBookmarkToggle?: () => void;
 }) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
+  const { t } = useLanguage();
 
-  // Local state for immediate feedback
-  const [localIsFavorite, setLocalIsFavorite] = useState(isFavorite || false);
-  const [localIsSaved, setLocalIsSaved] = useState(isSaved || false);
-
-  const handleFavoritePress = () => {
-    setLocalIsFavorite(!localIsFavorite);
-    onFavoriteToggle();
+  const getCostLabel = (level: number) => {
+    switch (level) {
+      case 0: return t.costFree;
+      case 1: return t.cheap;
+      case 2: return t.medium;
+      case 3: return t.expensive;
+      case 4: return t.expensive; // Using expensive for "Sehr teuer"
+      default: return "";
+    }
   };
-
-  const handleAddPress = () => {
-    setLocalIsSaved(!localIsSaved);
-    onAddToTrips();
-  };
-
-  // Debug log
-  console.log(`[TripCard] ${trip.name} - Photo URL:`, trip.primaryPhotoUrl);
 
   return (
     <Pressable
@@ -123,6 +134,7 @@ function TripCard({
             source={{ uri: trip.primaryPhotoUrl }}
             style={styles.tripImage}
             contentFit="cover"
+            transition={200}
           />
         ) : (
           <View style={[styles.tripImagePlaceholder, { backgroundColor: colors.surface }]}>
@@ -130,22 +142,40 @@ function TripCard({
           </View>
         )}
 
-        {/* Actions Overlay */}
-        <View style={styles.tripCardActions}>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              handleFavoritePress();
-            }}
-            style={[styles.tripActionButton, { backgroundColor: localIsFavorite ? "#EF4444" : colors.surface + "CC" }]}
-          >
-            <IconSymbol name="heart.fill" size={20} color={localIsFavorite ? "#FFFFFF" : "#D1D1D6"} />
-          </Pressable>
-        </View>
-
         {/* Cost Badge */}
         <View style={styles.costBadgeContainer}>
-          <CostBadge cost={trip.kosten_stufe !== null ? ['free', 'low', 'medium', 'high', 'very_high'][trip.kosten_stufe] : 'free'} />
+          <View style={[styles.costBadge, { backgroundColor: CostColors[trip.kosten_stufe ?? 0] + "D0" }]}>
+            <ThemedText style={[styles.costBadgeText, { color: "#FFFFFF", fontSize: 10 }]}>
+              {getCostLabel(trip.kosten_stufe ?? 0)}
+            </ThemedText>
+          </View>
+        </View>
+
+        {/* Action Buttons Overlay */}
+        <View style={styles.tripCardActions}>
+          {/* Favorite Button */}
+          <Pressable
+            onPress={onFavoriteToggle}
+            style={styles.tripActionButton}
+          >
+            <IconSymbol
+              name={isFavorite ? "heart.fill" : "heart"}
+              size={18}
+              color={isFavorite ? "#EF4444" : "#FFFFFF"}
+            />
+          </Pressable>
+
+          {/* Bookmark Button */}
+          <Pressable
+            onPress={onBookmarkToggle}
+            style={styles.tripActionButton}
+          >
+            <IconSymbol
+              name={isBookmarked ? "bookmark.fill" : "bookmark"}
+              size={18}
+              color={isBookmarked ? colors.primary : "#FFFFFF"}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -154,11 +184,15 @@ function TripCard({
         <ThemedText style={styles.tripTitle} numberOfLines={2}>
           {trip.name}
         </ThemedText>
+
         <View style={styles.tripLocation}>
-          <IconSymbol name="mappin.and.ellipse" size={14} color={colors.textSecondary} />
+          <IconSymbol name="mappin.and.ellipse" size={12} color={colors.textSecondary} />
           <ThemedText style={[styles.tripLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {trip.adresse}
+            {trip.region || trip.adresse.split(",")[0]}
           </ThemedText>
+          {isSaved && (
+            <IconSymbol name="checkmark.circle.fill" size={14} color={SemanticColors.success} />
+          )}
         </View>
 
         {/* Category Badges */}
@@ -177,6 +211,8 @@ function TripCard({
     </Pressable>
   );
 }
+
+
 
 function CategoryChip({
   label,
@@ -240,6 +276,14 @@ export default function ExploreScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [userTripIds, setUserTripIds] = useState<Set<number>>(new Set());
   const [favoriteTripIds, setFavoriteTripIds] = useState<Set<number>>(new Set());
+  const [doneTripIds, setDoneTripIds] = useState<Set<number>>(new Set());
+  const [bookmarkedTripIds, setBookmarkedTripIds] = useState<Set<number>>(new Set());
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [activeFilters, setActiveFilters] = useState({
+    favorites: false,
+    notDone: false,
+    bookmarked: false, // New filter
+  });
   const { isAuthenticated } = useAuth();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -267,13 +311,19 @@ export default function ExploreScreen() {
       kostenStufe,
     });
 
-    // Fetch primary photos for all trips
-    const tripsWithPhotos = await Promise.all(
-      result.data.map(async (ausflug) => {
-        const primaryPhotoUrl = await getPrimaryPhoto(ausflug.id);
-        return { ...ausflug, primaryPhotoUrl };
-      })
-    );
+    // Fetch primary photos in batches to avoid overwhelming the network
+    const batchSize = 10;
+    const tripsWithPhotos = [];
+    for (let i = 0; i < result.data.length; i += batchSize) {
+      const batch = result.data.slice(i, i + batchSize);
+      const batchWithPhotos = await Promise.all(
+        batch.map(async (ausflug) => {
+          const primaryPhotoUrl = await getPrimaryPhoto(ausflug.id);
+          return { ...ausflug, primaryPhotoUrl };
+        })
+      );
+      tripsWithPhotos.push(...batchWithPhotos);
+    }
 
     setTrips(tripsWithPhotos as any);
     setIsLoading(false);
@@ -306,8 +356,24 @@ export default function ExploreScreen() {
     return R * c;
   };
 
-  // Sort trips based on selected sort option
-  const sortedTrips = [...trips].sort((a, b) => {
+  // Filter and sort trips
+  const filteredTrips = trips.filter(trip => {
+    // Apply "Favorites Only" filter
+    if (activeFilters.favorites && !favoriteTripIds.has(trip.id)) {
+      return false;
+    }
+    // Apply "Bookmarked" filter
+    if (activeFilters.bookmarked && !bookmarkedTripIds.has(trip.id)) {
+      return false;
+    }
+    // Apply "Not Done" filter
+    if (activeFilters.notDone && doneTripIds.has(trip.id)) {
+      return false;
+    }
+    return true;
+  });
+
+  const sortedTrips = [...filteredTrips].sort((a, b) => {
     switch (sortBy) {
       case "name":
         return (a.name || "").localeCompare(b.name || "");
@@ -344,14 +410,20 @@ export default function ExploreScreen() {
     if (!isAuthenticated) {
       setUserTripIds(new Set());
       setFavoriteTripIds(new Set());
+      setDoneTripIds(new Set());
+      setBookmarkedTripIds(new Set());
       return;
     }
 
     const userTrips = await getUserTrips();
     const savedIds = new Set(userTrips.filter((t: any) => !t.is_favorite).map((t: any) => t.id));
     const favoriteIds = new Set(userTrips.filter((t: any) => t.is_favorite).map((t: any) => t.id));
+    const doneIds = new Set(userTrips.filter((t: any) => t.is_done).map((t: any) => t.id));
+    const bookmarkedIds = new Set(userTrips.filter((t: any) => t.is_bookmarked).map((t: any) => t.id));
     setUserTripIds(savedIds);
     setFavoriteTripIds(favoriteIds);
+    setDoneTripIds(doneIds);
+    setBookmarkedTripIds(bookmarkedIds);
   }, [isAuthenticated]);
 
   // Initial load
@@ -366,10 +438,12 @@ export default function ExploreScreen() {
     fetchTrips();
   }, [keyword, selectedCost, fetchTrips]);
 
-  // Reload user trips when authentication changes
-  useEffect(() => {
-    loadUserTrips();
-  }, [isAuthenticated, loadUserTrips]);
+  // Reload user trips when focused to keep sync with detail page changes
+  useFocusEffect(
+    useCallback(() => {
+      loadUserTrips();
+    }, [loadUserTrips])
+  );
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -414,13 +488,30 @@ export default function ExploreScreen() {
           </ThemedText>
         </View>
         <View style={styles.headerButtons}>
+          {/* Filter Button */}
+          <Pressable
+            onPress={() => setShowFilterMenu(!showFilterMenu)}
+            style={[
+              styles.viewModeButton,
+              {
+                backgroundColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked) ? colors.primary + "20" : colors.surface,
+                borderColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked) ? colors.primary : colors.border
+              }
+            ]}
+          >
+            <IconSymbol
+              name="slider.horizontal.3"
+              size={20}
+              color={colors.primary}
+            />
+          </Pressable>
           {/* Sort Button */}
           <Pressable
             onPress={() => setShowSortMenu(!showSortMenu)}
             style={[styles.viewModeButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <IconSymbol
-              name="line.3.horizontal.decrease"
+              name="arrow.up.arrow.down"
               size={20}
               color={colors.primary}
             />
@@ -438,6 +529,82 @@ export default function ExploreScreen() {
           </Pressable>
         </View>
       </View>
+
+      {/* Backdrop for closing menus */}
+      {(showFilterMenu || showSortMenu) && (
+        <Pressable
+          style={StyleSheet.absoluteFillObject}
+          onPress={() => {
+            setShowFilterMenu(false);
+            setShowSortMenu(false);
+          }}
+        />
+      )}
+
+      {/* Filter Menu Dropdown */}
+      {showFilterMenu && (
+        <View style={[styles.sortMenu, { backgroundColor: colors.card, borderColor: colors.border, right: Spacing.lg + 50 }]}>
+          <Pressable
+            onPress={() => setActiveFilters(prev => ({ ...prev, favorites: !prev.favorites }))}
+            style={[
+              styles.sortMenuItem,
+              activeFilters.favorites && { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.sortMenuItemText,
+                activeFilters.favorites && { color: colors.primary, fontWeight: "600" },
+              ]}
+            >
+              Favoriten
+            </ThemedText>
+            {activeFilters.favorites && (
+              <IconSymbol name="checkmark" size={16} color={colors.primary} />
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => setActiveFilters(prev => ({ ...prev, notDone: !prev.notDone }))}
+            style={[
+              styles.sortMenuItem,
+              activeFilters.notDone && { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.sortMenuItemText,
+                activeFilters.notDone && { color: colors.primary, fontWeight: "600" },
+              ]}
+            >
+              Noch nicht gemacht
+            </ThemedText>
+            {activeFilters.notDone && (
+              <IconSymbol name="checkmark" size={16} color={colors.primary} />
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => setActiveFilters(prev => ({ ...prev, bookmarked: !prev.bookmarked }))}
+            style={[
+              styles.sortMenuItem,
+              activeFilters.bookmarked && { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.sortMenuItemText,
+                activeFilters.bookmarked && { color: colors.primary, fontWeight: "600" },
+              ]}
+            >
+              Gemerkt
+            </ThemedText>
+            {activeFilters.bookmarked && (
+              <IconSymbol name="checkmark" size={16} color={colors.primary} />
+            )}
+          </Pressable>
+        </View>
+      )}
 
       {/* Sort Menu Dropdown */}
       {showSortMenu && (
@@ -548,8 +715,29 @@ export default function ExploreScreen() {
               onPress={() => handleTripPress(item.id)}
               onFavoriteToggle={() => handleFavoriteToggle(item.id)}
               onAddToTrips={() => handleAddToTrips(item.id)}
-              isSaved={userTripIds.has(item.id)}
+              isSaved={doneTripIds.has(item.id)}
               isFavorite={favoriteTripIds.has(item.id)}
+              isBookmarked={bookmarkedTripIds.has(item.id)}
+              onBookmarkToggle={async () => {
+                // Optimistic update
+                const isBookmarked = bookmarkedTripIds.has(item.id);
+                const newBookmarkedIds = new Set(bookmarkedTripIds);
+                if (isBookmarked) {
+                  newBookmarkedIds.delete(item.id);
+                } else {
+                  newBookmarkedIds.add(item.id);
+                }
+                setBookmarkedTripIds(newBookmarkedIds);
+
+                const result = await toggleTripBookmarked(item.id);
+                if (!result.success) {
+                  // Revert on failure
+                  setBookmarkedTripIds(bookmarkedTripIds);
+                } else {
+                  // Reload user trips to sync all states
+                  loadUserTrips();
+                }
+              }}
             />
           )}
         />

@@ -157,7 +157,10 @@ export default function CreateTripScreen() {
         if (result.success) {
             Alert.alert(
                 "Erfolg",
-                "Ausflug erfolgreich erstellt!",
+                `Ausflug erfolgreich erstellt!\n\nPush-Status: ${result.notificationResult?.success
+                    ? "Gesendet ✅"
+                    : "Fehler ❌\n" + (result.notificationResult?.message || JSON.stringify(result.notificationResult))
+                }`,
                 [
                     {
                         text: "OK",

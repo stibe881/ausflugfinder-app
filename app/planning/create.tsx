@@ -24,8 +24,10 @@ interface TripSelection {
     id: string;
     trip_id?: number;
     custom_location?: string;
+    custom_address?: string;
     planned_date: Date;
     trip?: Ausflug;
+    notes?: string;
 }
 
 export default function CreatePlanScreen() {
@@ -41,6 +43,8 @@ export default function CreatePlanScreen() {
     const [availableTrips, setAvailableTrips] = useState<Ausflug[]>([]);
     const [showTripPicker, setShowTripPicker] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState<string | null>(null);
+    const [tripSearchQuery, setTripSearchQuery] = useState("");
+    const [expandedTrip, setExpandedTrip] = useState<string | null>(null);
 
     useEffect(() => {
         loadAvailableTrips();
@@ -49,6 +53,27 @@ export default function CreatePlanScreen() {
     const loadAvailableTrips = async () => {
         const data = await getAllAusfluege();
         setAvailableTrips(data);
+    };
+
+    // Filter trips based on search query
+    const filteredAvailableTrips = availableTrips.filter((trip) => {
+        if (!tripSearchQuery) return true;
+        const query = tripSearchQuery.toLowerCase();
+        return (
+            trip.name.toLowerCase().includes(query) ||
+            trip.adresse?.toLowerCase().includes(query) ||
+            trip.region?.toLowerCase().includes(query)
+        );
+    });
+
+
+
+    const updateTripNotes = (tripId: string, notes: string) => {
+        setTrips(
+            trips.map((t) =>
+                t.id === tripId ? { ...t, notes } : t
+            )
+        );
     };
 
     const addTrip = () => {
@@ -77,15 +102,39 @@ export default function CreatePlanScreen() {
             [
                 { text: "Abbrechen", style: "cancel" },
                 {
-                    text: "Hinzufügen",
-                    onPress: (customLocation) => {
+                    text: "Weiter",
+                    onPress: (customLocation?: string) => {
                         if (customLocation && customLocation.trim()) {
-                            const newTrip: TripSelection = {
-                                id: Math.random().toString(),
-                                custom_location: customLocation.trim(),
-                                planned_date: new Date(),
-                            };
-                            setTrips([...trips, newTrip]);
+                            // After getting location name, prompt for address
+                            Alert.prompt(
+                                "Adresse eingeben",
+                                "Adresse (optional):",
+                                [
+                                    {
+                                        text: "Überspringen", onPress: () => {
+                                            const newTrip: TripSelection = {
+                                                id: Math.random().toString(),
+                                                custom_location: customLocation.trim(),
+                                                planned_date: new Date(),
+                                            };
+                                            setTrips([...trips, newTrip]);
+                                        }
+                                    },
+                                    {
+                                        text: "Hinzufügen",
+                                        onPress: (customAddress?: string) => {
+                                            const newTrip: TripSelection = {
+                                                id: Math.random().toString(),
+                                                custom_location: customLocation.trim(),
+                                                custom_address: customAddress?.trim() || undefined,
+                                                planned_date: new Date(),
+                                            };
+                                            setTrips([...trips, newTrip]);
+                                        },
+                                    },
+                                ],
+                                "plain-text"
+                            );
                         }
                     },
                 },
@@ -96,6 +145,22 @@ export default function CreatePlanScreen() {
 
     const removeTrip = (id: string) => {
         setTrips(trips.filter((t) => t.id !== id));
+    };
+
+    const moveTripUp = (index: number) => {
+        if (index > 0) {
+            const newTrips = [...trips];
+            [newTrips[index - 1], newTrips[index]] = [newTrips[index], newTrips[index - 1]];
+            setTrips(newTrips);
+        }
+    };
+
+    const moveTripDown = (index: number) => {
+        if (index < trips.length - 1) {
+            const newTrips = [...trips];
+            [newTrips[index], newTrips[index + 1]] = [newTrips[index + 1], newTrips[index]];
+            setTrips(newTrips);
+        }
     };
 
     const updateTripDate = (id: string, date: Date) => {
@@ -123,6 +188,7 @@ export default function CreatePlanScreen() {
             trips: trips.map((t) => ({
                 trip_id: t.trip_id,
                 custom_location: t.custom_location,
+                custom_address: t.custom_address,
                 planned_date: t.planned_date.toISOString(),
             })),
         });
@@ -151,6 +217,35 @@ export default function CreatePlanScreen() {
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
             >
+                {/* Budget Summary */}
+                {trips.length > 0 && (
+                    <View style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={styles.budgetHeader}>
+                            <IconSymbol name="dollarsign.circle.fill" size={20} color={colors.primary} />
+                            <ThemedText style={styles.budgetTitle}>Geschätztes Budget</ThemedText>
+                        </View>
+                        <ThemedText style={[styles.budgetAmount, { color: colors.primary }]}>
+                            {(() => {
+                                const costLabels = ["Gratis", "Günstig (CHF 10-30)", "Mittel (CHF 30-60)", "Teuer (CHF 60-100)", "Sehr teuer (CHF 100+)"];
+                                const tripCosts = trips.map(t => t.trip?.kosten_stufe ?? 0);
+                                const maxCost = Math.max(...tripCosts, 0);
+                                const minCost = Math.min(...tripCosts.filter(c => c > 0), 0);
+
+                                if (tripCosts.every(c => c === 0)) {
+                                    return "Gratis";
+                                } else if (minCost === maxCost) {
+                                    return costLabels[maxCost];
+                                } else {
+                                    return `${costLabels[minCost]} - ${costLabels[maxCost]}`;
+                                }
+                            })()}
+                        </ThemedText>
+                        <ThemedText style={[styles.budgetSubtitle, { color: colors.textSecondary }]}>
+                            Basierend auf {trips.length} Ausflug{trips.length > 1 ? "en" : ""}
+                        </ThemedText>
+                    </View>
+                )}
+
                 {/* Title */}
                 <View style={styles.inputGroup}>
                     <ThemedText style={styles.label}>Titel *</ThemedText>
@@ -197,50 +292,122 @@ export default function CreatePlanScreen() {
                 <View style={styles.inputGroup}>
                     <ThemedText style={styles.label}>Ausflüge *</ThemedText>
 
-                    {trips.map((trip) => (
-                        <View
-                            key={trip.id}
-                            style={[
-                                styles.tripItem,
-                                { backgroundColor: colors.surface, borderColor: colors.border },
-                            ]}
-                        >
-                            <View style={styles.tripInfo}>
-                                <ThemedText style={styles.tripTitle}>
-                                    {trip.trip ? trip.trip.title : trip.custom_location || "Eigener Ort"}
-                                </ThemedText>
-                                <Pressable
-                                    onPress={() => setShowDatePicker(trip.id)}
-                                    style={[styles.dateButton, { borderColor: colors.border }]}
-                                >
-                                    <IconSymbol name="calendar" size={16} color={colors.primary} />
-                                    <ThemedText style={[styles.dateText, { color: colors.text }]}>
-                                        {trip.planned_date.toLocaleDateString("de-DE", {
-                                            day: "2-digit",
-                                            month: "short",
-                                            year: "numeric",
-                                        })}
-                                    </ThemedText>
-                                </Pressable>
-                            </View>
-                            <Pressable onPress={() => removeTrip(trip.id)} style={styles.removeButton}>
-                                <IconSymbol name="trash" size={18} color="#EF4444" />
-                            </Pressable>
+                    {trips.map((trip, index) => (
+                        <View key={trip.id}>
+                            <View
+                                style={[
+                                    styles.tripItem,
+                                    { backgroundColor: colors.surface, borderColor: colors.border },
+                                ]}
+                            >
+                                <View style={styles.tripInfo}>
+                                    <View style={styles.tripMainRow}>
+                                        <Pressable
+                                            onPress={() => setExpandedTrip(expandedTrip === trip.id ? null : trip.id)}
+                                            style={styles.tripNameRow}
+                                        >
+                                            <IconSymbol
+                                                name={expandedTrip === trip.id ? "chevron.down" : "chevron.right"}
+                                                size={16}
+                                                color={colors.textSecondary}
+                                            />
+                                            <ThemedText style={styles.tripTitle}>
+                                                {trip.trip ? trip.trip.name : trip.custom_location || "Eigener Ort"}
+                                            </ThemedText>
+                                        </Pressable>
+                                        <View style={styles.tripActions}>
+                                            {/* Reorder Buttons */}
+                                            <Pressable
+                                                onPress={() => moveTripUp(index)}
+                                                disabled={index === 0}
+                                                style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+                                            >
+                                                <IconSymbol
+                                                    name="chevron.up"
+                                                    size={16}
+                                                    color={index === 0 ? colors.border : colors.textSecondary}
+                                                />
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={() => moveTripDown(index)}
+                                                disabled={index === trips.length - 1}
+                                                style={[styles.reorderButton, index === trips.length - 1 && styles.reorderButtonDisabled]}
+                                            >
+                                                <IconSymbol
+                                                    name="chevron.down"
+                                                    size={16}
+                                                    color={index === trips.length - 1 ? colors.border : colors.textSecondary}
+                                                />
+                                            </Pressable>
+                                            <Pressable onPress={() => removeTrip(trip.id)} style={styles.removeButton}>
+                                                <IconSymbol name="trash" size={18} color="#EF4444" />
+                                            </Pressable>
+                                        </View>
+                                    </View>
 
-                            {/* DatePicker */}
-                            {showDatePicker === trip.id && (
-                                <DateTimePicker
-                                    value={trip.planned_date}
-                                    mode="date"
-                                    display={Platform.OS === "ios" ? "spinner" : "default"}
-                                    onChange={(event, selectedDate) => {
-                                        if (selectedDate) {
-                                            updateTripDate(trip.id, selectedDate);
-                                        } else {
-                                            setShowDatePicker(null);
-                                        }
-                                    }}
-                                />
+                                    <Pressable
+                                        onPress={() => setShowDatePicker(trip.id)}
+                                        style={[styles.dateButton, { borderColor: colors.border }]}
+                                    >
+                                        <IconSymbol name="calendar" size={16} color={colors.primary} />
+                                        <ThemedText style={[styles.dateText, { color: colors.text }]}>
+                                            {trip.planned_date.toLocaleDateString("de-DE", {
+                                                day: "2-digit",
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </ThemedText>
+                                    </Pressable>
+
+
+                                </View>
+
+                                {/* DatePicker */}
+                                {showDatePicker === trip.id && (
+                                    <DateTimePicker
+                                        value={trip.planned_date}
+                                        mode="date"
+                                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                                        onChange={(event, selectedDate) => {
+                                            if (selectedDate) {
+                                                updateTripDate(trip.id, selectedDate);
+                                            } else {
+                                                setShowDatePicker(null);
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </View>
+
+                            {/* Expanded Section */}
+                            {expandedTrip === trip.id && (
+                                <View style={[styles.expandedSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+
+                                    {/* Notes */}
+                                    <View style={styles.expandedGroup}>
+                                        <View style={styles.expandedHeader}>
+                                            <IconSymbol name="note.text" size={16} color={colors.text} />
+                                            <ThemedText style={styles.expandedLabel}>Notizen</ThemedText>
+                                        </View>
+                                        <TextInput
+                                            style={[
+                                                styles.notesInput,
+                                                {
+                                                    backgroundColor: colors.background,
+                                                    borderColor: colors.border,
+                                                    color: colors.text,
+                                                },
+                                            ]}
+                                            placeholder="Notizen zu diesem Ausflug..."
+                                            placeholderTextColor={colors.textSecondary}
+                                            value={trip.notes || ""}
+                                            onChangeText={(text) => updateTripNotes(trip.id, text)}
+                                            multiline
+                                            numberOfLines={2}
+                                            textAlignVertical="top"
+                                        />
+                                    </View>
+                                </View>
                             )}
                         </View>
                     ))}
@@ -272,19 +439,67 @@ export default function CreatePlanScreen() {
                                 { backgroundColor: colors.card, borderColor: colors.border },
                             ]}
                         >
-                            <ScrollView style={styles.tripPickerScroll}>
-                                {availableTrips.map((ausflug) => (
-                                    <Pressable
-                                        key={ausflug.id}
-                                        onPress={() => addTripFromDatabase(ausflug)}
-                                        style={styles.tripPickerItem}
-                                    >
-                                        <ThemedText style={styles.tripPickerTitle}>
-                                            {ausflug.name}
-                                        </ThemedText>
-                                        <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+                            {/* Search Input */}
+                            <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+                                <IconSymbol name="magnifyingglass" size={18} color={colors.textSecondary} />
+                                <TextInput
+                                    style={[styles.searchInput, { color: colors.text }]}
+                                    placeholder="Suche nach Name, Ort oder Region..."
+                                    placeholderTextColor={colors.textSecondary}
+                                    value={tripSearchQuery}
+                                    onChangeText={setTripSearchQuery}
+                                />
+                                {tripSearchQuery.length > 0 && (
+                                    <Pressable onPress={() => setTripSearchQuery("")}>
+                                        <IconSymbol name="xmark.circle.fill" size={18} color={colors.textSecondary} />
                                     </Pressable>
-                                ))}
+                                )}
+                            </View>
+
+                            {/* Trip List */}
+                            <ScrollView style={styles.tripPickerScroll}>
+                                {filteredAvailableTrips.length === 0 ? (
+                                    <View style={styles.noResults}>
+                                        <IconSymbol name="magnifyingglass" size={32} color={colors.textSecondary} />
+                                        <ThemedText style={[styles.noResultsText, { color: colors.textSecondary }]}>
+                                            Keine Ausflüge gefunden
+                                        </ThemedText>
+                                    </View>
+                                ) : (
+                                    filteredAvailableTrips.map((ausflug) => {
+                                        const costLabels = ["Gratis", "Günstig", "Mittel", "Teuer", "Sehr teuer"];
+                                        const costColors = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#DC2626"];
+                                        const costLabel = costLabels[ausflug.kosten_stufe ?? 0];
+                                        const costColor = costColors[ausflug.kosten_stufe ?? 0];
+
+                                        return (
+                                            <Pressable
+                                                key={ausflug.id}
+                                                onPress={() => addTripFromDatabase(ausflug)}
+                                                style={({ pressed }) => [
+                                                    styles.tripPickerCard,
+                                                    { backgroundColor: colors.surface, opacity: pressed ? 0.8 : 1 }
+                                                ]}
+                                            >
+                                                <View style={styles.tripPickerInfo}>
+                                                    <ThemedText style={styles.tripPickerTitle}>
+                                                        {ausflug.name}
+                                                    </ThemedText>
+                                                    <View style={styles.tripPickerMeta}>
+                                                        <IconSymbol name="mappin" size={12} color={colors.textSecondary} />
+                                                        <ThemedText style={[styles.tripPickerLocation, { color: colors.textSecondary }]}>
+                                                            {ausflug.adresse}
+                                                        </ThemedText>
+                                                    </View>
+                                                    <View style={[styles.costBadge, { backgroundColor: costColor }]}>
+                                                        <ThemedText style={styles.costBadgeText}>{costLabel}</ThemedText>
+                                                    </View>
+                                                </View>
+                                                <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+                                            </Pressable>
+                                        );
+                                    })
+                                )}
                             </ScrollView>
                         </View>
                     )}
@@ -343,6 +558,30 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: Spacing.lg,
     },
+    budgetCard: {
+        padding: Spacing.lg,
+        borderRadius: BorderRadius.lg,
+        borderWidth: 1,
+        marginBottom: Spacing.lg,
+    },
+    budgetHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.sm,
+        marginBottom: Spacing.sm,
+    },
+    budgetTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    budgetAmount: {
+        fontSize: 20,
+        fontWeight: "700",
+        marginBottom: Spacing.xs,
+    },
+    budgetSubtitle: {
+        fontSize: 13,
+    },
     inputGroup: {
         marginBottom: Spacing.lg,
     },
@@ -370,6 +609,104 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.md,
         borderWidth: 1,
         marginBottom: Spacing.sm,
+    },
+    tripMainRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: Spacing.sm,
+    },
+    tripNameRow: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs,
+    },
+    tripActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs,
+    },
+    reorderButton: {
+        padding: Spacing.xs,
+    },
+    reorderButtonDisabled: {
+        opacity: 0.3,
+    },
+    participantBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 4,
+        borderRadius: BorderRadius.sm,
+        marginTop: Spacing.xs,
+        alignSelf: "flex-start",
+    },
+    participantBadgeText: {
+        fontSize: 11,
+        fontWeight: "600",
+    },
+    expandedSection: {
+        borderWidth: 1,
+        borderTopWidth: 0,
+        borderRadius: BorderRadius.md,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        padding: Spacing.md,
+        marginBottom: Spacing.sm,
+    },
+    expandedGroup: {
+        marginBottom: Spacing.md,
+    },
+    expandedHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs,
+        marginBottom: Spacing.sm,
+    },
+    expandedLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    participantList: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: Spacing.xs,
+        marginBottom: Spacing.sm,
+    },
+    participantChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.xs,
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.sm,
+        borderRadius: BorderRadius.sm,
+    },
+    participantName: {
+        fontSize: 13,
+    },
+    addParticipantButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: Spacing.xs,
+        paddingVertical: Spacing.sm,
+        borderWidth: 1,
+        borderStyle: "dashed",
+        borderRadius: BorderRadius.md,
+    },
+    addParticipantText: {
+        fontSize: 13,
+        fontWeight: "500",
+    },
+    notesInput: {
+        borderWidth: 1,
+        borderRadius: BorderRadius.md,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        fontSize: 14,
+        minHeight: 60,
     },
     tripInfo: {
         flex: 1,
@@ -414,14 +751,69 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
     },
+    searchContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: Spacing.sm,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderBottomWidth: 1,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        paddingVertical: Spacing.xs,
+    },
+    noResults: {
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: Spacing.xxl,
+        gap: Spacing.sm,
+    },
+    noResultsText: {
+        fontSize: 14,
+    },
+    tripPickerCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(0,0,0,0.05)",
+    },
+    tripPickerInfo: {
+        flex: 1,
+        gap: Spacing.xs,
+    },
+    tripPickerMeta: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    tripPickerLocation: {
+        fontSize: 12,
+    },
+    costBadge: {
+        paddingHorizontal: Spacing.sm,
+        paddingVertical: 2,
+        borderRadius: BorderRadius.sm,
+        alignSelf: "flex-start",
+        marginTop: Spacing.xs,
+    },
+    costBadgeText: {
+        color: "#FFFFFF",
+        fontSize: 11,
+        fontWeight: "600",
+    },
     tripPicker: {
         maxHeight: 300,
         borderWidth: 1,
         borderRadius: BorderRadius.md,
         marginTop: Spacing.sm,
+        overflow: "hidden",
     },
     tripPickerScroll: {
-        maxHeight: 300,
+        maxHeight: 250,
     },
     tripPickerItem: {
         flexDirection: "row",
@@ -432,7 +824,8 @@ const styles = StyleSheet.create({
         borderBottomColor: "rgba(0,0,0,0.05)",
     },
     tripPickerTitle: {
-        fontSize: 14,
+        fontSize: 15,
+        fontWeight: "600",
     },
     createButton: {
         flexDirection: "row",

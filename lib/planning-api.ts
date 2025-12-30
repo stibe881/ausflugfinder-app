@@ -236,6 +236,8 @@ export async function createPlan(data: {
             plan_id: plan.id,
             user_id: userData.id,
             role: 'organizer',
+            adults_count: 1,
+            children_count: 0,
             invitation_status: 'accepted',
         });
 
@@ -768,6 +770,28 @@ export async function addPlanCost(
         return { success: true };
     } catch (error: any) {
         console.error('[addPlanCost] Exception:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete cost from plan
+ */
+export async function deletePlanCost(costId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('plan_costs')
+            .delete()
+            .eq('id', costId);
+
+        if (error) {
+            console.error('[deletePlanCost] Error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deletePlanCost] Exception:', error);
         return { success: false, error: error.message };
     }
 }

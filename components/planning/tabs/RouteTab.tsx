@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Pressable, Linking, Dimensions, Alert } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, StyleSheet, Pressable, Linking, Dimensions, Alert, ScrollView, Switch, Text } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -7,6 +7,7 @@ import { Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { geocodeAddress } from '@/lib/geocoding';
 
 interface RouteTabProps {
     planId: string;
@@ -29,6 +30,7 @@ export function RouteTab({ planId }: RouteTabProps) {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
     const [locations, setLocations] = useState<TripLocation[]>([]);
+    const [activeTripIds, setActiveTripIds] = useState<Set<string>>(new Set());
     const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
     const [routeDistance, setRouteDistance] = useState(0); // in km
     const [routeDuration, setRouteDuration] = useState(0); // in seconds
@@ -47,8 +49,10 @@ export function RouteTab({ planId }: RouteTabProps) {
 
     const loadLocations = async () => {
         try {
+            console.log('[RouteTab] Loading locations for plan:', planId);
+
             // Fetch plan trips with trip locations
-            const { data: planTrips } = await supabase
+            const { data: planTrips, error } = await supabase
                 .from('plan_trips')
                 .select(`
                     id,
@@ -60,12 +64,26 @@ export function RouteTab({ planId }: RouteTabProps) {
                 .eq('plan_id', planId)
                 .order('sequence');
 
+            console.log('[RouteTab] Fetched plan trips:', planTrips?.length || 0, 'trips');
+            if (error) {
+                console.error('[RouteTab] Error fetching plan trips:', error);
+            }
+
             if (planTrips && planTrips.length > 0) {
                 const locs: TripLocation[] = [];
 
                 for (const pt of planTrips as any[]) {
+                    console.log('[RouteTab] Processing trip:', {
+                        name: pt.trip?.name || pt.custom_location,
+                        hasCoords: !!(pt.trip?.lat && pt.trip?.lng),
+                        hasAddress: !!(pt.trip?.adresse || pt.custom_address),
+                        tripData: pt.trip,
+                        customData: { location: pt.custom_location, address: pt.custom_address }
+                    });
+
                     if (pt.trip?.lat && pt.trip?.lng) {
                         // Database trip with coordinates
+                        console.log('[RouteTab] ✓ Using existing coordinates for:', pt.trip.name);
                         locs.push({
                             id: pt.id,
                             name: pt.trip.name,
@@ -73,28 +91,58 @@ export function RouteTab({ planId }: RouteTabProps) {
                             lng: parseFloat(pt.trip.lng),
                             sequence: pt.sequence,
                         });
+                    } else if (pt.trip?.adresse && !pt.trip?.lat) {
+                        // Database trip with address but no coordinates - try geocoding
+                        console.log('[RouteTab] ⚠️ Trip has address but no coords, geocoding:', pt.trip.name, pt.trip.adresse);
+                        try {
+                            const geocoded = await geocodeAddress(pt.trip.adresse);
+                            if (geocoded) {
+                                console.log('[RouteTab] ✓ Geocoded successfully:', pt.trip.name, geocoded);
+                                locs.push({
+                                    id: pt.id,
+                                    name: pt.trip.name,
+                                    lat: parseFloat(geocoded.lat),
+                                    lng: parseFloat(geocoded.lng),
+                                    sequence: pt.sequence,
+                                });
+                            } else {
+                                console.log('[RouteTab] ✗ Geocoding failed for trip:', pt.trip.name, pt.trip.adresse);
+                            }
+                        } catch (error) {
+                            console.log('[RouteTab] ✗ Geocoding error for trip:', pt.trip.name, error);
+                        }
                     } else if (pt.custom_location && pt.custom_address) {
                         // Custom location - try to geocode the address
+                        console.log('[RouteTab] ⚠️ Custom location, geocoding:', pt.custom_location, pt.custom_address);
                         try {
                             const geocoded = await geocodeAddress(pt.custom_address);
                             if (geocoded) {
+                                console.log('[RouteTab] ✓ Geocoded custom location:', pt.custom_location, geocoded);
                                 locs.push({
                                     id: pt.id,
                                     name: pt.custom_location,
-                                    lat: geocoded.lat,
-                                    lng: geocoded.lng,
+                                    lat: parseFloat(geocoded.lat),
+                                    lng: parseFloat(geocoded.lng),
                                     sequence: pt.sequence,
                                 });
+                            } else {
+                                console.log('[RouteTab] ✗ Geocoding failed for custom location:', pt.custom_location, pt.custom_address);
                             }
                         } catch (error) {
-                            console.log('Geocoding failed for:', pt.custom_address);
+                            console.log('[RouteTab] ✗ Geocoding error for custom location:', pt.custom_location, error);
                         }
+                    } else {
+                        console.log('[RouteTab] ✗ Trip has neither coordinates nor address, skipping:', pt.trip?.name || pt.custom_location);
                     }
                 }
 
+                console.log('[RouteTab] Total locations found:', locs.length);
                 setLocations(locs);
 
-                // Fetch driving route
+                // Initialize all trips as active
+                setActiveTripIds(new Set(locs.map(l => l.id)));
+
+                // Fetch driving route with all trips initially
                 if (locs.length > 1) {
                     await fetchDrivingRoute(locs);
                 }
@@ -180,37 +228,14 @@ export function RouteTab({ planId }: RouteTabProps) {
         }
     };
 
-    // Simple geocoding using Google Maps Geocoding API
-    const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
-        try {
-            // Using a free geocoding service (Nominatim)
-            const encoded = encodeURIComponent(address);
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=1`
-            );
-            const data = await response.json();
-
-            if (data && data.length > 0) {
-                return {
-                    lat: parseFloat(data[0].lat),
-                    lng: parseFloat(data[0].lon),
-                };
-            }
-            return null;
-        } catch (error) {
-            console.error('Geocoding error:', error);
-            return null;
-        }
-    };
-
     const openInGoogleMaps = () => {
-        if (locations.length === 0) {
-            Alert.alert('Keine Route', 'Füge erst Trips hinzu um eine Route zu sehen');
+        if (activeLocations.length === 0) {
+            Alert.alert('Keine Route', 'Aktiviere mindestens einen Trip um eine Route zu sehen');
             return;
         }
 
-        // Build Google Maps URL with waypoints
-        const waypoints = locations
+        // Build Google Maps URL with waypoints (only active trips)
+        const waypoints = activeLocations
             .map(loc => `${loc.lat},${loc.lng}`)
             .join('|');
 
@@ -270,6 +295,76 @@ export function RouteTab({ planId }: RouteTabProps) {
         return `${minutes}min`;
     };
 
+    // Filter locations to only active ones for route calculations
+    const activeLocations = useMemo(() => {
+        return locations.filter(loc => activeTripIds.has(loc.id));
+    }, [locations, activeTripIds]);
+
+    // Apply offset to markers at same location to prevent overlapping/flickering
+    const offsetLocations = useMemo(() => {
+        const threshold = 0.0001; // ~11 meters
+        const offsetDistance = 0.0003; // ~33 meters offset
+        const locationsWithOffset = [];
+
+        for (let i = 0; i < locations.length; i++) {
+            const loc = locations[i];
+            let offsetLat = loc.lat;
+            let offsetLng = loc.lng;
+
+            // Check if this location overlaps with any previous location
+            let overlapCount = 0;
+            for (let j = 0; j < i; j++) {
+                const prevLoc = locationsWithOffset[j];
+                const latDiff = Math.abs(prevLoc.lat - loc.lat);
+                const lngDiff = Math.abs(prevLoc.lng - loc.lng);
+
+                if (latDiff < threshold && lngDiff < threshold) {
+                    overlapCount++;
+                }
+            }
+
+            // If overlapping, offset in a circular pattern
+            if (overlapCount > 0) {
+                const angle = (overlapCount * (360 / 8)) * (Math.PI / 180); // 8 positions max
+                offsetLat = loc.lat + (offsetDistance * Math.cos(angle));
+                offsetLng = loc.lng + (offsetDistance * Math.sin(angle));
+            }
+
+            locationsWithOffset.push({
+                ...loc,
+                lat: offsetLat,
+                lng: offsetLng,
+                originalLat: loc.lat,
+                originalLng: loc.lng,
+            });
+        }
+
+        return locationsWithOffset;
+    }, [locations]);
+
+    // Toggle trip active state
+    const toggleTrip = async (tripId: string) => {
+        const newActiveTripIds = new Set(activeTripIds);
+        if (newActiveTripIds.has(tripId)) {
+            newActiveTripIds.delete(tripId);
+        } else {
+            newActiveTripIds.add(tripId);
+        }
+        setActiveTripIds(newActiveTripIds);
+
+        // Recalculate route with active trips
+        const newActiveLocations = locations.filter(loc => newActiveTripIds.has(loc.id));
+        if (newActiveLocations.length > 1) {
+            await fetchDrivingRoute(newActiveLocations);
+        } else {
+            // Clear route if only 0-1 active trips
+            setRouteCoordinates([]);
+            setRouteDistance(0);
+            setRouteDuration(0);
+            setRouteLegs([]);
+        }
+    };
+
     const totalDistance = calculateTotalDistance();
 
     if (loading) {
@@ -301,23 +396,32 @@ export function RouteTab({ planId }: RouteTabProps) {
                 showsUserLocation
                 showsMyLocationButton
             >
-                {/* Markers for each location */}
-                {locations.map((loc, index) => {
-                    // Build description with next leg info
-                    let description = `Stop ${index + 1}`;
-                    if (index < locations.length - 1 && routeLegs[index]) {
-                        const leg = routeLegs[index];
-                        description += `\n→ ${formatDuration(leg.duration)} (${leg.distance.toFixed(1)} km)`;
-                    }
+                {/* Markers for each location with numbered custom markers */}
+                {offsetLocations.map((loc, index) => {
+                    const isActive = activeTripIds.has(loc.id);
+                    const markerColor = isActive
+                        ? (index === 0 ? '#34C759' : index === offsetLocations.length - 1 ? '#FF3B30' : colors.primary)
+                        : '#999999';
 
                     return (
                         <Marker
                             key={loc.id}
                             coordinate={{ latitude: loc.lat, longitude: loc.lng }}
                             title={loc.name}
-                            description={description}
-                            pinColor={index === 0 ? '#34C759' : index === locations.length - 1 ? '#FF3B30' : colors.primary}
-                        />
+                            description={isActive ? 'Aktiv' : 'Inaktiv'}
+                            onPress={() => toggleTrip(loc.id)}
+                        >
+                            <View style={styles.customMarker}>
+                                <View style={[styles.markerCircle, { backgroundColor: markerColor }]}>
+                                    <Text style={styles.markerNumber}>{index + 1}</Text>
+                                </View>
+                                {!isActive && (
+                                    <View style={styles.inactiveOverlay}>
+                                        <IconSymbol name="slash.circle.fill" size={20} color="#FFF" />
+                                    </View>
+                                )}
+                            </View>
+                        </Marker>
                     );
                 })}
 
@@ -338,7 +442,7 @@ export function RouteTab({ planId }: RouteTabProps) {
                 <View style={styles.infoRow}>
                     <IconSymbol name="mappin.and.ellipse" size={20} color={colors.primary} />
                     <ThemedText style={styles.infoText}>
-                        {locations.length} {locations.length === 1 ? 'Stop' : 'Stops'}
+                        {activeLocations.length}/{locations.length} Stops
                     </ThemedText>
                 </View>
                 <View style={styles.infoRow}>
@@ -357,6 +461,50 @@ export function RouteTab({ planId }: RouteTabProps) {
                     </View>
                 )}
             </View>
+
+            {/* Horizontal Trip List with Toggles */}
+            <ScrollView
+                horizontal
+                style={[styles.tripListContainer, { backgroundColor: colors.card }]}
+                contentContainerStyle={styles.tripListContent}
+                showsHorizontalScrollIndicator={false}
+            >
+                {locations.map((loc, idx) => {
+                    const isActive = activeTripIds.has(loc.id);
+                    return (
+                        <Pressable
+                            key={loc.id}
+                            style={[
+                                styles.tripChip,
+                                {
+                                    backgroundColor: isActive ? colors.primary + '15' : colors.surface,
+                                    borderColor: isActive ? colors.primary : colors.border,
+                                }
+                            ]}
+                            onPress={() => toggleTrip(loc.id)}
+                        >
+                            <View style={styles.tripChipContent}>
+                                <View style={styles.tripChipHeader}>
+                                    <Text style={[styles.tripChipNumber, { color: colors.primary }]}>{idx + 1}</Text>
+                                    <Switch
+                                        value={isActive}
+                                        onValueChange={() => toggleTrip(loc.id)}
+                                        trackColor={{ false: colors.border, true: colors.primary }}
+                                        thumbColor={isActive ? '#FFF' : '#f4f3f4'}
+                                        style={styles.tripSwitch}
+                                    />
+                                </View>
+                                <ThemedText
+                                    style={[styles.tripChipName, { opacity: isActive ? 1 : 0.5 }]}
+                                    numberOfLines={2}
+                                >
+                                    {loc.name}
+                                </ThemedText>
+                            </View>
+                        </Pressable>
+                    );
+                })}
+            </ScrollView>
 
             {/* Google Maps Button */}
             <Pressable
@@ -438,5 +586,82 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    customMarker: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    markerCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 3,
+        borderColor: '#FFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    markerNumber: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    inactiveOverlay: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        backgroundColor: '#EF4444',
+        borderRadius: 10,
+        padding: 2,
+    },
+    tripListContainer: {
+        position: 'absolute',
+        bottom: 80,
+        left: 0,
+        right: 0,
+        maxHeight: 120,
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    tripListContent: {
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        gap: Spacing.sm,
+    },
+    tripChip: {
+        width: 140,
+        padding: Spacing.sm,
+        borderRadius: 12,
+        borderWidth: 2,
+        marginRight: Spacing.xs,
+    },
+    tripChipContent: {
+        flex: 1,
+    },
+    tripChipHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: Spacing.xs,
+    },
+    tripChipNumber: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    tripSwitch: {
+        transform: [{ scale: 0.8 }],
+    },
+    tripChipName: {
+        fontSize: 13,
+        fontWeight: '500',
     },
 });

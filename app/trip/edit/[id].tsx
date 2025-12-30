@@ -15,8 +15,9 @@ import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { DismissKeyboard } from "@/components/DismissKeyboard";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors, Spacing, BorderRadius } from "@/constants/theme";
+import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
     getAusflugById,
@@ -51,12 +52,16 @@ export default function EditTripScreen() {
     const [adresse, setAdresse] = useState("");
     const [region, setRegion] = useState("");
     const [websiteUrl, setWebsiteUrl] = useState("");
+    const [parkplatz, setParkplatz] = useState(""); // Corrected from parkplatzInfos
+    const [kostenStufe, setKostenStufe] = useState<number | null>(null);
     const [niceToKnow, setNiceToKnow] = useState<string[]>([]);
     const [kategorie, setKategorie] = useState<string[]>([]);
     const [niceToKnowOptions, setNiceToKnowOptions] = useState<{ category: string; options: string[] }[]>([]);
     const [kategorieOptions, setKategorieOptions] = useState<string[]>([]);
     const [kategorieExpanded, setKategorieExpanded] = useState(false);
     const [niceToKnowExpanded, setNiceToKnowExpanded] = useState(false);
+    const [parkplatzAnzahl, setParkplatzAnzahl] = useState<'genuegend' | 'maessig' | 'keine' | null>(null);
+    const [parkplatzKostenlos, setParkplatzKostenlos] = useState(false);
 
     useEffect(() => {
         async function loadData() {
@@ -71,6 +76,10 @@ export default function EditTripScreen() {
                 setAdresse(tripData.adresse || "");
                 setRegion(tripData.region || "");
                 setWebsiteUrl(tripData.website_url || "");
+                setParkplatz(tripData.parkplatz || ""); // Corrected
+                setKostenStufe(tripData.kosten_stufe);
+                setParkplatzAnzahl(tripData.parkplatz_anzahl || null);
+                setParkplatzKostenlos(tripData.parkplatz_kostenlos || false);
 
                 // Parse nice_to_know and kategorie_alt from comma-separated strings to arrays
                 setNiceToKnow(tripData.nice_to_know ? tripData.nice_to_know.split(',').map(v => v.trim()) : []);
@@ -102,6 +111,10 @@ export default function EditTripScreen() {
             adresse,
             region,
             website_url: websiteUrl,
+            parkplatz: parkplatz, // Corrected
+            kosten_stufe: kostenStufe,
+            parkplatz_anzahl: parkplatzAnzahl,
+            parkplatz_kostenlos: parkplatzKostenlos,
             nice_to_know: niceToKnow.join(", "),
             kategorie_alt: kategorie.join(", "),
         });
@@ -221,255 +234,347 @@ export default function EditTripScreen() {
     }
 
     return (
-        <>
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: "Ausflug bearbeiten",
-                    headerBackTitle: "Zurück",
-                }}
-            />
-            <ScrollView
-                style={[styles.container, { backgroundColor: colors.background }]}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
-            >
-                {/* Photos Section */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <ThemedText style={styles.sectionTitle}>Fotos</ThemedText>
-                        <Pressable
-                            onPress={handleAddPhoto}
-                            style={[styles.addButton, { backgroundColor: colors.primary }]}
-                        >
-                            <IconSymbol name="plus" size={20} color="#FFFFFF" />
-                            <ThemedText style={styles.addButtonText}>Foto hinzufügen</ThemedText>
-                        </Pressable>
-                    </View>
-
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={styles.photosRow}>
-                            {photos.map((photo) => (
-                                <View key={photo.id} style={styles.photoItem}>
-                                    <Image
-                                        source={{ uri: photo.full_url }}
-                                        style={styles.photoImage}
-                                        contentFit="cover"
-                                    />
-                                    {photo.is_primary && (
-                                        <View style={[styles.primaryBadge, { backgroundColor: colors.primary }]}>
-                                            <ThemedText style={styles.primaryBadgeText}>Titelbild</ThemedText>
-                                        </View>
-                                    )}
-                                    <View style={styles.photoActions}>
-                                        {!photo.is_primary && (
-                                            <Pressable
-                                                onPress={() => handleSetPrimary(photo.id)}
-                                                style={[styles.photoAction, { backgroundColor: colors.surface }]}
-                                            >
-                                                <IconSymbol name="star.fill" size={16} color={colors.primary} />
-                                            </Pressable>
-                                        )}
-                                        <Pressable
-                                            onPress={() => handleDeletePhoto(photo.id)}
-                                            style={[styles.photoAction, { backgroundColor: "#EF4444" }]}
-                                        >
-                                            <IconSymbol name="trash.fill" size={16} color="#FFFFFF" />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            ))}
+        <DismissKeyboard>
+            <>
+                <Stack.Screen
+                    options={{
+                        headerShown: true,
+                        title: "Ausflug bearbeiten",
+                        headerBackTitle: "Zurück",
+                    }}
+                />
+                <ScrollView
+                    style={[styles.container, { backgroundColor: colors.background }]}
+                    contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+                >
+                    {/* Photos Section */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <ThemedText style={styles.sectionTitle}>Fotos</ThemedText>
+                            <Pressable
+                                onPress={handleAddPhoto}
+                                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                            >
+                                <IconSymbol name="plus" size={20} color="#FFFFFF" />
+                                <ThemedText style={styles.addButtonText}>Foto hinzufügen</ThemedText>
+                            </Pressable>
                         </View>
-                    </ScrollView>
-                </View>
 
-                {/* Form Fields */}
-                <View style={styles.section}>
-                    <ThemedText style={styles.sectionTitle}>Details</ThemedText>
-
-                    <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Name *</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={name}
-                            onChangeText={setName}
-                            placeholder="Name des Ausflugs"
-                            placeholderTextColor={colors.textDisabled}
-                        />
-                    </View>
-
-                    <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Beschreibung</ThemedText>
-                        <TextInput
-                            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={beschreibung}
-                            onChangeText={setBeschreibung}
-                            placeholder="Beschreibung des Ausflugs"
-                            placeholderTextColor={colors.textDisabled}
-                            multiline
-                            numberOfLines={4}
-                        />
-                    </View>
-
-                    <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Adresse *</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={adresse}
-                            onChangeText={setAdresse}
-                            placeholder="Adresse"
-                            placeholderTextColor={colors.textDisabled}
-                        />
-                    </View>
-
-                    <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Region</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={region}
-                            onChangeText={setRegion}
-                            placeholder="z.B. Bern, Zürich"
-                            placeholderTextColor={colors.textDisabled}
-                        />
-                    </View>
-
-                    <View style={styles.field}>
-                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Website</ThemedText>
-                        <TextInput
-                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                            value={websiteUrl}
-                            onChangeText={setWebsiteUrl}
-                            placeholder="https://..."
-                            placeholderTextColor={colors.textDisabled}
-                            keyboardType="url"
-                            autoCapitalize="none"
-                        />
-                    </View>
-
-                    <View style={styles.field}>
-                        <Pressable
-                            onPress={() => setKategorieExpanded(!kategorieExpanded)}
-                            style={[styles.collapsibleHeader, { borderColor: colors.border }]}
-                        >
-                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Kategorie</ThemedText>
-                            <IconSymbol
-                                name={kategorieExpanded ? "chevron.up" : "chevron.down"}
-                                size={20}
-                                color={colors.textSecondary}
-                            />
-                        </Pressable>
-                        {kategorieExpanded && (kategorieOptions && kategorieOptions.length > 0 ? (
-                            <View style={styles.checkboxContainer}>
-                                {kategorieOptions.map((kat) => (
-                                    <Pressable
-                                        key={kat}
-                                        onPress={() => {
-                                            const isSelected = kategorie.includes(kat);
-                                            setKategorie(isSelected
-                                                ? kategorie.filter(v => v !== kat)
-                                                : [...kategorie, kat]
-                                            );
-                                        }}
-                                        style={[styles.checkboxItem, { borderColor: colors.border }]}
-                                    >
-                                        <View style={[
-                                            styles.checkbox,
-                                            {
-                                                backgroundColor: kategorie.includes(kat) ? colors.primary : colors.surface,
-                                                borderColor: kategorie.includes(kat) ? colors.primary : colors.border,
-                                            }
-                                        ]}>
-                                            {kategorie.includes(kat) && (
-                                                <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View style={styles.photosRow}>
+                                {photos.map((photo) => (
+                                    <View key={photo.id} style={styles.photoItem}>
+                                        <Image
+                                            source={{ uri: photo.full_url }}
+                                            style={styles.photoImage}
+                                            contentFit="cover"
+                                        />
+                                        {photo.is_primary && (
+                                            <View style={[styles.primaryBadge, { backgroundColor: colors.primary }]}>
+                                                <ThemedText style={styles.primaryBadgeText}>Titelbild</ThemedText>
+                                            </View>
+                                        )}
+                                        <View style={styles.photoActions}>
+                                            {!photo.is_primary && (
+                                                <Pressable
+                                                    onPress={() => handleSetPrimary(photo.id)}
+                                                    style={[styles.photoAction, { backgroundColor: colors.surface }]}
+                                                >
+                                                    <IconSymbol name="star.fill" size={16} color={colors.primary} />
+                                                </Pressable>
                                             )}
+                                            <Pressable
+                                                onPress={() => handleDeletePhoto(photo.id)}
+                                                style={[styles.photoAction, { backgroundColor: "#EF4444" }]}
+                                            >
+                                                <IconSymbol name="trash.fill" size={16} color="#FFFFFF" />
+                                            </Pressable>
                                         </View>
-                                        <ThemedText style={styles.checkboxLabel}>{kat}</ThemedText>
+                                    </View>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+
+                    {/* Form Fields */}
+                    <View style={styles.section}>
+                        <ThemedText style={styles.sectionTitle}>Details</ThemedText>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Name *</ThemedText>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={name}
+                                onChangeText={setName}
+                                placeholder="Name des Ausflugs"
+                                placeholderTextColor={colors.textDisabled}
+                            />
+                        </View>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Beschreibung</ThemedText>
+                            <TextInput
+                                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={beschreibung}
+                                onChangeText={setBeschreibung}
+                                placeholder="Beschreibung des Ausflugs"
+                                placeholderTextColor={colors.textDisabled}
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Adresse *</ThemedText>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={adresse}
+                                onChangeText={setAdresse}
+                                placeholder="Adresse"
+                                placeholderTextColor={colors.textDisabled}
+                            />
+                        </View>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Region</ThemedText>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={region}
+                                onChangeText={setRegion}
+                                placeholder="z.B. Bern, Zürich"
+                                placeholderTextColor={colors.textDisabled}
+                            />
+                        </View>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Parkplatz Infos</ThemedText>
+
+                            {/* Parkplatz Anzahl Dropdown (Simulated with Pressables for now, or use a picker if available/preferred) */}
+                            <View style={{ marginBottom: Spacing.sm }}>
+                                <ThemedText style={[styles.label, { fontSize: 13, color: colors.textSecondary }]}>Anzahl Parkplätze</ThemedText>
+                                <View style={{ flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' }}>
+                                    {[
+                                        { value: 'genuegend', label: 'Genügend' },
+                                        { value: 'maessig', label: 'Mässig' },
+                                        { value: 'keine', label: 'Keine' }
+                                    ].map((option) => (
+                                        <Pressable
+                                            key={option.value}
+                                            onPress={() => setParkplatzAnzahl(option.value as any)}
+                                            style={[
+                                                styles.costOption,
+                                                {
+                                                    backgroundColor: parkplatzAnzahl === option.value ? colors.primary + '20' : colors.surface,
+                                                    borderColor: parkplatzAnzahl === option.value ? colors.primary : colors.border,
+                                                    borderWidth: 1
+                                                }
+                                            ]}
+                                        >
+                                            <ThemedText style={{ color: parkplatzAnzahl === option.value ? colors.primary : colors.text }}>
+                                                {option.label}
+                                            </ThemedText>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            </View>
+
+                            {/* Parkplatz Kostenlos Checkbox */}
+                            <Pressable
+                                onPress={() => setParkplatzKostenlos(!parkplatzKostenlos)}
+                                style={[styles.checkboxItem, { marginBottom: Spacing.sm, borderColor: colors.border, backgroundColor: colors.surface }]}
+                            >
+                                <View style={[
+                                    styles.checkbox,
+                                    {
+                                        backgroundColor: parkplatzKostenlos ? colors.primary : colors.surface,
+                                        borderColor: parkplatzKostenlos ? colors.primary : colors.border,
+                                    }
+                                ]}>
+                                    {parkplatzKostenlos && (
+                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                    )}
+                                </View>
+                                <ThemedText style={styles.checkboxLabel}>Gratis Parkplatz</ThemedText>
+                            </Pressable>
+
+                            <TextInput
+                                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={parkplatz}
+                                onChangeText={setParkplatz}
+                                placeholder="Zusätzliche Infos zum Parken..."
+                                placeholderTextColor={colors.textDisabled}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Preis-Niveau</ThemedText>
+                            <View style={styles.costContainer}>
+                                {[0, 1, 2, 3, 4].map((level) => (
+                                    <Pressable
+                                        key={level}
+                                        onPress={() => setKostenStufe(level)}
+                                        style={[
+                                            styles.costOption,
+                                            {
+                                                backgroundColor: kostenStufe === level ? CostColors[level] + "20" : colors.surface,
+                                                borderWidth: kostenStufe === level ? 2 : 1,
+                                                borderColor: kostenStufe === level ? CostColors[level] : colors.border
+                                            }
+                                        ]}
+                                    >
+                                        <ThemedText style={[
+                                            styles.costOptionText,
+                                            { color: kostenStufe === level ? CostColors[level] : colors.textSecondary }
+                                        ]}>
+                                            {level === 0 ? "Kostenlos" : "CHF " + "🪙".repeat(level)}
+                                        </ThemedText>
                                     </Pressable>
                                 ))}
                             </View>
-                        ) : (
-                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                Keine Kategorien verfügbar
-                            </ThemedText>
-                        ))}
-                    </View>
+                        </View>
 
-                    <View style={styles.field}>
-                        <Pressable
-                            onPress={() => setNiceToKnowExpanded(!niceToKnowExpanded)}
-                            style={[styles.collapsibleHeader, { borderColor: colors.border }]}
-                        >
-                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Gut zu wissen</ThemedText>
-                            <IconSymbol
-                                name={niceToKnowExpanded ? "chevron.up" : "chevron.down"}
-                                size={20}
-                                color={colors.textSecondary}
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Website</ThemedText>
+                            <TextInput
+                                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                                value={websiteUrl}
+                                onChangeText={setWebsiteUrl}
+                                placeholder="https://..."
+                                placeholderTextColor={colors.textDisabled}
+                                keyboardType="url"
+                                autoCapitalize="none"
                             />
-                        </Pressable>
-                        {niceToKnowExpanded && (niceToKnowOptions && niceToKnowOptions.length > 0 ? (
-                            <View style={styles.checkboxContainer}>
-                                {niceToKnowOptions.map(({ category, options }) => (
-                                    <View key={category} style={styles.categorySection}>
-                                        <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
-                                            {category}
-                                        </ThemedText>
-                                        <View style={styles.categoryOptions}>
-                                            {options.map((option) => (
-                                                <Pressable
-                                                    key={option}
-                                                    onPress={() => {
-                                                        const isSelected = niceToKnow.includes(option);
-                                                        setNiceToKnow(isSelected
-                                                            ? niceToKnow.filter(v => v !== option)
-                                                            : [...niceToKnow, option]
-                                                        );
-                                                    }}
-                                                    style={[styles.checkboxItem, { borderColor: colors.border }]}
-                                                >
-                                                    <View style={[
-                                                        styles.checkbox,
-                                                        {
-                                                            backgroundColor: niceToKnow.includes(option) ? colors.primary : colors.surface,
-                                                            borderColor: niceToKnow.includes(option) ? colors.primary : colors.border,
-                                                        }
-                                                    ]}>
-                                                        {niceToKnow.includes(option) && (
-                                                            <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
-                                                        )}
-                                                    </View>
-                                                    <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
-                                                </Pressable>
-                                            ))}
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        ) : (
-                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                Keine Optionen verfügbar
-                            </ThemedText>
-                        ))}
-                    </View>
-                </View>
-            </ScrollView>
+                        </View>
 
-            {/* Save Button */}
-            <View style={[styles.saveContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + Spacing.md }]}>
-                <Pressable
-                    onPress={handleSave}
-                    disabled={isSaving}
-                    style={[styles.saveButton, { backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 }]}
-                >
-                    {isSaving ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                        <>
-                            <IconSymbol name="checkmark" size={20} color="#FFFFFF" />
-                            <ThemedText style={styles.saveButtonText}>Speichern</ThemedText>
-                        </>
-                    )}
-                </Pressable>
-            </View>
-        </>
+                        <View style={styles.field}>
+                            <Pressable
+                                onPress={() => setKategorieExpanded(!kategorieExpanded)}
+                                style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                            >
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Kategorie</ThemedText>
+                                <IconSymbol
+                                    name={kategorieExpanded ? "chevron.up" : "chevron.down"}
+                                    size={20}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                            {kategorieExpanded && (kategorieOptions && kategorieOptions.length > 0 ? (
+                                <View style={styles.checkboxContainer}>
+                                    {kategorieOptions.map((kat) => (
+                                        <Pressable
+                                            key={kat}
+                                            onPress={() => {
+                                                const isSelected = kategorie.includes(kat);
+                                                setKategorie(isSelected
+                                                    ? kategorie.filter(v => v !== kat)
+                                                    : [...kategorie, kat]
+                                                );
+                                            }}
+                                            style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                        >
+                                            <View style={[
+                                                styles.checkbox,
+                                                {
+                                                    backgroundColor: kategorie.includes(kat) ? colors.primary : colors.surface,
+                                                    borderColor: kategorie.includes(kat) ? colors.primary : colors.border,
+                                                }
+                                            ]}>
+                                                {kategorie.includes(kat) && (
+                                                    <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                )}
+                                            </View>
+                                            <ThemedText style={styles.checkboxLabel}>{kat}</ThemedText>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            ) : (
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+                                    Keine Kategorien verfügbar
+                                </ThemedText>
+                            ))}
+                        </View>
+
+                        <View style={styles.field}>
+                            <Pressable
+                                onPress={() => setNiceToKnowExpanded(!niceToKnowExpanded)}
+                                style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                            >
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Gut zu wissen</ThemedText>
+                                <IconSymbol
+                                    name={niceToKnowExpanded ? "chevron.up" : "chevron.down"}
+                                    size={20}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                            {niceToKnowExpanded && (niceToKnowOptions && niceToKnowOptions.length > 0 ? (
+                                <View style={styles.checkboxContainer}>
+                                    {niceToKnowOptions.map(({ category, options }) => (
+                                        <View key={category} style={styles.categorySection}>
+                                            <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
+                                                {category}
+                                            </ThemedText>
+                                            <View style={styles.categoryOptions}>
+                                                {options.map((option) => (
+                                                    <Pressable
+                                                        key={option}
+                                                        onPress={() => {
+                                                            const isSelected = niceToKnow.includes(option);
+                                                            setNiceToKnow(isSelected
+                                                                ? niceToKnow.filter(v => v !== option)
+                                                                : [...niceToKnow, option]
+                                                            );
+                                                        }}
+                                                        style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                                    >
+                                                        <View style={[
+                                                            styles.checkbox,
+                                                            {
+                                                                backgroundColor: niceToKnow.includes(option) ? colors.primary : colors.surface,
+                                                                borderColor: niceToKnow.includes(option) ? colors.primary : colors.border,
+                                                            }
+                                                        ]}>
+                                                            {niceToKnow.includes(option) && (
+                                                                <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                            )}
+                                                        </View>
+                                                        <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
+                                                    </Pressable>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
+                                    Keine Optionen verfügbar
+                                </ThemedText>
+                            ))}
+                        </View>
+
+                    </View>
+                </ScrollView>
+
+                {/* Save Button */}
+                <View style={[styles.saveContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + Spacing.md }]}>
+                    <Pressable
+                        onPress={handleSave}
+                        disabled={isSaving}
+                        style={[styles.saveButton, { backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 }]}
+                    >
+                        {isSaving ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <>
+                                <IconSymbol name="checkmark" size={20} color="#FFFFFF" />
+                                <ThemedText style={styles.saveButtonText}>Speichern</ThemedText>
+                            </>
+                        )}
+                    </Pressable>
+                </View>
+            </>
+        </DismissKeyboard>
     );
 }
 
@@ -638,5 +743,20 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
         fontSize: 16,
         fontWeight: "600",
+    },
+    costContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: Spacing.sm,
+    },
+    costOption: {
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.sm,
+        borderRadius: BorderRadius.md,
+        borderWidth: 1,
+    },
+    costOptionText: {
+        fontSize: 14,
+        fontWeight: "500",
     },
 });

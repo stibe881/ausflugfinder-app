@@ -19,7 +19,7 @@ interface Friend {
     user?: {
         id: number;
         email: string;
-        username?: string;
+        name?: string;
     };
 }
 
@@ -32,7 +32,7 @@ interface Participant {
     children_count: number;
     user?: {
         email: string;
-        username?: string;
+        name?: string;
     };
 }
 
@@ -63,7 +63,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
         // Load friends
         const { data: friendsData } = await supabase
             .from('friends')
-            .select('*, user:users!friends_friend_user_id_fkey(id, email, username)')
+            .select('*, user:users!friends_friend_user_id_fkey(id, email, name)')
             .eq('status', 'accepted');
 
         if (friendsData) {
@@ -73,7 +73,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
         // Load current participants
         const { data: participantsData } = await supabase
             .from('plan_participants')
-            .select('*, user:users(email, username)')
+            .select('*, user:users(email, name)')
             .eq('plan_id', planId);
 
         if (participantsData) {
@@ -117,8 +117,8 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                 plan_id: planId,
                 email: customEmail.trim() || customName.trim(),
                 role: 'participant',
-                adults_count: parseInt(adults) || 1,
-                children_count: parseInt(children) || 0,
+                adults_count: isNaN(parseInt(adults)) ? 1 : parseInt(adults),
+                children_count: isNaN(parseInt(children)) ? 0 : parseInt(children),
                 invitation_status: 'pending'
             });
 
@@ -154,8 +154,8 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
             .from('plan_participants')
             .update({
                 email: editEmail.trim(),
-                adults_count: parseInt(adults) || 1,
-                children_count: parseInt(children) || 0
+                adults_count: isNaN(parseInt(adults)) ? 1 : parseInt(adults),
+                children_count: isNaN(parseInt(children)) ? 0 : parseInt(children),
             })
             .eq('id', editingParticipant.id);
 
@@ -237,7 +237,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                                             <IconSymbol name="person.fill" size={20} color={colors.primary} />
                                             <View style={styles.participantDetails}>
                                                 <ThemedText style={styles.participantName}>
-                                                    {participant.user?.username || participant.email || 'Unbekannt'}
+                                                    {participant.user?.name || participant.email || 'Unbekannt'}
                                                 </ThemedText>
                                                 <ThemedText style={[styles.participantMeta, { color: colors.textSecondary }]}>
                                                     {participant.adults_count} Erw. · {participant.children_count} Kinder
@@ -296,9 +296,9 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                                             <IconSymbol name="person.circle" size={24} color={colors.primary} />
                                             <View style={styles.friendInfo}>
                                                 <ThemedText style={styles.friendName}>
-                                                    {friend.user.username || friend.user.email}
+                                                    {friend.user.name || friend.user.email}
                                                 </ThemedText>
-                                                {friend.user.username && (
+                                                {friend.user.name && (
                                                     <ThemedText style={[styles.friendEmail, { color: colors.textSecondary }]}>
                                                         {friend.user.email}
                                                     </ThemedText>
@@ -425,7 +425,7 @@ export function ParticipantsModal({ visible, planId, onClose, onDataChanged }: P
                             <View style={[styles.dialogContent, { backgroundColor: colors.surface }]}>
                                 <ThemedText style={styles.dialogTitle}>Teilnehmer bearbeiten</ThemedText>
                                 <ThemedText style={[styles.dialogMessage, { color: colors.textSecondary }]}>
-                                    {editingParticipant.user?.username || editingParticipant.email}
+                                    {editingParticipant.user?.name || editingParticipant.email}
                                 </ThemedText>
 
                                 {/* Name/Email Field */}

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Pressable, TextInput, Alert, Modal } from 'react-native';
+import { View, ScrollView, StyleSheet, Pressable, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { BudgetSummary } from '@/components/planning/BudgetSummary';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Spacing, Colors, BorderRadius } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { getCostSummary, addPlanCost } from '@/lib/planning-api';
+import { getCostSummary, addPlanCost, deletePlanCost } from '@/lib/planning-api';
 import { supabase } from '@/lib/supabase';
 
 interface BudgetTabProps {
@@ -79,9 +79,43 @@ export function BudgetTab({ planId }: BudgetTabProps) {
             .select('*')
             .eq('plan_id', planId);
 
-        if (participantData) {
-            setParticipants(participantData as Participant[]);
+        // Also load plan creator
+        const { data: planData } = await supabase
+            .from('plans')
+            .select('created_by')
+            .eq('id', planId)
+            .single();
+
+        // Fetch creator user details
+        let creatorName = planData?.created_by || '';
+        if (planData?.created_by) {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('name, email')
+                .eq('email', planData.created_by)
+                .single();
+
+            if (userData) {
+                creatorName = userData.name || userData.email;
+            }
         }
+
+        // Include creator as a participant if not already in list
+        const allParticipants = [...(participantData || [])];
+        if (planData?.created_by) {
+            const creatorExists = allParticipants.some(p => p.email === planData.created_by);
+            if (!creatorExists) {
+                // Add creator as implicit participant with 1 adult
+                allParticipants.unshift({
+                    id: 'creator',
+                    email: creatorName, // Use fetched name instead of email
+                    adults_count: 1,
+                    children_count: 0,
+                });
+            }
+        }
+
+        setParticipants(allParticipants as Participant[]);
 
         // Load all costs
         const { data: costData } = await supabase
@@ -143,6 +177,69 @@ export function BudgetTab({ planId }: BudgetTabProps) {
         }
     };
 
+    const handleDeleteCost = async (costId: string) => {
+        Alert.alert(
+            'Ausgabe löschen',
+            'Möchtest du diese Ausgabe wirklich löschen?',
+            [
+                { text: 'Abbrechen', style: 'cancel' },
+                {
+                    text: 'Löschen',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const result = await deletePlanCost(costId);
+                        if (result.success) {
+                            loadBudgetData();
+                        } else {
+                            Alert.alert('Fehler', 'Ausgabe konnte nicht gelöscht werden');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    // Calculate cost per participant based on split_type
+    const calculateParticipantCost = (participantId: string) => {
+        let totalCost = 0;
+
+        costs.forEach(cost => {
+            const participant = participants.find(p => p.id === participantId);
+            if (!participant) return;
+
+            if (cost.split_type === 'all' || !cost.split_type) {
+                // Divide equally among all persons
+                const totalPersons = participants.reduce((sum, p) => sum + p.adults_count + p.children_count, 0);
+                const personCount = participant.adults_count + participant.children_count;
+                if (totalPersons > 0) {
+                    totalCost += (cost.amount / totalPersons) * personCount;
+                }
+            } else if (cost.split_type === 'adults_only') {
+                // Divide only among adults
+                const totalAdults = participants.reduce((sum, p) => sum + p.adults_count, 0);
+                if (totalAdults > 0) {
+                    totalCost += (cost.amount / totalAdults) * participant.adults_count;
+                }
+            } else if (cost.split_type === 'specific' && cost.split_participant_ids) {
+                // Divide only among selected participants
+                if (cost.split_participant_ids.includes(participantId)) {
+                    const selectedParticipants = participants.filter(p =>
+                        cost.split_participant_ids?.includes(p.id)
+                    );
+                    const totalPersonsInSplit = selectedParticipants.reduce(
+                        (sum, p) => sum + p.adults_count + p.children_count, 0
+                    );
+                    const personCount = participant.adults_count + participant.children_count;
+                    if (totalPersonsInSplit > 0) {
+                        totalCost += (cost.amount / totalPersonsInSplit) * personCount;
+                    }
+                }
+            }
+        });
+
+        return totalCost;
+    };
+
     const totalPersons = participants.reduce((sum, p) => sum + p.adults_count + p.children_count, 0) || 1;
     const costPerPerson = summary.total / totalPersons;
 
@@ -166,8 +263,7 @@ export function BudgetTab({ planId }: BudgetTabProps) {
                         </View>
 
                         {participants.map(participant => {
-                            const personCount = participant.adults_count + participant.children_count;
-                            const participantCost = costPerPerson * personCount;
+                            const participantCost = calculateParticipantCost(participant.id);
 
                             return (
                                 <View key={participant.id} style={[styles.participantCard, { borderColor: colors.border }]}>
@@ -222,6 +318,12 @@ export function BudgetTab({ planId }: BudgetTabProps) {
                                         <ThemedText style={styles.costAmount}>
                                             CHF {cost.amount.toFixed(2)}
                                         </ThemedText>
+                                        <Pressable
+                                            onPress={() => handleDeleteCost(cost.id)}
+                                            style={styles.deleteButton}
+                                        >
+                                            <IconSymbol name="trash" size={18} color="#EF4444" />
+                                        </Pressable>
                                     </View>
                                 ))}
                             </View>
@@ -264,8 +366,15 @@ export function BudgetTab({ planId }: BudgetTabProps) {
                 animationType="fade"
                 onRequestClose={() => setShowAddDialog(false)}
             >
-                <View style={styles.dialogOverlay}>
-                    <View style={[styles.dialogContent, { backgroundColor: colors.surface }]}>
+                <Pressable
+                    style={styles.dialogOverlay}
+                    onPress={Keyboard.dismiss}
+                >
+                    <View
+                        style={[styles.dialogContent, { backgroundColor: colors.surface }]}
+                        onStartShouldSetResponder={() => true}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                    >
                         <ThemedText style={styles.dialogTitle}>Ausgabe hinzufügen</ThemedText>
 
                         <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Beschreibung</ThemedText>
@@ -446,8 +555,8 @@ export function BudgetTab({ planId }: BudgetTabProps) {
                             </Pressable>
                         </View>
                     </View>
-                </View>
-            </Modal>
+                </Pressable>
+            </Modal >
         </>
     );
 }
@@ -662,5 +771,9 @@ const styles = StyleSheet.create({
     participantCheckboxMeta: {
         fontSize: 11,
         marginTop: 2,
+    },
+    deleteButton: {
+        padding: Spacing.sm,
+        marginLeft: Spacing.sm,
     },
 });

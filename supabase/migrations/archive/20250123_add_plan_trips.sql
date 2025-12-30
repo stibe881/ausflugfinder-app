@@ -23,6 +23,8 @@ CREATE INDEX IF NOT EXISTS idx_plan_trips_trip_id ON public.plan_trips(trip_id);
 ALTER TABLE public.plan_trips ENABLE ROW LEVEL SECURITY;
 
 -- Users can view trips for plans they have access to
+-- Users can view trips for plans they have access to
+DROP POLICY IF EXISTS "Users can view trips for their plans" ON public.plan_trips;
 CREATE POLICY "Users can view trips for their plans"
     ON public.plan_trips
     FOR SELECT
@@ -31,12 +33,13 @@ CREATE POLICY "Users can view trips for their plans"
             SELECT 1 FROM public.plans
             WHERE plans.id = plan_trips.plan_id
             AND plans.creator_id IN (
-                SELECT id FROM public.users WHERE open_id = auth.uid()
+                SELECT id FROM public.users WHERE open_id = auth.uid()::text
             )
         )
     );
 
 -- Users can insert trips to their plans
+DROP POLICY IF EXISTS "Users can insert trips to their plans" ON public.plan_trips;
 CREATE POLICY "Users can insert trips to their plans"
     ON public.plan_trips
     FOR INSERT
@@ -45,12 +48,13 @@ CREATE POLICY "Users can insert trips to their plans"
             SELECT 1 FROM public.plans
             WHERE plans.id = plan_trips.plan_id
             AND plans.creator_id IN (
-                SELECT id FROM public.users WHERE open_id = auth.uid()
+                SELECT id FROM public.users WHERE open_id = auth.uid()::text
             )
         )
     );
 
 -- Users can update trips in their plans
+DROP POLICY IF EXISTS "Users can update trips in their plans" ON public.plan_trips;
 CREATE POLICY "Users can update trips in their plans"
     ON public.plan_trips
     FOR UPDATE
@@ -59,12 +63,13 @@ CREATE POLICY "Users can update trips in their plans"
             SELECT 1 FROM public.plans
             WHERE plans.id = plan_trips.plan_id
             AND plans.creator_id IN (
-                SELECT id FROM public.users WHERE open_id = auth.uid()
+                SELECT id FROM public.users WHERE open_id = auth.uid()::text
             )
         )
     );
 
 -- Users can delete trips from their plans
+DROP POLICY IF EXISTS "Users can delete trips from their plans" ON public.plan_trips;
 CREATE POLICY "Users can delete trips from their plans"
     ON public.plan_trips
     FOR DELETE
@@ -73,7 +78,7 @@ CREATE POLICY "Users can delete trips from their plans"
             SELECT 1 FROM public.plans
             WHERE plans.id = plan_trips.plan_id
             AND plans.creator_id IN (
-                SELECT id FROM public.users WHERE open_id = auth.uid()
+                SELECT id FROM public.users WHERE open_id = auth.uid()::text
             )
         )
     );

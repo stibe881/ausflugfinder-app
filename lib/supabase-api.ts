@@ -30,6 +30,12 @@ export type Ausflug = {
     is_rundtour: boolean;
     is_von_a_nach_b: boolean;
     altersempfehlung: string | null;
+    kinderwagen?: boolean;
+    hundefreundlich?: boolean;
+    dauer?: string;
+    parkplaetze?: boolean;
+    oeffentlicher_verkehr?: boolean;
+    parkplatz_anzahl?: 'genuegend' | 'maessig' | 'keine' | null;
 };
 
 // Search ausfluege with optional filters
@@ -243,7 +249,7 @@ export async function createAusflug(data: {
     distanz_km?: string;
     is_rundtour?: boolean;
     is_von_a_nach_b?: boolean;
-}): Promise<{ success: boolean; id?: number; error?: string }> {
+}): Promise<{ success: boolean; id?: number; error?: string; notificationResult?: any }> {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -266,7 +272,27 @@ export async function createAusflug(data: {
         }
 
         console.log("[createAusflug] Created successfully:", result.id);
-        return { success: true, id: result.id };
+
+        // Notify users about the new trip (awaiting for debug purposes)
+        let notificationResult = null;
+        try {
+            const { data, error } = await supabase.functions.invoke('notify-new-trip', {
+                body: { record: { id: result.id, ...data } }
+            });
+
+            if (error) {
+                console.error("[createAusflug] Notification error:", error);
+                notificationResult = { error: error };
+            } else {
+                console.log("[createAusflug] Notification result:", data);
+                notificationResult = data;
+            }
+        } catch (e) {
+            console.error("[createAusflug] Notification exception:", e);
+            notificationResult = { exception: e };
+        }
+
+        return { success: true, id: result.id, notificationResult };
     } catch (error: any) {
         console.error("[createAusflug] Unexpected error:", error);
         return { success: false, error: error.message };
@@ -584,6 +610,11 @@ export type DayPlan = {
     start_date: string;
     end_date: string;
     is_public: boolean;
+    kinderwagen?: boolean;
+    hundefreundlich?: boolean;
+    dauer?: string;
+    parkplaetze?: boolean;
+    oeffentlicher_verkehr?: boolean;
     is_draft: boolean;
     created_at: string;
 };
@@ -754,6 +785,7 @@ export type UserTrip = {
     lng?: string | null;
     is_favorite: boolean;
     is_done: boolean;
+    is_bookmarked: boolean; // New field
     primaryPhotoUrl?: string | null;
     image?: string | null; // Trip image URL
 };
@@ -785,6 +817,7 @@ export async function getUserTrips(): Promise<UserTrip[]> {
         .select(`
             is_favorite,
             is_done,
+            is_bookmarked,
             ausfluege (
                 id,
                 name,
@@ -812,22 +845,76 @@ export async function getUserTrips(): Promise<UserTrip[]> {
     console.log('[getUserTrips] Photos map sample:', photos[tripIds[0]]);
 
     // Map to UserTrip type
-    return (data || []).map((ut: any) => ({
-        id: ut.ausfluege.id,
-        name: ut.ausfluege.name,
-        beschreibung: ut.ausfluege.beschreibung,
-        adresse: ut.ausfluege.adresse,
-        region: ut.ausfluege.region,
-        kosten_stufe: ut.ausfluege.kosten_stufe,
-        lat: ut.ausfluege.lat,
-        lng: ut.ausfluege.lng,
-        is_favorite: ut.is_favorite,
-        is_done: ut.is_done,
-        primaryPhotoUrl: photos[ut.ausfluege.id] || null,
-        image: photos[ut.ausfluege.id] || null, // Also provide as 'image' for compatibility
+    return data.map((item: any) => ({
+        id: item.ausfluege.id,
+        name: item.ausfluege.name,
+        beschreibung: item.ausfluege.beschreibung,
+        adresse: item.ausfluege.adresse,
+        region: item.ausfluege.region,
+        kosten_stufe: item.ausfluege.kosten_stufe,
+        lat: item.ausfluege.lat,
+        lng: item.ausfluege.lng,
+        is_favorite: item.is_favorite,
+        is_done: item.is_done,
+        is_bookmarked: item.is_bookmarked || false, // Default to false if null
+        primaryPhotoUrl: photos[item.ausfluege.id] || null,
+        image: photos[item.ausfluege.id] || null, // Also provide as 'image' for compatibility
     }));
 }
 
+// Toggle trip bookmark status
+export async function toggleTripBookmarked(tripId: number): Promise<{ success: boolean; error?: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, error: "Not authenticated" };
+    }
+
+    // Get user's integer ID
+    const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("open_id", user.id)
+        .single();
+
+    if (!userData) {
+        return { success: false, error: "User not found" };
+    }
+
+    // Check if entry exists
+    const { data: existingEntry } = await supabase
+        .from("user_trips")
+        .select("is_bookmarked")
+        .eq("user_id", userData.id)
+        .eq("trip_id", tripId)
+        .single();
+
+    if (existingEntry) {
+        // Toggle
+        const { error } = await supabase
+            .from("user_trips")
+            .update({ is_bookmarked: !existingEntry.is_bookmarked })
+            .eq("user_id", userData.id)
+            .eq("trip_id", tripId);
+
+        if (error) return { success: false, error: error.message };
+    } else {
+        // Create new entry
+        const { error } = await supabase
+            .from("user_trips")
+            .insert({
+                user_id: userData.id,
+                trip_id: tripId,
+                is_bookmarked: true,
+                is_favorite: false,
+                is_done: false
+            });
+
+        if (error) return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
 // Add a trip to user's collection
 export async function addUserTrip(tripId: number, isFavorite: boolean = false): Promise<{ success: boolean; error?: string }> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -1402,6 +1489,119 @@ export async function getAllPushTokens(): Promise<{ success: boolean; tokens?: s
     }
 }
 
+// ============================================================================
+// NOTIFICATION TEMPLATES
+// ============================================================================
+
+export type NotificationTemplate = {
+    id: number;
+    title: string;
+    message: string;
+    is_system: boolean;
+    created_by: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Get all notification templates (admin only)
+ */
+export async function getNotificationTemplates(): Promise<{ success: boolean; templates?: NotificationTemplate[]; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('notification_templates')
+            .select('*')
+            .order('is_system', { ascending: false })
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, templates: data };
+    } catch (error: any) {
+        console.error('[getNotificationTemplates] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Create a new notification template (admin only)
+ */
+export async function createNotificationTemplate(
+    title: string,
+    message: string
+): Promise<{ success: boolean; template?: NotificationTemplate; error?: string }> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: 'Not authenticated' };
+        }
+
+        const { data, error } = await supabase
+            .from('notification_templates')
+            .insert({
+                title,
+                message,
+                is_system: false,
+                created_by: user.id,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { success: true, template: data };
+    } catch (error: any) {
+        console.error('[createNotificationTemplate] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update a notification template (admin only, non-system only)
+ */
+export async function updateNotificationTemplate(
+    id: number,
+    title: string,
+    message: string
+): Promise<{ success: boolean; template?: NotificationTemplate; error?: string }> {
+    try {
+        const { data, error } = await supabase
+            .from('notification_templates')
+            .update({ title, message, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .eq('is_system', false)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { success: true, template: data };
+    } catch (error: any) {
+        console.error('[updateNotificationTemplate] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete a notification template (admin only, non-system only)
+ */
+export async function deleteNotificationTemplate(id: number): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('notification_templates')
+            .delete()
+            .eq('id', id)
+            .eq('is_system', false);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('[deleteNotificationTemplate] Error:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================================================
+// BROADCAST NOTIFICATIONS
+// ============================================================================
+
 /**
  * Send broadcast notification to all users (admin only)
  */
@@ -1438,7 +1638,9 @@ export async function sendBroadcastNotification(
         if (!response.ok) {
             const errorData = await response.json();
             console.error('[sendBroadcastNotification] Expo API error:', errorData);
-            return { success: false, error: 'Failed to send notifications' };
+            // Return specific error details
+            const errorMsg = errorData.errors?.[0]?.message || 'Failed to send notifications';
+            return { success: false, error: `Expo API Error: ${errorMsg}` };
         }
 
         console.log(`[sendBroadcastNotification] Sent to ${tokens.length} devices`);

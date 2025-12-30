@@ -236,7 +236,7 @@ export default function TripsScreen() {
     { key: "distance", label: t.sortByDistance },
   ];
 
-  const [filter, setFilter] = useState<"all" | "favorites" | "done">("all");
+  const [filter, setFilter] = useState<"all" | "favorites" | "done" | "bookmarked">("all");
   const [sortBy, setSortBy] = useState<"name" | "distance">("name");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -369,6 +369,7 @@ export default function TripsScreen() {
     .filter((trip) => {
       if (filter === "favorites") return trip.is_favorite;
       if (filter === "done") return trip.is_done;
+      if (filter === "bookmarked") return trip.is_bookmarked;
       return true;
     })
     .sort((a, b) => {
@@ -392,6 +393,7 @@ export default function TripsScreen() {
 
   const filterOptions = [
     { key: "all", label: t.allFilter, count: trips.length },
+    { key: "bookmarked", label: "Gemerkt", count: trips.filter(t => t.is_bookmarked).length }, // Add visual label "Gemerkt" or use translation if available
     { key: "favorites", label: t.favorites, count: trips.filter(t => t.is_favorite).length },
     { key: "done", label: t.done, count: trips.filter(t => t.is_done).length },
   ];

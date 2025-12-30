@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Notifications from "expo-notifications";
 import "react-native-reanimated";
 import { Platform } from "react-native";
 import {
@@ -98,7 +99,7 @@ export default function RootLayout() {
                       <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
                       <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
                       <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
-                      <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung" }} />
+                      <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung", headerBackTitle: "Zurück" }} />
                       <Stack.Screen name="admin/create-trip" options={{ headerShown: true, title: "Neuer Ausflug" }} />
                       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
                       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
@@ -116,6 +117,24 @@ export default function RootLayout() {
       </trpc.Provider>
     </GestureHandlerRootView>
   );
+
+  // Handle notification clicks
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response.notification.request.content.data.url;
+      if (url) {
+        // Use router from expo-router globally or import it here?
+        // Ideally we should import router. But hook is cleaner.
+        // Since we are in Layout, we might not have router readily available via hook if not inside context? 
+        // Actually useRouter works in Layout too.
+        // But better use the 'router' import for imperative navigation
+        const { router } = require('expo-router');
+        router.push(url);
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const shouldOverrideSafeArea = Platform.OS === "web";
 

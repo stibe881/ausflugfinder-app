@@ -1,175 +1,63 @@
-import { useRouter, Stack } from "expo-router";
-import { useState, useCallback } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Stack, router } from 'expo-router';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors, Spacing } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { FriendsScreen } from '@/components/friends/FriendsScreen';
+import { useAuth } from '@/hooks/use-auth';
 
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuth } from "@/hooks/use-auth";
-import { trpc } from "@/lib/trpc";
-
-type Friend = {
-  id: number;
-  userId: number;
-  friendId: number;
-  status: "pending" | "accepted" | "blocked";
-  requestedBy: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function FriendItem({ friend }: { friend: Friend }) {
+export default function FriendsPage() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
+  const colors = Colors[colorScheme ?? 'light'];
+  const { user, loading } = useAuth();
 
-  return (
-    <View style={[styles.friendItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={[styles.avatar, { backgroundColor: colors.primary + "20" }]}>
-        <ThemedText style={[styles.avatarText, { color: colors.primary }]}>
-          {"F"}
-        </ThemedText>
-      </View>
-      <View style={styles.friendInfo}>
-        <ThemedText style={styles.friendName}>
-          Freund #{friend.friendId}
-        </ThemedText>
-        <ThemedText style={[styles.friendEmail, { color: colors.textSecondary }]}>
-          ID: {friend.id}
-        </ThemedText>
-      </View>
-      <View style={[styles.statusBadge, { backgroundColor: friend.status === "accepted" ? BrandColors.primary + "20" : BrandColors.secondary + "20" }]}>
-        <ThemedText style={[styles.statusText, { color: friend.status === "accepted" ? BrandColors.primary : BrandColors.secondary }]}>
-          {friend.status === "accepted" ? "Freund" : "Ausstehend"}
-        </ThemedText>
-      </View>
-    </View>
-  );
-}
-
-export default function FriendsScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"];
-  const { isAuthenticated, loading: authLoading } = useAuth();
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-
-  const { data: friends, isLoading, refetch } = trpc.friends.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
-
-  const filteredFriends = (friends || []).filter((friend) => {
-    if (!searchQuery) return true;
-    return true; // Filter by ID for now
-  });
-
-  if (authLoading) {
+  if (loading) {
     return (
-      <ThemedView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </ThemedView>
+      <>
+        <Stack.Screen options={{ headerShown: true, headerTitle: 'Freunde' }} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <ThemedText>Laden...</ThemedText>
+        </View>
+      </>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <>
-        <Stack.Screen options={{ headerShown: true, headerTitle: "Freunde" }} />
-        <ThemedView style={styles.container}>
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="person.2.fill" size={64} color={colors.textSecondary} />
-            <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-              Anmeldung erforderlich
-            </ThemedText>
-            <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        <Stack.Screen options={{ headerShown: true, headerTitle: 'Freunde' }} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.emptyState}>
+            <IconSymbol name="person.2" size={64} color={colors.textSecondary} />
+            <ThemedText style={styles.emptyTitle}>Nicht angemeldet</ThemedText>
+            <ThemedText style={[styles.emptyText, { color: colors.textSecondary }]}>
               Melde dich an, um Freunde zu verwalten
             </ThemedText>
+            <Pressable
+              style={[styles.loginButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/profile')}
+            >
+              <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
+            </Pressable>
           </View>
-        </ThemedView>
+        </View>
       </>
     );
   }
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, headerTitle: "Freunde", headerBackTitle: "Zurück" }} />
-      <ThemedView style={styles.container}>
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <IconSymbol name="magnifyingglass" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Freunde suchen..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </View>
-
-        {/* Friends List */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : filteredFriends.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <IconSymbol name="person.2.fill" size={48} color={colors.textSecondary} />
-            <ThemedText style={[styles.emptyTitle, { color: colors.text }]}>
-              {searchQuery ? "Keine Freunde gefunden" : "Noch keine Freunde"}
-            </ThemedText>
-            <ThemedText style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              {searchQuery ? "Versuche einen anderen Suchbegriff" : "Lade Freunde ein, um gemeinsam Ausflüge zu planen"}
-            </ThemedText>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredFriends}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.friendsList}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.primary}
-              />
-            }
-            renderItem={({ item }) => <FriendItem friend={item as Friend} />}
-          />
-        )}
-
-        {/* Add Friend FAB */}
-        <Pressable
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            // TODO: Implement friend invite dialog
-            alert('Freund hinzufügen - Feature kommt bald!');
-          }}
-        >
-          <IconSymbol name="person.badge.plus" size={24} color="#FFF" />
-        </Pressable>
-      </ThemedView>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTitle: 'Freunde',
+          headerBackTitle: 'Zurück'
+        }}
+      />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <FriendsScreen />
+      </View>
     </>
   );
 }
@@ -178,105 +66,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  emptyState: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    gap: Spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: Spacing.xs,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: Spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "600",
+    fontWeight: '700',
     marginTop: Spacing.lg,
-    textAlign: "center",
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: Spacing.sm,
-    lineHeight: 20,
-  },
-  friendsList: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  friendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
     marginBottom: Spacing.sm,
-    gap: Spacing.md,
   },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
+  emptyText: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
   },
-  avatarText: {
-    fontSize: 20,
-    fontWeight: "600",
+  loginButton: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: 12,
   },
-  friendInfo: {
-    flex: 1,
-  },
-  friendName: {
+  loginButtonText: {
+    color: '#FFF',
     fontSize: 16,
-    fontWeight: "500",
-  },
-  friendEmail: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    fontWeight: '600',
   },
 });
-``
