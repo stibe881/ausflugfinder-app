@@ -41,7 +41,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
         async function checkAdminStatus() {
             if (!user) {
-                if (mounted) setIsDbAdmin(false);
+                if (mounted) {
+                    setIsDbAdmin(false);
+                    setIsLoaded(true); // FIX: Ensure we stop loading if no user
+                }
                 return;
             }
 

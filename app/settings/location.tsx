@@ -7,6 +7,97 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, BrandColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useLocation, DISTANCE_OPTIONS } from "@/hooks/use-location";
+
+function SettingToggle({
+    icon,
+    iconColor,
+    title,
+    description,
+    value,
+    onValueChange,
+}: {
+    icon: any;
+    iconColor: string;
+    title: string;
+    description: string;
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+}) {
+    const colorScheme = useColorScheme();
+    const colors = Colors[colorScheme ?? "light"];
+
+    return (
+        <View style={[styles.settingItem, { borderColor: colors.border, backgroundColor: colors.card }]}>
+            <View style={[styles.settingIcon, { backgroundColor: iconColor + "20" }]}>
+                <IconSymbol name={icon} size={22} color={iconColor} />
+            </View>
+            <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>{title}</ThemedText>
+                <ThemedText style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                    {description}
+                </ThemedText>
+            </View>
+            <Switch
+                value={value}
+                onValueChange={onValueChange}
+                trackColor={{ false: colors.border, true: BrandColors.primary }}
+                thumbColor={"#FFF"}
+            />
+        </View>
+    );
+}
+
+function DistanceSelector({
+    value,
+    onValueChange,
+    disabled,
+}: {
+    value: number;
+    onValueChange: (value: number) => void;
+    disabled: boolean;
+}) {
+    const colorScheme = useColorScheme();
+    const colors = Colors[colorScheme ?? "light"];
+
+    return (
+        <View style={[styles.distanceContainer, { borderColor: colors.border, opacity: disabled ? 0.5 : 1 }]}>
+            <View style={styles.distanceHeader}>
+                <IconSymbol name="ruler" size={20} color={colors.textSecondary} />
+                <ThemedText style={[styles.distanceHeaderText, { color: colors.textSecondary }]}>
+                    Benachrichtigungsradius
+                </ThemedText>
+            </View>
+            <View style={styles.distanceOptions}>
+                {DISTANCE_OPTIONS.map((option) => (
+                    <Pressable
+                        key={option.value}
+                        onPress={() => !disabled && onValueChange(option.value)}
+                        style={[
+                            styles.distanceOption,
+                            {
+                                borderColor: value === option.value ? BrandColors.primary : colors.border,
+                                backgroundColor: value === option.value ? BrandColors.primary + "15" : "transparent",
+                            },
+                        ]}
+                    >
+                        <ThemedText
+                            style={[
+                                styles.distanceOptionText,
+                                {
+                                    color: value === option.value ? BrandColors.primary : colors.text,
+                                    fontWeight: value === option.value ? "600" : "400",
+                                },
+                            ]}
+                        >
+                            {option.label}
+                        </ThemedText>
+                    </Pressable>
+                ))}
+            </View>
+        </View>
+    );
+}
 
 
 export default function LocationSettingsScreen() {

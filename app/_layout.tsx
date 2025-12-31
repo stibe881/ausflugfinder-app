@@ -23,6 +23,7 @@ import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 import { AdminProvider } from "@/contexts/admin-context";
 import { ProximityTrackingInitializer } from "@/components/proximity-tracking-initializer";
 import { NotificationInitializer } from "@/components/notification-initializer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -81,38 +82,40 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <SupabaseAuthProvider>
-            <AdminProvider>
-              <AppThemeProvider>
-                <LanguageProvider>
-                  <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-                    <Stack>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-                      <Stack.Screen name="planning" options={{ headerShown: false }} />
-                      <Stack.Screen name="trip/[id]" options={{ headerShown: false }} />
-                      <Stack.Screen name="trip/edit/[id]" options={{ headerShown: true, title: "Bearbeiten" }} />
-                      <Stack.Screen name="plan/[id]" options={{ headerShown: true }} />
-                      <Stack.Screen name="friends" options={{ headerShown: true }} />
-                      <Stack.Screen name="about" options={{ headerShown: true }} />
-                      <Stack.Screen name="settings/language" options={{ headerShown: true }} />
-                      <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
-                      <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
-                      <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
-                      <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung", headerBackTitle: "Zurück" }} />
-                      <Stack.Screen name="admin/create-trip" options={{ headerShown: true, title: "Neuer Ausflug" }} />
-                      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/register" options={{ headerShown: false }} />
-                      <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
-                    </Stack>
-                    <ProximityTrackingInitializer />
-                    <NotificationInitializer />
-                    <StatusBar style={colorScheme === "dark" ? "light" : "dark"} translucent backgroundColor="transparent" />
-                  </ThemeProvider>
-                </LanguageProvider>
-              </AppThemeProvider>
-            </AdminProvider>
-          </SupabaseAuthProvider>
+          <ErrorBoundary>
+            <SupabaseAuthProvider>
+              <AdminProvider>
+                <AppThemeProvider>
+                  <LanguageProvider>
+                    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+                      <Stack>
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+                        <Stack.Screen name="planning" options={{ headerShown: false }} />
+                        <Stack.Screen name="trip/[id]" options={{ headerShown: false }} />
+                        <Stack.Screen name="trip/edit/[id]" options={{ headerShown: true, title: "Bearbeiten" }} />
+                        <Stack.Screen name="plan/[id]" options={{ headerShown: true }} />
+                        <Stack.Screen name="friends" options={{ headerShown: true }} />
+                        <Stack.Screen name="about" options={{ headerShown: true }} />
+                        <Stack.Screen name="settings/language" options={{ headerShown: true }} />
+                        <Stack.Screen name="settings/appearance" options={{ headerShown: true, headerBackTitle: "Zurück" }} />
+                        <Stack.Screen name="settings/notifications" options={{ headerShown: true }} />
+                        <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
+                        <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung", headerBackTitle: "Zurück" }} />
+                        <Stack.Screen name="admin/create-trip" options={{ headerShown: true, title: "Neuer Ausflug" }} />
+                        <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+                        <Stack.Screen name="auth/register" options={{ headerShown: false }} />
+                        <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
+                      </Stack>
+                      <ProximityTrackingInitializer />
+                      <NotificationInitializer />
+                      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} translucent backgroundColor="transparent" />
+                    </ThemeProvider>
+                  </LanguageProvider>
+                </AppThemeProvider>
+              </AdminProvider>
+            </SupabaseAuthProvider>
+          </ErrorBoundary>
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>
