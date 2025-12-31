@@ -1171,7 +1171,7 @@ export async function uploadProfilePhoto(fileUri: string): Promise<{ success: bo
 }
 
 // Helper function to get primary photos for multiple trips
-async function getPrimaryPhotosForTrips(tripIds: number[]): Promise<Record<number, string>> {
+export async function getPrimaryPhotosForTrips(tripIds: number[]): Promise<Record<number, string>> {
     if (tripIds.length === 0) return {};
 
     const { data, error } = await supabase

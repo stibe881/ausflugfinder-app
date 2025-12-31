@@ -125,12 +125,7 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
           showsMyLocationButton={true}
           toolbarEnabled={false}
           moveOnMarkerPress={false}
-          // Clustering props
-          clusterColor={BrandColors.primary}
-          clusterTextColor="#FFFFFF"
-          spiderLineColor={BrandColors.primary}
-          animationEnabled={false} // Disable animation for stability
-          tracksViewChanges={false} // Performance optimization
+        // clustered={false}
         >
           {tripsWithCoords.map((trip) => {
             const latitude = parseFloat(trip.lat!);
@@ -140,11 +135,12 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
               <Marker
                 key={`trip-${trip.id}`}
                 coordinate={{ latitude, longitude }}
-                pinColor={CostMarkerColors[trip.kosten_stufe ?? 0] || CostMarkerColors[0]} // Fallback for safety
+                pinColor={CostMarkerColors[trip.kosten_stufe ?? 0] || CostMarkerColors[0]}
                 zIndex={1}
-                tracksViewChanges={false} // CRITICAL: Prevents native crash on rapid updates
+                tracksViewChanges={false}
+                onPress={() => { }} // Empty handler to allow callout to open
               >
-                <Callout onPress={() => onMarkerPress?.(trip.id)}>
+                <Callout tooltip onPress={() => onMarkerPress?.(trip.id)}>
                   <View style={styles.calloutContainer}>
                     {trip.primaryPhotoUrl && (
                       <Image
@@ -154,17 +150,11 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
                       />
                     )}
                     <View style={styles.calloutContent}>
-                      <Text style={styles.calloutTitle} numberOfLines={1}>
-                        {trip.name}
-                      </Text>
-                      <Text style={styles.calloutSubtitle} numberOfLines={1}>
-                        {trip.region} • {CostLabels[trip.kosten_stufe ?? 0]}
-                      </Text>
-                      {trip.kategorie_alt && (
-                        <Text style={styles.calloutCategory} numberOfLines={1}>
-                          {trip.kategorie_alt}
-                        </Text>
+                      <Text style={styles.calloutTitle} numberOfLines={1}>{trip.name}</Text>
+                      {trip.region && (
+                        <Text style={styles.calloutSubtitle} numberOfLines={1}>{trip.region}</Text>
                       )}
+                      <Text style={styles.calloutCategory}>{CostLabels[trip.kosten_stufe ?? 0]}</Text>
                     </View>
                   </View>
                 </Callout>

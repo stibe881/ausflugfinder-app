@@ -27,6 +27,7 @@ import {
   type Ausflug,
   type AusflugWithPhoto,
   getPrimaryPhoto,
+  getPrimaryPhotosForTrips,
   addUserTrip,
   getUserTrips,
   toggleTripFavorite, // Added from instruction
@@ -323,18 +324,14 @@ export default function ExploreScreen() {
     });
 
     // Fetch primary photos in batches to avoid overwhelming the network
-    const batchSize = 10;
-    const tripsWithPhotos = [];
-    for (let i = 0; i < result.data.length; i += batchSize) {
-      const batch = result.data.slice(i, i + batchSize);
-      const batchWithPhotos = await Promise.all(
-        batch.map(async (ausflug) => {
-          const primaryPhotoUrl = await getPrimaryPhoto(ausflug.id);
-          return { ...ausflug, primaryPhotoUrl };
-        })
-      );
-      tripsWithPhotos.push(...batchWithPhotos);
-    }
+    // OPTIMIZED: Use bulk fetch for photos to prevent N+1 DB calls and memory crash
+    const ausflugIds = result.data.map(t => t.id);
+    const photoMap = await getPrimaryPhotosForTrips(ausflugIds);
+
+    const tripsWithPhotos = result.data.map(ausflug => ({
+      ...ausflug,
+      primaryPhotoUrl: photoMap[ausflug.id] || null,
+    }));
 
     setTrips(tripsWithPhotos as any);
     setIsLoading(false);
@@ -668,7 +665,7 @@ export default function ExploreScreen() {
       </View>
 
       {/* Cost Filter Chips */}
-      <View style={styles.filterContainer}>
+      {/* <View style={styles.filterContainer}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -683,7 +680,7 @@ export default function ExploreScreen() {
             />
           )}
         />
-      </View>
+      </View> */}
 
       {/* Content - Grid or Map */}
       {viewMode === "map" ? (
