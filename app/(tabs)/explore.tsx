@@ -35,6 +35,7 @@ import {
   getNiceToKnowOptions, // Added from instruction
 } from "@/lib/supabase-api";
 import { useAuth } from "@/hooks/use-auth";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useLanguage } from "@/contexts/language-context";
 import * as Location from "expo-location";
 
@@ -289,6 +290,10 @@ export default function ExploreScreen() {
 
   const params = useLocalSearchParams();
 
+  // Debounced filter values to prevent rapid API calls
+  const debouncedKeyword = useDebounce(keyword, 500);
+  const debouncedCost = useDebounce(selectedCost, 500);
+
   // Handle URL params for view mode and cost filter
   useEffect(() => {
     if (params.view === 'map') {
@@ -303,11 +308,17 @@ export default function ExploreScreen() {
 
 
   // Fetch trips with filters and photos
-  const fetchTrips = useCallback(async () => {
+  // Refactored to accept arguments for immediate usage (e.g. refresh) or use debounced values
+  const fetchTrips = useCallback(async (searchKeyword?: string, searchCost?: string | null) => {
     setIsLoading(true);
-    const kostenStufe = selectedCost ? { free: 0, low: 1, medium: 2, high: 3, very_high: 4 }[selectedCost] : undefined;
+    // Use arguments if provided, otherwise fallback to debounced values (or undefined if not yet ready, though usually passed)
+    // Note: In useEffect we pass debounced. In refresh we pass current state.
+    const queryKeyword = searchKeyword === undefined ? debouncedKeyword : searchKeyword;
+    const queryCost = searchCost === undefined ? debouncedCost : searchCost;
+
+    const kostenStufe = queryCost ? { free: 0, low: 1, medium: 2, high: 3, very_high: 4 }[queryCost] : undefined;
     const result = await searchAusfluege({
-      keyword: keyword || undefined,
+      keyword: queryKeyword || undefined,
       kostenStufe,
     });
 
@@ -327,7 +338,7 @@ export default function ExploreScreen() {
 
     setTrips(tripsWithPhotos as any);
     setIsLoading(false);
-  }, [keyword, selectedCost]);
+  }, []); // Removed dependencies on state to avoid closure staleness, passed as args now
 
   // Get user location for distance sorting
   useEffect(() => {
@@ -433,10 +444,10 @@ export default function ExploreScreen() {
     loadUserTrips();
   }, []);
 
-  // Refetch when filters change
+  // Refetch when DEBOUNCED filters change
   useEffect(() => {
-    fetchTrips();
-  }, [keyword, selectedCost, fetchTrips]);
+    fetchTrips(debouncedKeyword, debouncedCost);
+  }, [debouncedKeyword, debouncedCost, fetchTrips]);
 
   // Reload user trips when focused to keep sync with detail page changes
   useFocusEffect(
@@ -447,11 +458,11 @@ export default function ExploreScreen() {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchTrips();
+    await fetchTrips(keyword, selectedCost); // Use current state for manual refresh
     await fetchStats();
     await loadUserTrips();
     setRefreshing(false);
-  }, [fetchTrips, fetchStats, loadUserTrips]);
+  }, [fetchTrips, fetchStats, loadUserTrips, keyword, selectedCost]);
 
   const handleTripPress = (tripId: number) => {
     router.push(`/trip/${tripId}` as any);

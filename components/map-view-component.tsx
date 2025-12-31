@@ -140,8 +140,9 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
               <Marker
                 key={`trip-${trip.id}`}
                 coordinate={{ latitude, longitude }}
-                pinColor={CostMarkerColors[trip.kosten_stufe ?? 0]}
+                pinColor={CostMarkerColors[trip.kosten_stufe ?? 0] || CostMarkerColors[0]} // Fallback for safety
                 zIndex={1}
+                tracksViewChanges={false} // CRITICAL: Prevents native crash on rapid updates
               >
                 <Callout onPress={() => onMarkerPress?.(trip.id)}>
                   <View style={styles.calloutContainer}>
