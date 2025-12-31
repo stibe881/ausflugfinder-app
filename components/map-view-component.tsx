@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, StyleSheet, Platform, Text, Image, Dimensions } from 'react-native';
 import Constants from 'expo-constants';
-import MapView, { Marker, Callout, PROVIDER_DEFAULT, Region } from 'react-native-maps';
+import MapView from 'react-native-map-clustering';
+import { Marker, Callout, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 
 import { ThemedText } from './themed-text';
 import { GoogleMapsWeb } from './google-maps-web';
@@ -96,14 +97,8 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
     return <GoogleMapsWeb trips={trips} onMarkerPress={onMarkerPress} />;
   }
 
-  // Expo Go fallback
-  if (isExpoGo) {
-    return (
-      <View style={[styles.fallback, { backgroundColor: colors.surface }]}>
-        <ThemedText>Karte nur in Production Build</ThemedText>
-      </View>
-    );
-  }
+  // Expo Go check removed to allow testing with Apple Maps
+  // if (isExpoGo) { ... }
 
   // No trips
   if (tripsWithCoords.length === 0) {
@@ -130,6 +125,12 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
           showsMyLocationButton={true}
           toolbarEnabled={false}
           moveOnMarkerPress={false}
+          // Clustering props
+          clusterColor={BrandColors.primary}
+          clusterTextColor="#FFFFFF"
+          spiderLineColor={BrandColors.primary}
+          animationEnabled={false} // Disable animation for stability
+          tracksViewChanges={false} // Performance optimization
         >
           {tripsWithCoords.map((trip) => {
             const latitude = parseFloat(trip.lat!);
