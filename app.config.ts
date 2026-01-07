@@ -48,7 +48,7 @@ const config: ExpoConfig = {
     infoPlist: {
       CFBundleIconName: "AppIcon",
       ITSAppUsesNonExemptEncryption: false,
-      UIBackgroundModes: ["audio", "location", "fetch", "remote-notification"],
+      UIBackgroundModes: ["location", "fetch", "remote-notification"],
       NSLocationWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort, um Ausflugsziele in deiner Nähe anzuzeigen und dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
       NSLocationAlwaysAndWhenInUseUsageDescription: "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
       NSLocationAlwaysUsageDescription: "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
