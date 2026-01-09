@@ -36,7 +36,7 @@ export default function FriendsPage() {
             </ThemedText>
             <Pressable
               style={[styles.loginButton, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/profile')}
+              onPress={() => router.push('/auth/login' as any)}
             >
               <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>
             </Pressable>

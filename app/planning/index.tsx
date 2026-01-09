@@ -89,7 +89,7 @@ export default function PlanningIndexScreen() {
                             Melde dich an, um Ausflüge zu planen
                         </ThemedText>
                         <Pressable
-                            onPress={() => router.push("/login" as any)}
+                            onPress={() => router.push("/auth/login" as any)}
                             style={[styles.loginButton, { backgroundColor: colors.primary }]}
                         >
                             <ThemedText style={styles.loginButtonText}>Anmelden</ThemedText>

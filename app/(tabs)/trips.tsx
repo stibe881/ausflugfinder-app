@@ -414,7 +414,7 @@ export default function TripsScreen() {
         <View style={styles.header}>
           <ThemedText style={styles.headerTitle}>Meine Trips</ThemedText>
         </View>
-        <LoginPrompt onLogin={() => router.push("/login" as any)} />
+        <LoginPrompt onLogin={() => router.push("/auth/login" as any)} />
       </ThemedView>
     );
   }

@@ -68,7 +68,7 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow $(PRODUCT_NAME) to access your photos</string>
+    <string>AusflugFinder benötigt Zugriff auf deine Fotobibliothek, um Fotos zu deinem Profil hinzuzufügen. Die Fotos werden nur lokal gespeichert und nicht mit anderen geteilt.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
@@ -77,7 +77,6 @@
     <true/>
     <key>UIBackgroundModes</key>
     <array>
-      <string>location</string>
       <string>fetch</string>
       <string>remote-notification</string>
     </array>

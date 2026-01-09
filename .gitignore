@@ -51,7 +51,7 @@ app-example
 
 # Logs
 logs
-*.log
+# *.log  # Temporär auskommentiert um Build-Logs zu lesen
 
 # OS
 Thumbs.db
@@ -62,3 +62,6 @@ Thumbs.db
 .cache/
 ios/Pods/
 pc-api-key.json
+
+# Auto Claude data directory
+.auto-claude/
