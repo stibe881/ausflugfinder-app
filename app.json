@@ -30,6 +30,7 @@
                 "CFBundleIconName": "AppIcon",
                 "ITSAppUsesNonExemptEncryption": false,
                 "UIBackgroundModes": [
+                    "location",
                     "fetch",
                     "remote-notification"
                 ],
