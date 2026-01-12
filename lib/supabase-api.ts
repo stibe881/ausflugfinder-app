@@ -1767,3 +1767,94 @@ export async function getWeatherForecast(lat: number, lng: number): Promise<{ su
 export function getWeatherIconUrl(iconCode: string): string {
     return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 }
+
+// ============ TRIP VOUCHERS ============
+
+export type TripVoucher = {
+    id: string;
+    titel: string;
+    code: string | null;
+    deep_link: string;
+    ist_eingeloest: boolean;
+    ausflug_id: number | null;
+};
+
+// Get all vouchers linked to a trip (jetzt aus gutscheine Tabelle)
+export async function getTripVouchers(tripId: number): Promise<TripVoucher[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    console.log('[getTripVouchers] ===== DEBUG START =====');
+    console.log('[getTripVouchers] Trip ID:', tripId);
+    console.log('[getTripVouchers] Current user:', user?.id);
+    console.log('[getTripVouchers] User email:', user?.email);
+
+    if (!user) {
+        console.log("[Supabase] User not authenticated for getTripVouchers");
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("gutscheine")
+        .select("id, titel, code, ist_eingeloest, ausflug_id, user_id")
+        .eq("ausflug_id", tripId)
+        .eq("ist_eingeloest", false)
+        .order("created_at", { ascending: false });
+
+    console.log('[getTripVouchers] Query result:', {
+        data: data?.length || 0,
+        error: error?.message,
+        fullError: error
+    });
+
+    if (data && data.length > 0) {
+        console.log('[getTripVouchers] Found vouchers:', data.map(v => ({
+            id: v.id,
+            titel: v.titel,
+            user_id: v.user_id,
+            matches_current_user: v.user_id === user.id
+        })));
+    }
+
+    if (error) {
+        console.error("[Supabase] Error fetching trip vouchers:", error);
+        return [];
+    }
+
+    // Map to TripVoucher format with deep_link
+    const vouchers = (data || []).map((v) => ({
+        id: v.id,
+        titel: v.titel,
+        code: v.code,
+        deep_link: `manus20251231101003://gutschein/${v.id}`,
+        ist_eingeloest: v.ist_eingeloest,
+        ausflug_id: v.ausflug_id,
+    }));
+
+    console.log('[getTripVouchers] Returning vouchers:', vouchers.length);
+    console.log('[getTripVouchers] ===== DEBUG END =====');
+
+    return vouchers;
+}
+
+// Open voucher in Gutschein app using deep link
+export async function openVoucherDeepLink(deepLink: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { Linking } = require('react-native');
+
+        console.log('[DeepLink] Attempting to open:', deepLink);
+
+        // Just try to open directly - canOpenURL is often too restrictive in development
+        await Linking.openURL(deepLink);
+        console.log('[DeepLink] Successfully opened');
+        return { success: true };
+    } catch (error: any) {
+        console.error("[DeepLink] Error opening URL:", error);
+        const { Alert } = require('react-native');
+        Alert.alert(
+            "Gutschein öffnen",
+            `Konnte Gutschein-App nicht öffnen.\n\nFehler: ${error.message}\n\nBitte öffne die Gutschein-App manuell.`,
+            [{ text: "OK" }]
+        );
+        return { success: false, error: error.message };
+    }
+}

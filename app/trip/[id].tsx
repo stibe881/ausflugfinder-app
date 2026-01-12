@@ -20,7 +20,7 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, toggleTripBookmarked, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, toggleTripBookmarked, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast, getTripVouchers, openVoucherDeepLink, type TripVoucher } from "@/lib/supabase-api";
 import { useAdmin } from "@/contexts/admin-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
@@ -98,6 +98,10 @@ export default function TripDetailScreen() {
   const [showForecast, setShowForecast] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
+  // Vouchers state
+  const [vouchers, setVouchers] = useState<TripVoucher[]>([]);
+  const [vouchersLoading, setVouchersLoading] = useState(false);
+
   // Fetch trip data and photo from Supabase
   useEffect(() => {
     async function loadTrip() {
@@ -146,6 +150,30 @@ export default function TripDetailScreen() {
     }
     loadTrip();
   }, [id, isAuthenticated]);
+
+  // Fetch trip vouchers
+  useEffect(() => {
+    async function loadVouchers() {
+      console.log('[loadVouchers] useEffect triggered', {
+        hasTrip: !!trip,
+        tripId: trip?.id,
+        isAuthenticated
+      });
+
+      if (!trip || !isAuthenticated) {
+        console.log('[loadVouchers] Skipping: trip or auth missing');
+        return;
+      }
+
+      console.log('[loadVouchers] Loading vouchers for trip:', trip.id);
+      setVouchersLoading(true);
+      const voucherData = await getTripVouchers(trip.id);
+      console.log('[loadVouchers] Loaded vouchers:', voucherData);
+      setVouchers(voucherData);
+      setVouchersLoading(false);
+    }
+    loadVouchers();
+  }, [trip, isAuthenticated]);
 
   // Fetch weather data
   useEffect(() => {
@@ -737,6 +765,54 @@ export default function TripDetailScreen() {
               </View>
             ) : null}
 
+            {/* Linked Vouchers */}
+            {isAuthenticated && (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>Verknüpfte Gutscheine</ThemedText>
+                {vouchersLoading ? (
+                  <View style={{ paddingVertical: Spacing.lg }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : vouchers.length > 0 ? (
+                  <View style={{ gap: Spacing.sm }}>
+                    {vouchers.map((voucher) => (
+                      <Pressable
+                        key={voucher.id}
+                        onPress={async () => {
+                          const result = await openVoucherDeepLink(voucher.deep_link);
+                          if (!result.success) {
+                            Alert.alert("Fehler", result.error || "Gutschein-App konnte nicht geöffnet werden");
+                          }
+                        }}
+                        style={({ pressed }) => ([
+                          styles.voucherCard,
+                          { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }
+                        ])}
+                      >
+                        <View style={[styles.voucherIcon, { backgroundColor: colors.primary + "15" }]}>
+                          <IconSymbol name="giftcard.fill" size={24} color={colors.primary} />
+                        </View>
+                        <View style={styles.voucherContent}>
+                          <ThemedText style={styles.voucherTitle}>{voucher.titel}</ThemedText>
+                          <ThemedText style={[styles.voucherCode, { color: colors.textSecondary }]}>
+                            {voucher.code ? `Code: ${voucher.code}` : "Kein Code"}
+                          </ThemedText>
+                        </View>
+                        <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} />
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={[styles.emptyVouchers, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <IconSymbol name="giftcard" size={32} color={colors.textSecondary} />
+                    <ThemedText style={[styles.emptyVouchersText, { color: colors.textSecondary }]}>
+                      Noch keine Gutscheine verknüpft
+                    </ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Admin Actions */}
             {canEdit && (
               <View style={styles.section}>
@@ -1125,8 +1201,43 @@ const styles = StyleSheet.create({
   },
   forecastDescription: {
     fontSize: 12,
+  },
+  // Voucher styles
+  voucherCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    gap: Spacing.md,
+  },
+  voucherIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voucherContent: {
     flex: 1,
-    textAlign: "right",
-    textTransform: "capitalize",
+  },
+  voucherTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  voucherCode: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  emptyVouchers: {
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  emptyVouchersText: {
+    fontSize: 14,
+    textAlign: "center",
   },
 });
