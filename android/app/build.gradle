@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ausflugfinder.ausflugfinder'
+    namespace 'com.ausflugfinder.app'
     defaultConfig {
-        applicationId 'com.ausflugfinder.ausflugfinder'
+        applicationId 'com.ausflugfinder.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
