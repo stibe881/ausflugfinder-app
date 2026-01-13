@@ -1,4 +1,4 @@
-package com.ausflugfinder.ausflugfinder
+package com.ausflugfinder.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

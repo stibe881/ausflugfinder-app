@@ -1,4 +1,4 @@
-package com.ausflugfinder.ausflugfinder
+package com.ausflugfinder.app
 
 import android.app.Application
 import android.content.res.Configuration
