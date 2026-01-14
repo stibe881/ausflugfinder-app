@@ -6,7 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import "react-native-reanimated";
-import { Platform } from "react-native";
+import { Platform, View, Text } from "react-native";
+import { useFonts } from "expo-font";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -37,6 +38,11 @@ export default function RootLayout() {
   const colorScheme = useAppColorScheme();
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
+
+  // Load fonts for Material Icons
+  const [fontsLoaded] = useFonts({
+    'MaterialIcons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
+  });
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
@@ -140,6 +146,15 @@ export default function RootLayout() {
   }, []);
 
   const shouldOverrideSafeArea = Platform.OS === "web";
+
+  // Show loading screen while fonts are loading
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   if (shouldOverrideSafeArea) {
     return (

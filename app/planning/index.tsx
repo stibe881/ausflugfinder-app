@@ -38,7 +38,9 @@ export default function PlanningIndexScreen() {
         const data = await getPlans();
         setPlans(data);
         setIsLoading(false);
-    }, []); useEffect(() => {
+    }, []);
+
+    useEffect(() => {
         if (isAuthenticated) {
             loadPlans();
         }
