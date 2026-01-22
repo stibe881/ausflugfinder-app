@@ -153,7 +153,19 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
                     <View style={styles.calloutContent}>
                       <Text style={styles.calloutTitle} numberOfLines={1}>{trip.name}</Text>
                       <Text style={styles.calloutSubtitle} numberOfLines={1}>
-                        {(trip.adresse && trip.adresse.match(/\d{4}\s+(.+)/)?.[1]) || trip.region || ''}
+                        {(() => {
+                          const addr = trip.adresse || "";
+                          const zipMatch = addr.match(/\b\d{4}\s+([^,]+)/);
+                          if (zipMatch?.[1]) return zipMatch[1].trim();
+
+                          if (addr.includes(",")) {
+                            const parts = addr.split(",");
+                            const lastPart = parts[parts.length - 1].trim();
+                            if (lastPart && isNaN(Number(Number(lastPart)))) return lastPart;
+                          }
+
+                          return trip.region || "";
+                        })()}
                       </Text>
                       <Text style={styles.calloutCategory}>{CostLabels[trip.kosten_stufe ?? 0]}</Text>
                     </View>

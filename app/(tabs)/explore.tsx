@@ -190,7 +190,22 @@ function TripCard({
         <View style={styles.tripLocation}>
           <IconSymbol name="mappin.and.ellipse" size={12} color={colors.textSecondary} />
           <ThemedText style={[styles.tripLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {trip.adresse.match(/\d{4}\s+(.+)/)?.[1] || trip.region || trip.adresse.split(",")[0]}
+            {(() => {
+              // 1. Try to extract ZIP + City (e.g., "8000 Zürich")
+              const zipMatch = trip.adresse.match(/\b\d{4}\s+([^,]+)/);
+              if (zipMatch?.[1]) return zipMatch[1].trim();
+
+              // 2. Try to extract city after comma (e.g., "Street 1, City")
+              if (trip.adresse.includes(",")) {
+                const parts = trip.adresse.split(",");
+                const lastPart = parts[parts.length - 1].trim();
+                // Ensure it's not just a number or empty
+                if (lastPart && isNaN(Number(lastPart))) return lastPart;
+              }
+
+              // 3. Fallback to Region, then raw address start
+              return trip.region || trip.adresse.split(",")[0];
+            })()}
           </ThemedText>
           {isSaved && (
             <IconSymbol name="checkmark.circle.fill" size={14} color={SemanticColors.success} />
@@ -337,7 +352,7 @@ export default function ExploreScreen() {
 
     setTrips(tripsWithPhotos as any);
     setIsLoading(false);
-  }, []); // Removed dependencies on state to avoid closure staleness, passed as args now
+  }, [activeFilters, debouncedKeyword, debouncedCost]); // Added activeFilters to dependencies
 
   // Get user location for distance sorting
   useEffect(() => {
@@ -494,7 +509,7 @@ export default function ExploreScreen() {
         <View>
           <ThemedText style={styles.headerTitle}>{t.explore}</ThemedText>
           <ThemedText style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-            {stats?.totalActivities || 0} {t.activitiesWaiting}
+            {filteredTrips.length} {t.activitiesWaiting}
           </ThemedText>
         </View>
         <View style={styles.headerButtons}>

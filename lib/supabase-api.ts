@@ -46,9 +46,6 @@ export async function searchAusfluege(params?: {
     hasVoucher?: boolean;
 }): Promise<{ data: Ausflug[]; total: number }> {
     let selectString = "*";
-    if (params?.hasVoucher) {
-        selectString = "*, vouchers!inner(id)";
-    }
 
     let query = supabase
         .from("ausfluege")
@@ -69,7 +66,28 @@ export async function searchAusfluege(params?: {
         query = query.eq("kosten_stufe", params.kostenStufe);
     }
 
-    // hasVoucher is handled by the !inner join in selectString
+    // Manual filter for hasVoucher to avoid FK issues
+    if (params?.hasVoucher) {
+        const { data: voucherTrips, error: voucherError } = await supabase
+            .from('vouchers')
+            .select('trip_id')
+            .not('trip_id', 'is', null);
+
+        if (!voucherError && voucherTrips && voucherTrips.length > 0) {
+            // Extract unique trip IDs
+            const tripIds = [...new Set(voucherTrips.map(v => v.trip_id))];
+            if (tripIds.length > 0) {
+                query = query.in('id', tripIds);
+            } else {
+                // No trips have vouchers, return empty result strictly
+                // We can simulate this by asking for id=0 or similar, or just return empty now
+                return { data: [], total: 0 };
+            }
+        } else {
+            // Error or no vouchers found at all
+            return { data: [], total: 0 };
+        }
+    }
 
     const { data, error } = await query;
 

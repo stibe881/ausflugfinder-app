@@ -15,13 +15,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 import { Image } from "expo-image";
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { EditProfileModal } from "@/components/edit-profile-modal";
 import { FeedbackModal } from "@/components/feedback-modal";
-import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
+import { Colors, BrandColors, SemanticColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
@@ -211,6 +213,29 @@ export default function ProfileScreen() {
     loadAvatar();
   }, [supabaseUser, showEditModal]); // Reload when modal closes
 
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+
+  useEffect(() => {
+    checkBiometricStatus();
+  }, []);
+
+  async function checkBiometricStatus() {
+    const hasEmail = await SecureStore.getItemAsync('user_email');
+    setIsBiometricEnabled(!!hasEmail);
+  }
+
+  async function toggleBiometric(value: boolean) {
+    if (!value) {
+      // Disable
+      await SecureStore.deleteItemAsync('user_email');
+      await SecureStore.deleteItemAsync('user_password');
+      setIsBiometricEnabled(false);
+    } else {
+      // Enable - Can't do it here easily without password
+      Alert.alert("Aktivierung", "Bitte melden Sie sich ab und erneut mit E-Mail und Passwort an, um Face ID zu aktivieren.");
+    }
+  }
+
   const user = supabaseUser || manusUser;
   const isAuthenticated = !!supabaseUser || manusAuth;
   const loading = supabaseLoading || manusLoading;
@@ -389,6 +414,19 @@ export default function ProfileScreen() {
                 subtitle={t.appearanceSubtitle}
                 onPress={() => router.push("/settings/appearance" as any)}
               />
+              <SettingItem
+                icon="faceid"
+                iconColor={BrandColors.success}
+                title="Face ID / Touch ID"
+                subtitle={isBiometricEnabled ? "Aktiviert" : "Nicht aktiviert"}
+                rightElement={
+                  <Switch
+                    value={isBiometricEnabled}
+                    onValueChange={toggleBiometric}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                  />
+                }
+              />
             </SettingSection>
 
             <SettingSection title={t.socialSection}>
@@ -481,13 +519,13 @@ export default function ProfileScreen() {
                 icon="rectangle.portrait.and.arrow.right"
                 title={t.logout}
                 onPress={handleLogout}
-                isDestructive
+                danger
               />
               <SettingItem
                 icon="trash.fill"
                 title={t.deleteAccount}
                 onPress={handleDeleteAccount}
-                isDestructive
+                danger
               />
             </SettingSection>
 
