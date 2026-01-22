@@ -113,6 +113,13 @@ const config: ExpoConfig = {
         "locationAlwaysAndWhenInUsePermission": "AusflugFinder benötigt deinen Standort, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
       },
     ],
+    "expo-secure-store",
+    [
+      "expo-local-authentication",
+      {
+        "faceIDUsageDescription": "Ermöglicht das Einloggen mittels Face ID."
+      }
+    ],
     // Temporarily disabled - requires prebuild. Uncomment and run `npx expo prebuild --clean` to enable Route Map
     // [
     //   "react-native-maps",

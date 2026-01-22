@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,17 +15,60 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSupabaseAuth } from '@/contexts/supabase-auth-context';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
   const { signIn } = useSupabaseAuth();
   const insets = useSafeAreaInsets();
-  
+
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
+
+  useEffect(() => {
+    (async () => {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      const hasCredentials = await SecureStore.getItemAsync('user_email');
+      setIsBiometricSupported(compatible && enrolled && !!hasCredentials);
+    })();
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Anmelden mit Face ID',
+        fallbackLabel: 'Passwort verwenden',
+      });
+
+      if (result.success) {
+        setLoading(true);
+        const savedEmail = await SecureStore.getItemAsync('user_email');
+        const savedPassword = await SecureStore.getItemAsync('user_password');
+
+        if (savedEmail && savedPassword) {
+          const { error } = await signIn(savedEmail, savedPassword);
+          if (error) {
+            Alert.alert('Login fehlgeschlagen', 'Gespeicherte Daten sind ungültig.');
+          } else {
+            router.replace('/(tabs)');
+          }
+        } else {
+          Alert.alert('Info', 'Keine Zugangsdaten für Face ID gespeichert.');
+        }
+        setLoading(false);
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Fehler', 'Biometrischer Login nicht möglich.');
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,6 +83,13 @@ export default function LoginScreen() {
     if (error) {
       Alert.alert('Login fehlgeschlagen', error.message);
     } else {
+      // Save credentials locally for biometric login
+      try {
+        await SecureStore.setItemAsync('user_email', email);
+        await SecureStore.setItemAsync('user_password', password);
+      } catch (e) {
+        console.warn('Could not save credentials for biometrics');
+      }
       router.replace('/(tabs)');
     }
   };
@@ -116,6 +166,17 @@ export default function LoginScreen() {
             )}
           </Pressable>
 
+          {isBiometricSupported && (
+            <Pressable
+              style={[styles.biometricButton, { borderColor: tintColor }]}
+              onPress={handleBiometricLogin}
+              disabled={loading}
+            >
+              <IconSymbol name="faceid" size={24} color={tintColor} />
+              <Text style={[styles.biometricButtonText, { color: tintColor }]}>Mit Face ID anmelden</Text>
+            </Pressable>
+          )}
+
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: textColor, opacity: 0.7 }]}>
               Noch kein Konto?{' '}
@@ -183,6 +244,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  biometricButton: {
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 0,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  biometricButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },

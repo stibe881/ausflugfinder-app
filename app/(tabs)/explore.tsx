@@ -190,7 +190,7 @@ function TripCard({
         <View style={styles.tripLocation}>
           <IconSymbol name="mappin.and.ellipse" size={12} color={colors.textSecondary} />
           <ThemedText style={[styles.tripLocationText, { color: colors.textSecondary }]} numberOfLines={1}>
-            {trip.region || trip.adresse.split(",")[0]}
+            {trip.adresse.match(/\d{4}\s+(.+)/)?.[1] || trip.region || trip.adresse.split(",")[0]}
           </ThemedText>
           {isSaved && (
             <IconSymbol name="checkmark.circle.fill" size={14} color={SemanticColors.success} />
@@ -284,7 +284,8 @@ export default function ExploreScreen() {
   const [activeFilters, setActiveFilters] = useState({
     favorites: false,
     notDone: false,
-    bookmarked: false, // New filter
+    bookmarked: false,
+    hasVoucher: false, // New filter
   });
   const { isAuthenticated } = useAuth();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -321,6 +322,7 @@ export default function ExploreScreen() {
     const result = await searchAusfluege({
       keyword: queryKeyword || undefined,
       kostenStufe,
+      hasVoucher: activeFilters.hasVoucher,
     });
 
     // Fetch primary photos in batches to avoid overwhelming the network
@@ -444,7 +446,7 @@ export default function ExploreScreen() {
   // Refetch when DEBOUNCED filters change
   useEffect(() => {
     fetchTrips(debouncedKeyword, debouncedCost);
-  }, [debouncedKeyword, debouncedCost, fetchTrips]);
+  }, [debouncedKeyword, debouncedCost, fetchTrips, activeFilters.hasVoucher]);
 
   // Reload user trips when focused to keep sync with detail page changes
   useFocusEffect(
@@ -502,8 +504,8 @@ export default function ExploreScreen() {
             style={[
               styles.viewModeButton,
               {
-                backgroundColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked) ? colors.primary + "20" : colors.surface,
-                borderColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked) ? colors.primary : colors.border
+                backgroundColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher) ? colors.primary + "20" : colors.surface,
+                borderColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher) ? colors.primary : colors.border
               }
             ]}
           >
@@ -608,6 +610,26 @@ export default function ExploreScreen() {
               Gemerkt
             </ThemedText>
             {activeFilters.bookmarked && (
+              <IconSymbol name="checkmark" size={16} color={colors.primary} />
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={() => setActiveFilters(prev => ({ ...prev, hasVoucher: !prev.hasVoucher }))}
+            style={[
+              styles.sortMenuItem,
+              activeFilters.hasVoucher && { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.sortMenuItemText,
+                activeFilters.hasVoucher && { color: colors.primary, fontWeight: "600" },
+              ]}
+            >
+              Gutschein vorhanden
+            </ThemedText>
+            {activeFilters.hasVoucher && (
               <IconSymbol name="checkmark" size={16} color={colors.primary} />
             )}
           </Pressable>

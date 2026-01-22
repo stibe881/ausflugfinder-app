@@ -18,6 +18,7 @@ type Trip = {
   region: string | null;
   primaryPhotoUrl?: string | null;
   kategorie_alt?: string | null;
+  adresse?: string;
 };
 
 type MapViewComponentProps = {
@@ -151,9 +152,9 @@ export function MapViewComponent({ trips, onMarkerPress }: MapViewComponentProps
                     )}
                     <View style={styles.calloutContent}>
                       <Text style={styles.calloutTitle} numberOfLines={1}>{trip.name}</Text>
-                      {trip.region && (
-                        <Text style={styles.calloutSubtitle} numberOfLines={1}>{trip.region}</Text>
-                      )}
+                      <Text style={styles.calloutSubtitle} numberOfLines={1}>
+                        {(trip.adresse && trip.adresse.match(/\d{4}\s+(.+)/)?.[1]) || trip.region || ''}
+                      </Text>
                       <Text style={styles.calloutCategory}>{CostLabels[trip.kosten_stufe ?? 0]}</Text>
                     </View>
                   </View>

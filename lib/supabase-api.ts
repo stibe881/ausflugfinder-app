@@ -43,10 +43,16 @@ export async function searchAusfluege(params?: {
     keyword?: string;
     region?: string;
     kostenStufe?: number;
+    hasVoucher?: boolean;
 }): Promise<{ data: Ausflug[]; total: number }> {
+    let selectString = "*";
+    if (params?.hasVoucher) {
+        selectString = "*, vouchers!inner(id)";
+    }
+
     let query = supabase
         .from("ausfluege")
-        .select("*")
+        .select(selectString)
         .order("created_at", { ascending: false });
 
     if (params?.keyword) {
@@ -62,6 +68,8 @@ export async function searchAusfluege(params?: {
     if (params?.kostenStufe !== undefined) {
         query = query.eq("kosten_stufe", params.kostenStufe);
     }
+
+    // hasVoucher is handled by the !inner join in selectString
 
     const { data, error } = await query;
 
@@ -1779,55 +1787,45 @@ export type TripVoucher = {
     ausflug_id: number | null;
 };
 
-// Get all vouchers linked to a trip (jetzt aus gutscheine Tabelle)
+// Get all vouchers linked to a trip (jetzt aus vouchers Tabelle)
 export async function getTripVouchers(tripId: number): Promise<TripVoucher[]> {
     const { data: { user } } = await supabase.auth.getUser();
 
     console.log('[getTripVouchers] ===== DEBUG START =====');
     console.log('[getTripVouchers] Trip ID:', tripId);
     console.log('[getTripVouchers] Current user:', user?.id);
-    console.log('[getTripVouchers] User email:', user?.email);
 
     if (!user) {
         console.log("[Supabase] User not authenticated for getTripVouchers");
         return [];
     }
 
+    // Switch to 'vouchers' table (shared with Gutschein App)
     const { data, error } = await supabase
-        .from("gutscheine")
-        .select("id, titel, code, ist_eingeloest, ausflug_id, user_id")
-        .eq("ausflug_id", tripId)
-        .eq("ist_eingeloest", false)
+        .from("vouchers")
+        .select("id, title, code, remaining_amount, trip_id, user_id")
+        .eq("trip_id", tripId)
+        .gt("remaining_amount", 0) // Only show vouchers with balance
         .order("created_at", { ascending: false });
 
     console.log('[getTripVouchers] Query result:', {
         data: data?.length || 0,
         error: error?.message,
-        fullError: error
     });
-
-    if (data && data.length > 0) {
-        console.log('[getTripVouchers] Found vouchers:', data.map(v => ({
-            id: v.id,
-            titel: v.titel,
-            user_id: v.user_id,
-            matches_current_user: v.user_id === user.id
-        })));
-    }
 
     if (error) {
         console.error("[Supabase] Error fetching trip vouchers:", error);
         return [];
     }
 
-    // Map to TripVoucher format with deep_link
+    // Map to TripVoucher format
     const vouchers = (data || []).map((v) => ({
         id: v.id,
-        titel: v.titel,
+        titel: v.title, // Map 'title' to legacy 'titel' for UI compatibility
         code: v.code,
-        deep_link: `manus20251231101003://gutschein/${v.id}`,
-        ist_eingeloest: v.ist_eingeloest,
-        ausflug_id: v.ausflug_id,
+        deep_link: `vouchervault://voucher/${v.id}`,
+        ist_eingeloest: v.remaining_amount <= 0,
+        ausflug_id: v.trip_id,
     }));
 
     console.log('[getTripVouchers] Returning vouchers:', vouchers.length);
