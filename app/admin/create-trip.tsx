@@ -269,6 +269,67 @@ export default function CreateTripScreen() {
                             </View>
 
                             <View style={styles.inputGroup}>
+                                <Pressable
+                                    onPress={() => setNiceToKnowExpanded(!niceToKnowExpanded)}
+                                    style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                                >
+                                    <ThemedText style={styles.label}>Nice to Know</ThemedText>
+                                    <IconSymbol
+                                        name={niceToKnowExpanded ? "chevron.up" : "chevron.down"}
+                                        size={20}
+                                        color={colors.textSecondary}
+                                    />
+                                </Pressable>
+                                {niceToKnowExpanded && (
+                                    formData.kategorie_alt.length === 0 ? (
+                                        <ThemedText style={[styles.label, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 8 }]}>
+                                            Bitte zuerst eine Kategorie auswählen
+                                        </ThemedText>
+                                    ) : niceToKnowOptions.length > 0 ? (
+                                        <View style={styles.checkboxContainer}>
+                                            {niceToKnowOptions.map(({ category, options }) => (
+                                                <View key={category} style={styles.categorySection}>
+                                                    <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
+                                                        {category}
+                                                    </ThemedText>
+                                                    <View style={styles.categoryOptions}>
+                                                        {options.map((option) => (
+                                                            <Pressable
+                                                                key={option}
+                                                                onPress={() => {
+                                                                    const isSelected = formData.nice_to_know.includes(option);
+                                                                    setFormData({
+                                                                        ...formData,
+                                                                        nice_to_know: isSelected
+                                                                            ? formData.nice_to_know.filter(v => v !== option)
+                                                                            : [...formData.nice_to_know, option]
+                                                                    });
+                                                                }}
+                                                                style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                                            >
+                                                                <View style={[
+                                                                    styles.checkbox,
+                                                                    {
+                                                                        backgroundColor: formData.nice_to_know.includes(option) ? colors.primary : colors.surface,
+                                                                        borderColor: formData.nice_to_know.includes(option) ? colors.primary : colors.border,
+                                                                    }
+                                                                ]}>
+                                                                    {formData.nice_to_know.includes(option) && (
+                                                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                                    )}
+                                                                </View>
+                                                                <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
+                                                            </Pressable>
+                                                        ))}
+                                                    </View>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ) : null
+                                )}
+                            </View>
+
+                            <View style={styles.inputGroup}>
                                 <ThemedText style={styles.label}>Beschreibung</ThemedText>
                                 <TextInput
                                     style={[
@@ -489,66 +550,7 @@ export default function CreateTripScreen() {
                                 />
                             </View>
 
-                            <View style={styles.inputGroup}>
-                                <Pressable
-                                    onPress={() => setNiceToKnowExpanded(!niceToKnowExpanded)}
-                                    style={[styles.collapsibleHeader, { borderColor: colors.border }]}
-                                >
-                                    <ThemedText style={styles.label}>Nice to Know</ThemedText>
-                                    <IconSymbol
-                                        name={niceToKnowExpanded ? "chevron.up" : "chevron.down"}
-                                        size={20}
-                                        color={colors.textSecondary}
-                                    />
-                                </Pressable>
-                                {niceToKnowExpanded && (
-                                    formData.kategorie_alt.length === 0 ? (
-                                        <ThemedText style={[styles.label, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 8 }]}>
-                                            Bitte zuerst eine Kategorie auswählen
-                                        </ThemedText>
-                                    ) : niceToKnowOptions.length > 0 ? (
-                                        <View style={styles.checkboxContainer}>
-                                            {niceToKnowOptions.map(({ category, options }) => (
-                                                <View key={category} style={styles.categorySection}>
-                                                    <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
-                                                        {category}
-                                                    </ThemedText>
-                                                    <View style={styles.categoryOptions}>
-                                                        {options.map((option) => (
-                                                            <Pressable
-                                                                key={option}
-                                                                onPress={() => {
-                                                                    const isSelected = formData.nice_to_know.includes(option);
-                                                                    setFormData({
-                                                                        ...formData,
-                                                                        nice_to_know: isSelected
-                                                                            ? formData.nice_to_know.filter(v => v !== option)
-                                                                            : [...formData.nice_to_know, option]
-                                                                    });
-                                                                }}
-                                                                style={[styles.checkboxItem, { borderColor: colors.border }]}
-                                                            >
-                                                                <View style={[
-                                                                    styles.checkbox,
-                                                                    {
-                                                                        backgroundColor: formData.nice_to_know.includes(option) ? colors.primary : colors.surface,
-                                                                        borderColor: formData.nice_to_know.includes(option) ? colors.primary : colors.border,
-                                                                    }
-                                                                ]}>
-                                                                    {formData.nice_to_know.includes(option) && (
-                                                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
-                                                                    )}
-                                                                </View>
-                                                                <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
-                                                            </Pressable>
-                                                        ))}
-                                                    </View>
-                                                </View>
-                                            ))}
-                                        </View>
-                                    ) : null
-                                )}
-                            </View>
+
                         </View>
 
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
