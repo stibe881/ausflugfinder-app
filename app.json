@@ -38,7 +38,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "AusflugFinder benötigt deinen Standort, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist.",
         "NSLocationAlwaysUsageDescription": "AusflugFinder benötigt deinen Standort im Hintergrund, um dich zu benachrichtigen, wenn du in der Nähe eines Ausflugsziels bist."
       },
-      "buildNumber": "4"
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
