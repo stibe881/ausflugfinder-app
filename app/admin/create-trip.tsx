@@ -18,7 +18,8 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { createAusflug, uploadAusflugPhoto, getNiceToKnowOptions, getKategorieOptions } from "@/lib/supabase-api";
+import { createAusflug, uploadAusflugPhoto } from "@/lib/supabase-api";
+import { KATEGORIE_OPTIONS, getNiceToKnowForCategories } from "@/lib/category-nice-to-know";
 import { geocodeAddress } from "@/lib/geocoding";
 import { useAdmin } from "@/contexts/admin-context";
 import * as ImagePicker from "expo-image-picker";
@@ -33,11 +34,11 @@ export default function CreateTripScreen() {
 
     const [isCreating, setIsCreating] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
-    const [selectedImage, setSelectedImage] = useState<{ uri: string; fileName: string } | null>(null);
-    const [niceToKnowOptions, setNiceToKnowOptions] = useState<{ category: string; options: string[] }[]>([]);
-    const [kategorieOptions, setKategorieOptions] = useState<string[]>([]);
+    const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
     const [kategorieExpanded, setKategorieExpanded] = useState(false);
     const [niceToKnowExpanded, setNiceToKnowExpanded] = useState(false);
+    const [jahreszeitenExpanded, setJahreszeitenExpanded] = useState(false);
     const [formData, setFormData] = useState({
         name: "",
         beschreibung: "",
@@ -55,17 +56,18 @@ export default function CreateTripScreen() {
         kategorie_alt: [] as string[],
     });
 
-    // Load nice to know options
-    useEffect(() => {
-        async function loadOptions() {
-            const options = await getNiceToKnowOptions();
-            setNiceToKnowOptions(options);
+    // Derive nice-to-know options from selected categories
+    const niceToKnowOptions = getNiceToKnowForCategories(formData.kategorie_alt);
 
-            const categories = await getKategorieOptions();
-            setKategorieOptions(categories);
+    // When categories change, remove any nice-to-know values that are no longer valid
+    useEffect(() => {
+        const validOptions = new Set<string>();
+        niceToKnowOptions.forEach(g => g.options.forEach(o => validOptions.add(o)));
+        const filtered = formData.nice_to_know.filter(v => validOptions.has(v));
+        if (filtered.length !== formData.nice_to_know.length) {
+            setFormData(prev => ({ ...prev, nice_to_know: filtered }));
         }
-        loadOptions();
-    }, []);
+    }, [formData.kategorie_alt.join(',')]);
 
     // Redirect if not admin
     if (!canEdit) {
@@ -101,24 +103,27 @@ export default function CreateTripScreen() {
     const handlePickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permissionResult.granted) {
-            Alert.alert("Berechtigung erforderlich", "Bitte erlaube den Zugriff auf deine Fotos.");
+            alert("Permission to access camera roll is required!");
             return;
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            allowsEditing: false, // Must be false for multiple selection usually, or one by one
+            allowsMultipleSelection: true, // Enable multiple
+            selectionLimit: 0, // Unlimited
             aspect: [16, 9],
             quality: 0.8,
         });
 
-        if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            setSelectedImage({
-                uri: asset.uri,
-                fileName: asset.fileName || `cover_${Date.now()}.jpg`,
-            });
+        if (!result.canceled && result.assets) {
+            // Append new images to existing list
+            setSelectedImages(prev => [...prev, ...result.assets.map(asset => asset.uri)]);
         }
+    };
+
+    const removeImage = (index: number) => {
+        setSelectedImages(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleCreate = async () => {
@@ -132,42 +137,53 @@ export default function CreateTripScreen() {
             return;
         }
 
+        // Auto-geocode if coordinates are missing
+        let validLat = formData.lat;
+        let validLng = formData.lng;
+
+        if ((!validLat || !validLng) && formData.adresse) {
+            setIsGeocoding(true);
+            try {
+                const geoResult = await geocodeAddress(formData.adresse);
+                if (geoResult) {
+                    validLat = geoResult.lat;
+                    validLng = geoResult.lng;
+                    console.log(`[CreateTrip] Auto-geocoded '${formData.adresse}' to ${validLat}, ${validLng}`);
+                }
+            } catch (e) {
+                console.error("[CreateTrip] Auto-geocoding failed:", e);
+            } finally {
+                setIsGeocoding(false);
+            }
+        }
+
         setIsCreating(true);
         const result = await createAusflug({
             ...formData,
             kosten_stufe: formData.kosten_stufe,
-            lat: formData.lat || undefined,
-            lng: formData.lng || undefined,
+            lat: validLat || undefined,
+            lng: validLng || undefined,
             nice_to_know: formData.nice_to_know.join(", "), // Join array to string
             kategorie_alt: formData.kategorie_alt.join(", "), // Join array to string
         });
 
-        // Upload image if selected
-        if (result.success && result.id && selectedImage) {
-            await uploadAusflugPhoto(
-                result.id,
-                selectedImage.uri,
-                selectedImage.fileName,
-                true // First photo is primary (title image)
-            );
-        }
+        if (result.success && result.id) {
+            const tripId = result.id;
 
-        setIsCreating(false);
+            // Upload all selected images
+            if (selectedImages.length > 0) {
+                for (let i = 0; i < selectedImages.length; i++) {
+                    const uri = selectedImages[i];
+                    const isPrimary = i === 0; // First image is primary
+                    const fileName = `trip_${tripId}_${Date.now()}_${i}.jpg`;
 
-        if (result.success) {
-            Alert.alert(
-                "Erfolg",
-                `Ausflug erfolgreich erstellt!\n\nPush-Status: ${result.notificationResult?.success
-                    ? "Gesendet ✅"
-                    : "Fehler ❌\n" + (result.notificationResult?.message || JSON.stringify(result.notificationResult))
-                }`,
-                [
-                    {
-                        text: "OK",
-                        onPress: () => router.push(`/trip/${result.id}` as any),
-                    },
-                ]
-            );
+                    console.log(`[CreateTrip] Uploading image ${i + 1}/${selectedImages.length}`);
+                    await uploadAusflugPhoto(tripId, uri, fileName, isPrimary);
+                }
+            }
+
+            setIsCreating(false);
+            router.replace(`/trip/${result.id}` as any);
         } else {
             Alert.alert("Fehler", result.error || "Unbekannter Fehler");
         }
@@ -219,42 +235,36 @@ export default function CreateTripScreen() {
                                     />
                                 </Pressable>
                                 {kategorieExpanded && (
-                                    kategorieOptions.length > 0 ? (
-                                        <View style={styles.checkboxContainer}>
-                                            {kategorieOptions.map((kategorie) => (
-                                                <Pressable
-                                                    key={kategorie}
-                                                    onPress={() => {
-                                                        const isSelected = formData.kategorie_alt.includes(kategorie);
-                                                        setFormData({
-                                                            ...formData,
-                                                            kategorie_alt: isSelected
-                                                                ? formData.kategorie_alt.filter(v => v !== kategorie)
-                                                                : [...formData.kategorie_alt, kategorie]
-                                                        });
-                                                    }}
-                                                    style={[styles.checkboxItem, { borderColor: colors.border }]}
-                                                >
-                                                    <View style={[
-                                                        styles.checkbox,
-                                                        {
-                                                            backgroundColor: formData.kategorie_alt.includes(kategorie) ? colors.primary : colors.surface,
-                                                            borderColor: formData.kategorie_alt.includes(kategorie) ? colors.primary : colors.border,
-                                                        }
-                                                    ]}>
-                                                        {formData.kategorie_alt.includes(kategorie) && (
-                                                            <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
-                                                        )}
-                                                    </View>
-                                                    <ThemedText style={styles.checkboxLabel}>{kategorie}</ThemedText>
-                                                </Pressable>
-                                            ))}
-                                        </View>
-                                    ) : (
-                                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                            Keine Kategorien verfügbar
-                                        </ThemedText>
-                                    )
+                                    <View style={styles.checkboxContainer}>
+                                        {KATEGORIE_OPTIONS.map((kat) => (
+                                            <Pressable
+                                                key={kat}
+                                                onPress={() => {
+                                                    const isSelected = formData.kategorie_alt.includes(kat);
+                                                    setFormData({
+                                                        ...formData,
+                                                        kategorie_alt: isSelected
+                                                            ? formData.kategorie_alt.filter(v => v !== kat)
+                                                            : [...formData.kategorie_alt, kat]
+                                                    });
+                                                }}
+                                                style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                            >
+                                                <View style={[
+                                                    styles.checkbox,
+                                                    {
+                                                        backgroundColor: formData.kategorie_alt.includes(kat) ? colors.primary : colors.surface,
+                                                        borderColor: formData.kategorie_alt.includes(kat) ? colors.primary : colors.border,
+                                                    }
+                                                ]}>
+                                                    {formData.kategorie_alt.includes(kat) && (
+                                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                    )}
+                                                </View>
+                                                <ThemedText style={styles.checkboxLabel}>{kat}</ThemedText>
+                                            </Pressable>
+                                        ))}
+                                    </View>
                                 )}
                             </View>
 
@@ -297,43 +307,7 @@ export default function CreateTripScreen() {
                             </View>
                         </View>
 
-                        {/* Titelbild */}
-                        <View style={styles.section}>
-                            <ThemedText style={styles.sectionTitle}>Titelbild (Optional)</ThemedText>
 
-                            {selectedImage ? (
-                                <View style={styles.imagePreviewContainer}>
-                                    <Image
-                                        source={{ uri: selectedImage.uri }}
-                                        style={styles.imagePreview}
-                                        contentFit="cover"
-                                    />
-                                    <Pressable
-                                        onPress={() => setSelectedImage(null)}
-                                        style={[styles.removeImageButton, { backgroundColor: "#EF4444" }]}
-                                    >
-                                        <IconSymbol name="xmark" size={16} color="#FFFFFF" />
-                                    </Pressable>
-                                    <Pressable
-                                        onPress={handlePickImage}
-                                        style={[styles.changeImageButton, { backgroundColor: colors.primary }]}
-                                    >
-                                        <IconSymbol name="photo" size={14} color="#FFFFFF" />
-                                        <ThemedText style={styles.changeImageText}>Ändern</ThemedText>
-                                    </Pressable>
-                                </View>
-                            ) : (
-                                <Pressable
-                                    onPress={handlePickImage}
-                                    style={[styles.pickImageButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                                >
-                                    <IconSymbol name="photo" size={32} color={colors.textSecondary} />
-                                    <ThemedText style={[styles.pickImageText, { color: colors.textSecondary }]}>
-                                        Titelbild auswählen
-                                    </ThemedText>
-                                </Pressable>
-                            )}
-                        </View>
 
                         {/* Standort */}
                         <View style={styles.section}>
@@ -420,14 +394,59 @@ export default function CreateTripScreen() {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <ThemedText style={styles.label}>Jahreszeiten</ThemedText>
-                                <TextInput
-                                    style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
-                                    value={formData.jahreszeiten}
-                                    onChangeText={(text) => setFormData({ ...formData, jahreszeiten: text })}
-                                    placeholder="z.B. Frühling, Sommer, Herbst, Winter"
-                                    placeholderTextColor={colors.textSecondary}
-                                />
+                                <Pressable
+                                    onPress={() => setJahreszeitenExpanded(!jahreszeitenExpanded)}
+                                    style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                                >
+                                    <ThemedText style={styles.label}>Jahreszeiten</ThemedText>
+                                    <IconSymbol
+                                        name={jahreszeitenExpanded ? "chevron.up" : "chevron.down"}
+                                        size={20}
+                                        color={colors.textSecondary}
+                                    />
+                                </Pressable>
+                                {jahreszeitenExpanded && (
+                                    <View style={styles.checkboxContainer}>
+                                        {['Frühling', 'Sommer', 'Herbst', 'Winter', 'Ganzes Jahr'].map((season) => (
+                                            <Pressable
+                                                key={season}
+                                                onPress={() => {
+                                                    const currentSeasons = formData.jahreszeiten ? formData.jahreszeiten.split(',').map(s => s.trim()) : [];
+                                                    const isSelected = currentSeasons.includes(season);
+                                                    let newSeasons: string[];
+
+                                                    if (season === 'Ganzes Jahr') {
+                                                        // If selecting 'Ganzes Jahr', clear others or just set it? 
+                                                        // Use case: usually exclusive or inclusive. treating as just another tag is safest.
+                                                        newSeasons = isSelected
+                                                            ? currentSeasons.filter(s => s !== season)
+                                                            : [...currentSeasons, season];
+                                                    } else {
+                                                        newSeasons = isSelected
+                                                            ? currentSeasons.filter(s => s !== season)
+                                                            : [...currentSeasons, season];
+                                                    }
+
+                                                    setFormData({ ...formData, jahreszeiten: newSeasons.join(', ') });
+                                                }}
+                                                style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                            >
+                                                <View style={[
+                                                    styles.checkbox,
+                                                    {
+                                                        backgroundColor: formData.jahreszeiten?.includes(season) ? colors.primary : colors.surface,
+                                                        borderColor: formData.jahreszeiten?.includes(season) ? colors.primary : colors.border,
+                                                    }
+                                                ]}>
+                                                    {formData.jahreszeiten?.includes(season) && (
+                                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                    )}
+                                                </View>
+                                                <ThemedText style={styles.checkboxLabel}>{season}</ThemedText>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
 
                             <View style={styles.inputGroup}>
@@ -483,7 +502,11 @@ export default function CreateTripScreen() {
                                     />
                                 </Pressable>
                                 {niceToKnowExpanded && (
-                                    niceToKnowOptions && niceToKnowOptions.length > 0 ? (
+                                    formData.kategorie_alt.length === 0 ? (
+                                        <ThemedText style={[styles.label, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 8 }]}>
+                                            Bitte zuerst eine Kategorie auswählen
+                                        </ThemedText>
+                                    ) : niceToKnowOptions.length > 0 ? (
                                         <View style={styles.checkboxContainer}>
                                             {niceToKnowOptions.map(({ category, options }) => (
                                                 <View key={category} style={styles.categorySection}>
@@ -523,14 +546,28 @@ export default function CreateTripScreen() {
                                                 </View>
                                             ))}
                                         </View>
-                                    ) : (
-                                        <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                            Keine Optionen verfügbar
-                                        </ThemedText>
-                                    )
+                                    ) : null
                                 )}
                             </View>
                         </View>
+
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
+                            {selectedImages.map((uri, index) => (
+                                <View key={index} style={styles.imagePreviewWrapper}>
+                                    <Image source={{ uri }} style={styles.imagePreview} contentFit="cover" />
+                                    <Pressable
+                                        style={styles.removeImageButton}
+                                        onPress={() => removeImage(index)}
+                                    >
+                                        <IconSymbol name="xmark.circle.fill" size={24} color="#EF4444" />
+                                    </Pressable>
+                                </View>
+                            ))}
+                            <Pressable style={styles.addImageButton} onPress={handlePickImage}>
+                                <IconSymbol name="plus" size={30} color={colors.textSecondary} />
+                                <ThemedText style={{ color: colors.textSecondary, marginTop: 4 }}>Foto hinzufügen</ThemedText>
+                            </Pressable>
+                        </ScrollView>
 
                         {/* Create Button */}
                         <Pressable
@@ -646,26 +683,50 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "500",
     },
-    imagePreviewContainer: {
-        position: "relative",
-        height: 200,
-        borderRadius: BorderRadius.lg,
-        overflow: "hidden",
+    imageScroll: {
+        marginBottom: Spacing.md,
+    },
+    imagePreviewWrapper: {
+        width: 200,
+        height: 150,
+        marginRight: Spacing.md,
+        borderRadius: BorderRadius.md,
+        overflow: 'hidden',
+        position: 'relative',
     },
     imagePreview: {
         width: "100%",
         height: "100%",
     },
     removeImageButton: {
-        position: "absolute",
-        top: Spacing.sm,
-        right: Spacing.sm,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: "center",
-        alignItems: "center",
+        position: 'absolute',
+        top: 4,
+        right: 4,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        borderRadius: 12,
     },
+    addImageButton: {
+        width: 150,
+        height: 150,
+        borderRadius: BorderRadius.md,
+        borderWidth: 2,
+        borderColor: '#E5E7EB', // Gray-200
+        borderStyle: 'dashed',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+    },
+    imagePlaceholder: {
+        width: "100%",
+        height: "100%",
+    },
+    imagePreviewContainer: {
+        position: "relative",
+        height: 200,
+        borderRadius: BorderRadius.lg,
+        overflow: "hidden",
+    },
+
     changeImageButton: {
         position: "absolute",
         bottom: Spacing.sm,

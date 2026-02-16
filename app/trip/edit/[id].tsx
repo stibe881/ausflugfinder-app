@@ -26,11 +26,11 @@ import {
     uploadAusflugPhoto,
     deleteAusflugPhoto,
     setPhotoPrimary,
-    getNiceToKnowOptions,
-    getKategorieOptions,
     type Ausflug,
     type AusflugFoto,
 } from "@/lib/supabase-api";
+import { KATEGORIE_OPTIONS, getNiceToKnowForCategories } from "@/lib/category-nice-to-know";
+import { geocodeAddress } from "@/lib/geocoding";
 import { useAdmin } from "@/contexts/admin-context";
 
 export default function EditTripScreen() {
@@ -56,12 +56,12 @@ export default function EditTripScreen() {
     const [kostenStufe, setKostenStufe] = useState<number | null>(null);
     const [niceToKnow, setNiceToKnow] = useState<string[]>([]);
     const [kategorie, setKategorie] = useState<string[]>([]);
-    const [niceToKnowOptions, setNiceToKnowOptions] = useState<{ category: string; options: string[] }[]>([]);
-    const [kategorieOptions, setKategorieOptions] = useState<string[]>([]);
     const [kategorieExpanded, setKategorieExpanded] = useState(false);
     const [niceToKnowExpanded, setNiceToKnowExpanded] = useState(false);
     const [parkplatzAnzahl, setParkplatzAnzahl] = useState<'genuegend' | 'maessig' | 'keine' | null>(null);
     const [parkplatzKostenlos, setParkplatzKostenlos] = useState(false);
+    const [jahreszeiten, setJahreszeiten] = useState("");
+    const [jahreszeitenExpanded, setJahreszeitenExpanded] = useState(false);
 
     useEffect(() => {
         async function loadData() {
@@ -80,6 +80,7 @@ export default function EditTripScreen() {
                 setKostenStufe(tripData.kosten_stufe);
                 setParkplatzAnzahl(tripData.parkplatz_anzahl || null);
                 setParkplatzKostenlos(tripData.parkplatz_kostenlos || false);
+                setJahreszeiten(tripData.jahreszeiten || "");
 
                 // Parse nice_to_know and kategorie_alt from comma-separated strings to arrays
                 setNiceToKnow(tripData.nice_to_know ? tripData.nice_to_know.split(',').map(v => v.trim()) : []);
@@ -87,11 +88,7 @@ export default function EditTripScreen() {
             }
 
             // Load options
-            const niceToKnowOpts = await getNiceToKnowOptions();
-            setNiceToKnowOptions(niceToKnowOpts);
-
-            const kategorieOpts = await getKategorieOptions();
-            setKategorieOptions(kategorieOpts);
+            // No need to load kategorie and niceToKnow options from DB anymore - they're hardcoded
 
             const photosData = await getAusflugPhotos(Number(id));
             setPhotos(photosData);
@@ -105,18 +102,38 @@ export default function EditTripScreen() {
         if (!trip) return;
 
         setIsSaving(true);
+
+        // Auto-geocode if address was changed
+        let updatedLat: string | undefined;
+        let updatedLng: string | undefined;
+        if (adresse && adresse !== trip.adresse) {
+            try {
+                console.log('[EditScreen] Address changed, geocoding:', adresse);
+                const geoResult = await geocodeAddress(adresse);
+                if (geoResult) {
+                    updatedLat = geoResult.lat;
+                    updatedLng = geoResult.lng;
+                    console.log(`[EditScreen] Geocoded to ${updatedLat}, ${updatedLng}`);
+                }
+            } catch (e) {
+                console.error('[EditScreen] Geocoding failed:', e);
+            }
+        }
+
         const result = await updateAusflug(trip.id, {
             name,
             beschreibung,
             adresse,
             region,
             website_url: websiteUrl,
-            parkplatz: parkplatz, // Corrected
+            parkplatz: parkplatz,
             kosten_stufe: kostenStufe,
             parkplatz_anzahl: parkplatzAnzahl,
             parkplatz_kostenlos: parkplatzKostenlos,
+            jahreszeiten: jahreszeiten,
             nice_to_know: niceToKnow.join(", "),
             kategorie_alt: kategorie.join(", "),
+            ...(updatedLat && updatedLng ? { lat: updatedLat, lng: updatedLng, google_place_id: null } : {}),
         });
         setIsSaving(false);
 
@@ -139,37 +156,52 @@ export default function EditTripScreen() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            allowsEditing: false, // Multiple selection requires false usually
+            allowsMultipleSelection: true, // Enable multiple
+            selectionLimit: 0, // Unlimited
             aspect: [16, 9],
             quality: 0.8,
         });
 
-        if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            const fileName = asset.fileName || `photo_${Date.now()}.jpg`;
-            const isPrimary = photos.length === 0; // First photo is primary
-
-            console.log('[EditScreen] Uploading photo:', fileName, 'isPrimary:', isPrimary);
-
+        if (!result.canceled && result.assets) {
             setIsSaving(true);
-            const uploadResult = await uploadAusflugPhoto(
-                trip.id,
-                asset.uri,
-                fileName,
-                isPrimary
-            );
+
+            let uploadedCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < result.assets.length; i++) {
+                const asset = result.assets[i];
+                const fileName = asset.fileName || `photo_${Date.now()}_${i}.jpg`;
+                // First photo is primary ONLY if there were no photos before AND this is the first one being uploaded
+                const isPrimary = photos.length === 0 && i === 0;
+
+                console.log(`[EditScreen] Uploading photo ${i + 1}/${result.assets.length}:`, fileName);
+
+                const uploadResult = await uploadAusflugPhoto(
+                    trip.id,
+                    asset.uri,
+                    fileName,
+                    isPrimary
+                );
+
+                if (uploadResult.success) {
+                    uploadedCount++;
+                } else {
+                    errorCount++;
+                    console.error(`[EditScreen] Error uploading ${fileName}:`, uploadResult.error);
+                }
+            }
+
             setIsSaving(false);
 
-            console.log('[EditScreen] Upload result:', uploadResult);
+            // Reload photos
+            const photosData = await getAusflugPhotos(trip.id);
+            setPhotos(photosData);
 
-            if (uploadResult.success) {
-                // Reload photos
-                const photosData = await getAusflugPhotos(trip.id);
-                console.log('[EditScreen] Loaded photos after upload:', photosData);
-                setPhotos(photosData);
-                Alert.alert("Hochgeladen", "Das Foto wurde erfolgreich hochgeladen.");
+            if (errorCount === 0) {
+                Alert.alert("Hochgeladen", `${uploadedCount} Foto(s) erfolgreich hochgeladen.`);
             } else {
-                Alert.alert("Fehler", uploadResult.error || "Fehler beim Hochladen.");
+                Alert.alert("Teilweiser Erfolg", `${uploadedCount} hochgeladen, ${errorCount} fehlgeschlagen.`);
             }
         }
     };
@@ -347,6 +379,60 @@ export default function EditTripScreen() {
                         </View>
 
                         <View style={styles.field}>
+                            <Pressable
+                                onPress={() => setJahreszeitenExpanded(!jahreszeitenExpanded)}
+                                style={[styles.collapsibleHeader, { borderColor: colors.border }]}
+                            >
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Jahreszeiten</ThemedText>
+                                <IconSymbol
+                                    name={jahreszeitenExpanded ? "chevron.up" : "chevron.down"}
+                                    size={20}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                            {jahreszeitenExpanded && (
+                                <View style={styles.checkboxContainer}>
+                                    {['Frühling', 'Sommer', 'Herbst', 'Winter', 'Ganzes Jahr'].map((season) => (
+                                        <Pressable
+                                            key={season}
+                                            onPress={() => {
+                                                const currentSeasons = jahreszeiten ? jahreszeiten.split(',').map(s => s.trim()) : [];
+                                                const isSelected = currentSeasons.includes(season);
+                                                let newSeasons: string[];
+
+                                                if (season === 'Ganzes Jahr') {
+                                                    newSeasons = isSelected
+                                                        ? currentSeasons.filter(s => s !== season)
+                                                        : [...currentSeasons, season];
+                                                } else {
+                                                    newSeasons = isSelected
+                                                        ? currentSeasons.filter(s => s !== season)
+                                                        : [...currentSeasons, season];
+                                                }
+
+                                                setJahreszeiten(newSeasons.join(', '));
+                                            }}
+                                            style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                        >
+                                            <View style={[
+                                                styles.checkbox,
+                                                {
+                                                    backgroundColor: jahreszeiten.includes(season) ? colors.primary : colors.surface,
+                                                    borderColor: jahreszeiten.includes(season) ? colors.primary : colors.border,
+                                                }
+                                            ]}>
+                                                {jahreszeiten.includes(season) && (
+                                                    <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                )}
+                                            </View>
+                                            <ThemedText style={styles.checkboxLabel}>{season}</ThemedText>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+
+                        <View style={styles.field}>
                             <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Parkplatz Infos</ThemedText>
 
                             {/* Parkplatz Anzahl Dropdown (Simulated with Pressables for now, or use a picker if available/preferred) */}
@@ -460,9 +546,9 @@ export default function EditTripScreen() {
                                     color={colors.textSecondary}
                                 />
                             </Pressable>
-                            {kategorieExpanded && (kategorieOptions && kategorieOptions.length > 0 ? (
+                            {kategorieExpanded && (
                                 <View style={styles.checkboxContainer}>
-                                    {kategorieOptions.map((kat) => (
+                                    {KATEGORIE_OPTIONS.map((kat) => (
                                         <Pressable
                                             key={kat}
                                             onPress={() => {
@@ -489,11 +575,7 @@ export default function EditTripScreen() {
                                         </Pressable>
                                     ))}
                                 </View>
-                            ) : (
-                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                    Keine Kategorien verfügbar
-                                </ThemedText>
-                            ))}
+                            )}
                         </View>
 
                         <View style={styles.field}>
@@ -508,49 +590,54 @@ export default function EditTripScreen() {
                                     color={colors.textSecondary}
                                 />
                             </Pressable>
-                            {niceToKnowExpanded && (niceToKnowOptions && niceToKnowOptions.length > 0 ? (
-                                <View style={styles.checkboxContainer}>
-                                    {niceToKnowOptions.map(({ category, options }) => (
-                                        <View key={category} style={styles.categorySection}>
-                                            <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
-                                                {category}
-                                            </ThemedText>
-                                            <View style={styles.categoryOptions}>
-                                                {options.map((option) => (
-                                                    <Pressable
-                                                        key={option}
-                                                        onPress={() => {
-                                                            const isSelected = niceToKnow.includes(option);
-                                                            setNiceToKnow(isSelected
-                                                                ? niceToKnow.filter(v => v !== option)
-                                                                : [...niceToKnow, option]
-                                                            );
-                                                        }}
-                                                        style={[styles.checkboxItem, { borderColor: colors.border }]}
-                                                    >
-                                                        <View style={[
-                                                            styles.checkbox,
-                                                            {
-                                                                backgroundColor: niceToKnow.includes(option) ? colors.primary : colors.surface,
-                                                                borderColor: niceToKnow.includes(option) ? colors.primary : colors.border,
-                                                            }
-                                                        ]}>
-                                                            {niceToKnow.includes(option) && (
-                                                                <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
-                                                            )}
-                                                        </View>
-                                                        <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
-                                                    </Pressable>
-                                                ))}
-                                            </View>
+                            {(() => {
+                                const niceToKnowOptions = getNiceToKnowForCategories(kategorie);
+                                return niceToKnowExpanded && (
+                                    kategorie.length === 0 ? (
+                                        <ThemedText style={[styles.label, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 8 }]}>
+                                            Bitte zuerst eine Kategorie auswählen
+                                        </ThemedText>
+                                    ) : niceToKnowOptions.length > 0 ? (
+                                        <View style={styles.checkboxContainer}>
+                                            {niceToKnowOptions.map(({ category, options }) => (
+                                                <View key={category} style={styles.categorySection}>
+                                                    <ThemedText style={[styles.categoryTitle, { color: colors.textSecondary }]}>
+                                                        {category}
+                                                    </ThemedText>
+                                                    <View style={styles.categoryOptions}>
+                                                        {options.map((option) => (
+                                                            <Pressable
+                                                                key={option}
+                                                                onPress={() => {
+                                                                    const isSelected = niceToKnow.includes(option);
+                                                                    setNiceToKnow(isSelected
+                                                                        ? niceToKnow.filter(v => v !== option)
+                                                                        : [...niceToKnow, option]
+                                                                    );
+                                                                }}
+                                                                style={[styles.checkboxItem, { borderColor: colors.border }]}
+                                                            >
+                                                                <View style={[
+                                                                    styles.checkbox,
+                                                                    {
+                                                                        backgroundColor: niceToKnow.includes(option) ? colors.primary : colors.surface,
+                                                                        borderColor: niceToKnow.includes(option) ? colors.primary : colors.border,
+                                                                    }
+                                                                ]}>
+                                                                    {niceToKnow.includes(option) && (
+                                                                        <IconSymbol name="checkmark" size={14} color="#FFFFFF" />
+                                                                    )}
+                                                                </View>
+                                                                <ThemedText style={styles.checkboxLabel}>{option}</ThemedText>
+                                                            </Pressable>
+                                                        ))}
+                                                    </View>
+                                                </View>
+                                            ))}
                                         </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>
-                                    Keine Optionen verfügbar
-                                </ThemedText>
-                            ))}
+                                    ) : null
+                                );
+                            })()}
                         </View>
 
                     </View>
