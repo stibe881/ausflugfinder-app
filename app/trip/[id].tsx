@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,14 +14,16 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import PagerView from "react-native-pager-view";
+import { ImagePager } from "@/components/ui/image-pager";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, toggleTripBookmarked, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, type CurrentWeather, type DailyForecast, getTripVouchers, openVoucherDeepLink, type TripVoucher } from "@/lib/supabase-api";
+import { getAusflugById, getPrimaryPhoto, getAusflugPhotos, deleteAusflug, type Ausflug, type AusflugFoto, addUserTrip, removeUserTrip, toggleTripFavorite, toggleTripDone, toggleTripBookmarked, getUserTrips, getCurrentWeather, getWeatherForecast, getWeatherIconUrl, getRainForecastToday, type CurrentWeather, type DailyForecast, getTripVouchers, openVoucherDeepLink, type TripVoucher, findGooglePlaceId, fetchOpeningHours, cacheGooglePlaceId, type OpeningHoursResult } from "@/lib/supabase-api";
+
 import { useAdmin } from "@/contexts/admin-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/contexts/language-context";
@@ -61,6 +64,9 @@ function translateSeasons(seasons: string, t: any): string {
     'autumn': t.autumn,
     'fall': t.autumn,
     'winter': t.winter,
+    // Special
+    'all_year': 'Ganzes Jahr',
+    'ganzes jahr': 'Ganzes Jahr',
   };
 
   // Split by comma and translate each season (case-insensitive)
@@ -97,10 +103,18 @@ export default function TripDetailScreen() {
   const [forecast, setForecast] = useState<DailyForecast[]>([]);
   const [showForecast, setShowForecast] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [rainInfo, setRainInfo] = useState<{ hasRain: boolean; rainText: string | null; maxPop: number }>({ hasRain: false, rainText: null, maxPop: 0 });
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   // Vouchers state
   const [vouchers, setVouchers] = useState<TripVoucher[]>([]);
   const [vouchersLoading, setVouchersLoading] = useState(false);
+
+  // Opening hours state
+  const [openingHours, setOpeningHours] = useState<OpeningHoursResult | null>(null);
+  const [openingHoursLoading, setOpeningHoursLoading] = useState(false);
+  const [showAllHours, setShowAllHours] = useState(false);
 
   // Fetch trip data and photo from Supabase
   useEffect(() => {
@@ -151,6 +165,24 @@ export default function TripDetailScreen() {
     loadTrip();
   }, [id, isAuthenticated]);
 
+  // Show popup notification if configured and not dismissed
+  useEffect(() => {
+    async function checkPopup() {
+      if (!trip) return;
+      if (!trip.popup_level || trip.popup_level === 'deaktiviert') return;
+      if (!trip.popup_title && !trip.popup_message) return;
+
+      const dismissedKey = `popup_dismissed_${trip.id}`;
+      const dismissedAt = await AsyncStorage.getItem(dismissedKey);
+      if (dismissedAt) {
+        const daysSinceDismissed = (Date.now() - parseInt(dismissedAt, 10)) / (1000 * 60 * 60 * 24);
+        if (daysSinceDismissed < 30) return; // Still within 30-day suppression
+      }
+      setShowPopup(true);
+    }
+    checkPopup();
+  }, [trip]);
+
   // Fetch trip vouchers
   useEffect(() => {
     async function loadVouchers() {
@@ -175,29 +207,67 @@ export default function TripDetailScreen() {
     loadVouchers();
   }, [trip, isAuthenticated]);
 
-  // Fetch weather data
+  // Load opening hours from Google Places API
+  useEffect(() => {
+    if (!trip) return;
+
+    async function loadOpeningHours() {
+      console.log('[OpeningHours] Starting for trip:', trip!.name, 'google_place_id:', trip!.google_place_id, 'lat:', trip!.lat, 'lng:', trip!.lng);
+      setOpeningHoursLoading(true);
+      try {
+        let placeId = trip!.google_place_id;
+
+        // If no cached place ID, look it up
+        if (!placeId) {
+          console.log('[OpeningHours] No cached place ID, searching...');
+          placeId = await findGooglePlaceId(trip!.name, trip!.lat, trip!.lng);
+          console.log('[OpeningHours] findGooglePlaceId returned:', placeId);
+          if (placeId) {
+            // Cache for future use
+            await cacheGooglePlaceId(trip!.id, placeId);
+            console.log('[OpeningHours] Cached place ID:', placeId);
+          }
+        } else {
+          console.log('[OpeningHours] Using cached place ID:', placeId);
+        }
+
+        if (placeId) {
+          console.log('[OpeningHours] Fetching hours for placeId:', placeId);
+          const hours = await fetchOpeningHours(placeId);
+          console.log('[OpeningHours] fetchOpeningHours returned:', JSON.stringify(hours));
+          setOpeningHours(hours);
+        } else {
+          console.warn('[OpeningHours] No placeId found, cannot fetch hours');
+        }
+      } catch (error) {
+        console.error("[OpeningHours] Error:", error);
+      } finally {
+        setOpeningHoursLoading(false);
+      }
+    }
+
+    loadOpeningHours();
+  }, [trip?.id]);
+
+  // Fetch weather data + rain info
   useEffect(() => {
     async function loadWeather() {
-      if (!trip?.lat || !trip?.lng) {
-        console.log('[Weather] No coordinates available:', { lat: trip?.lat, lng: trip?.lng });
-        return;
-      }
+      if (!trip?.lat || !trip?.lng) return;
 
-      console.log('[Weather] Loading weather for:', { lat: trip.lat, lng: trip.lng });
       setWeatherLoading(true);
       const lat = parseFloat(trip.lat);
       const lng = parseFloat(trip.lng);
 
-      // Get current weather
-      const weatherResult = await getCurrentWeather(lat, lng);
-      console.log('[Weather] API Result:', weatherResult);
+      // Get current weather and rain forecast in parallel
+      const [weatherResult, rainResult] = await Promise.all([
+        getCurrentWeather(lat, lng),
+        getRainForecastToday(lat, lng),
+      ]);
 
       if (weatherResult.success && weatherResult.weather) {
-        console.log('[Weather] Setting current weather:', weatherResult.weather);
         setCurrentWeather(weatherResult.weather);
-      } else {
-        console.error('[Weather] Failed to load weather:', weatherResult.error);
       }
+      setRainInfo(rainResult);
 
       setWeatherLoading(false);
     }
@@ -358,11 +428,22 @@ export default function TripDetailScreen() {
   };
 
   const handleToggleDone = async () => {
-    if (!trip || !isSaved) return;
+    if (!trip) return;
+
+    // Optimistic update
+    const newIsDone = !isDone;
+    setIsDone(newIsDone);
+
+    // If marking as done, also mark as saved
+    if (newIsDone && !isSaved) {
+      setIsSaved(true);
+    }
+
     const result = await toggleTripDone(trip.id);
-    if (result.success) {
-      setIsDone(!isDone);
-    } else {
+    if (!result.success) {
+      // Revert on error
+      setIsDone(!newIsDone);
+      if (newIsDone && !isSaved) setIsSaved(false); // Revert saved state only if we toggled it
       Alert.alert("Fehler", result.error || "Fehler beim Markieren");
     }
   };
@@ -427,10 +508,13 @@ export default function TripDetailScreen() {
     <View style={{ flex: 1 }}>
       <Stack.Screen
         options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: "",
-          headerLeft: () => (
+          headerShown: false,
+        }}
+      />
+      <View style={[styles.pageContainer, { backgroundColor: colors.background }]}>
+        <View style={styles.heroContainer}>
+          {/* Custom header buttons - no iOS glass effect */}
+          <View style={{ position: 'absolute', top: insets.top + 4, left: 12, right: 12, zIndex: 10, flexDirection: 'row', justifyContent: 'space-between' }} pointerEvents="box-none">
             <Pressable
               onPress={() => router.back()}
               style={({ pressed }) => ({
@@ -441,13 +525,10 @@ export default function TripDetailScreen() {
                 justifyContent: "center",
                 alignItems: "center",
                 opacity: pressed ? 0.7 : 1,
-                marginLeft: 8,
               })}
             >
               <IconSymbol name="chevron.left" size={24} color="#FFFFFF" />
             </Pressable>
-          ),
-          headerRight: () => (
             <Pressable
               onPress={handleShare}
               style={({ pressed }) => ({
@@ -458,35 +539,28 @@ export default function TripDetailScreen() {
                 justifyContent: "center",
                 alignItems: "center",
                 opacity: pressed ? 0.7 : 1,
-                marginRight: 8,
               })}
             >
               <IconSymbol name="square.and.arrow.up" size={20} color="#FFFFFF" />
             </Pressable>
-          ),
-        }}
-      />
-      <View style={[styles.pageContainer, { backgroundColor: colors.background }]}>
-        {/* Fixed Hero Image Gallery */}
-        <View style={styles.heroContainer}>
+          </View>
           {allPhotos.length > 0 ? (
             <>
-              <PagerView
+              <ImagePager
                 style={styles.pagerView}
                 initialPage={0}
                 onPageSelected={(e) => setCurrentPhotoIndex(e.nativeEvent.position)}
-                collapsable={false}
               >
                 {allPhotos.map((photoUrl, index) => (
-                  <View key={`page-${index}`} style={styles.page}>
+                  <Pressable key={`page-${index}`} style={styles.page} onPress={() => setShowFullscreenImage(true)}>
                     <Image
                       source={{ uri: photoUrl }}
                       style={styles.heroImage}
                       contentFit="cover"
                     />
-                  </View>
+                  </Pressable>
                 ))}
-              </PagerView>
+              </ImagePager>
 
               {/* Pagination Dots */}
               {allPhotos.length > 1 && (
@@ -504,11 +578,13 @@ export default function TripDetailScreen() {
               )}
             </>
           ) : photoUrl ? (
-            <Image
-              source={{ uri: photoUrl }}
-              style={styles.heroImage}
-              contentFit="cover"
-            />
+            <Pressable onPress={() => setShowFullscreenImage(true)}>
+              <Image
+                source={{ uri: photoUrl }}
+                style={styles.heroImage}
+                contentFit="cover"
+              />
+            </Pressable>
           ) : (
             <View style={[styles.heroPlaceholder, { backgroundColor: colors.surface }]}>
               <IconSymbol name="mountain.2.fill" size={64} color={colors.textSecondary} />
@@ -610,77 +686,228 @@ export default function TripDetailScreen() {
               </View>
             )}
 
-            {/* Weather */}
-            {currentWeather && (
+            {/* Opening Hours */}
+            {(openingHours || openingHoursLoading) && (
               <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>{t.tripWeatherTitle}</ThemedText>
+                <ThemedText style={styles.sectionTitle}>🕐 Öffnungszeiten</ThemedText>
 
-                {/* Current Weather */}
-                <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={styles.weatherCurrent}>
-                    {currentWeather.icon && (
-                      <Image
-                        source={{ uri: getWeatherIconUrl(currentWeather.icon) }}
-                        style={styles.weatherIcon}
-                        contentFit="contain"
-                      />
-                    )}
-                    <View style={styles.weatherCurrentInfo}>
-                      <ThemedText style={styles.weatherTemp}>{currentWeather.temp}°C</ThemedText>
-                      <ThemedText style={[styles.weatherDescription, { color: colors.textSecondary }]}>
-                        {currentWeather.description}
-                      </ThemedText>
-                    </View>
+                {openingHoursLoading ? (
+                  <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center', paddingVertical: 20 }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary, marginTop: 8 }]}>
+                      Öffnungszeiten werden geladen...
+                    </ThemedText>
                   </View>
-
-                  {/* Forecast Toggle Button */}
+                ) : openingHours ? (
                   <Pressable
-                    onPress={handleShowForecast}
-                    style={({ pressed }) => [
-                      styles.forecastButton,
-                      { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 }
-                    ]}
-                    disabled={weatherLoading}
+                    onPress={() => setShowAllHours(!showAllHours)}
+                    style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    {weatherLoading ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <ThemedText style={styles.forecastButtonText}>
-                          {showForecast ? "7-Tage Vorhersage ausblenden" : "7-Tage Vorhersage anzeigen"}
-                        </ThemedText>
-                        <IconSymbol
-                          name={showForecast ? "chevron.up" : "chevron.down"}
-                          size={16}
-                          color="#FFFFFF"
-                        />
-                      </>
+                    {/* Compact: Open/Closed + Today */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        {openingHours.isOpen !== null && (
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            backgroundColor: openingHours.isOpen ? '#10B98115' : '#EF444415',
+                            marginRight: 10,
+                          }}>
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: openingHours.isOpen ? '#10B981' : '#EF4444',
+                              marginRight: 6,
+                            }} />
+                            <ThemedText style={{
+                              fontSize: 14,
+                              fontWeight: '600',
+                              color: openingHours.isOpen ? '#10B981' : '#EF4444',
+                            }}>
+                              {openingHours.isOpen ? 'Geöffnet' : 'Geschlossen'}
+                            </ThemedText>
+                          </View>
+                        )}
+                        {/* Today's hours */}
+                        {openingHours.weekdayText.length > 0 && (() => {
+                          const today = new Date().getDay();
+                          // weekdayText: index 0 = Monday, JS getDay: 0=Sun
+                          const todayIndex = today === 0 ? 6 : today - 1;
+                          const todayText = openingHours.weekdayText[todayIndex];
+                          // Extract just the hours part (after the colon)
+                          const hoursOnly = todayText?.includes(':') ? todayText.substring(todayText.indexOf(':') + 1).trim() : todayText;
+                          return (
+                            <ThemedText style={{ fontSize: 13, color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                              {hoursOnly}
+                            </ThemedText>
+                          );
+                        })()}
+                      </View>
+                      <IconSymbol
+                        name={showAllHours ? "chevron.up" : "chevron.down"}
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                    </View>
+
+                    {/* Expanded: All Days */}
+                    {showAllHours && openingHours.weekdayText.length > 0 && (
+                      <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }}>
+                        {openingHours.weekdayText.map((dayText: string, index: number) => {
+                          const today = new Date().getDay();
+                          const dayIndex = (index + 1) % 7;
+                          const isToday = dayIndex === today;
+
+                          return (
+                            <View
+                              key={index}
+                              style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                paddingVertical: 5,
+                                paddingHorizontal: 8,
+                                borderRadius: 6,
+                                backgroundColor: isToday ? colors.primary + '10' : 'transparent',
+                              }}
+                            >
+                              <ThemedText style={{
+                                fontSize: 14,
+                                fontWeight: isToday ? '600' : '400',
+                                color: isToday ? colors.primary : colors.text,
+                                flex: 1,
+                              }}>
+                                {dayText}
+                              </ThemedText>
+                            </View>
+                          );
+                        })}
+                      </View>
                     )}
                   </Pressable>
-                </View>
+                ) : null}
+              </View>
+            )}
 
-                {/* 7-Day Forecast */}
-                {showForecast && forecast.length > 0 && (
-                  <View style={[styles.forecastContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    {forecast.map((day, index) => (
-                      <View key={day.date} style={[styles.forecastDay, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
-                        <ThemedText style={[styles.forecastDate, { color: colors.textSecondary }]}>
-                          {new Date(day.date).toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })}
+            {/* Weather – compact like opening hours */}
+            {(currentWeather || weatherLoading) && (
+              <View style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>🌤️ Wetter</ThemedText>
+
+                {weatherLoading && !currentWeather ? (
+                  <View style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: 'center', paddingVertical: 20 }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ThemedText style={[styles.infoLabel, { color: colors.textSecondary, marginTop: 8 }]}>
+                      Wetter wird geladen...
+                    </ThemedText>
+                  </View>
+                ) : currentWeather ? (
+                  <Pressable
+                    onPress={handleShowForecast}
+                    style={[styles.weatherCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    {/* Compact: Icon + Temp + Description + Rain */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        {currentWeather.icon && (
+                          <Image
+                            source={{ uri: getWeatherIconUrl(currentWeather.icon) }}
+                            style={{ width: 36, height: 36, marginRight: 8 }}
+                            contentFit="contain"
+                          />
+                        )}
+                        <ThemedText style={{ fontSize: 18, fontWeight: '700', marginRight: 8 }}>
+                          {currentWeather.temp}°C
                         </ThemedText>
-                        <Image
-                          source={{ uri: getWeatherIconUrl(day.icon) }}
-                          style={styles.forecastIcon}
-                          contentFit="contain"
-                        />
-                        <ThemedText style={styles.forecastTemp}>
-                          {day.temp_max}° / {day.temp_min}°
-                        </ThemedText>
-                        <ThemedText style={[styles.forecastDescription, { color: colors.textSecondary }]}>
-                          {day.description}
+                        <ThemedText style={{ fontSize: 14, color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                          {currentWeather.description}
                         </ThemedText>
                       </View>
-                    ))}
-                  </View>
+                      {rainInfo.rainText && (
+                        <View style={{ backgroundColor: '#EF444415', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginLeft: 6 }}>
+                          <ThemedText style={{ fontSize: 11, color: '#EF4444', fontWeight: '600' }}>
+                            🌧️ {rainInfo.rainText}
+                          </ThemedText>
+                        </View>
+                      )}
+                      <IconSymbol
+                        name={showForecast ? "chevron.up" : "chevron.down"}
+                        size={16}
+                        color={colors.textSecondary}
+                        style={{ marginLeft: 8 }}
+                      />
+                    </View>
+
+                    {/* Expanded: 7-Day Forecast */}
+                    {showForecast && forecast.length > 0 && (
+                      <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }}>
+                        {forecast.map((day, index) => {
+                          const isToday = index === 0;
+                          return (
+                            <View
+                              key={day.date}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 6,
+                                paddingHorizontal: 4,
+                                borderRadius: 6,
+                                backgroundColor: isToday ? colors.primary + '10' : 'transparent',
+                              }}
+                            >
+                              <ThemedText style={{ fontSize: 13, width: 80, fontWeight: isToday ? '600' : '400', color: isToday ? colors.primary : colors.textSecondary }}>
+                                {new Date(day.date).toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'short' })}
+                              </ThemedText>
+                              <Image
+                                source={{ uri: getWeatherIconUrl(day.icon) }}
+                                style={{ width: 28, height: 28, marginHorizontal: 4 }}
+                                contentFit="contain"
+                              />
+                              <ThemedText style={{ fontSize: 14, fontWeight: '600', width: 65 }}>
+                                {day.temp_max}° / {day.temp_min}°
+                              </ThemedText>
+                              <ThemedText style={{ fontSize: 13, color: colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                                {day.description}
+                              </ThemedText>
+                              {day.pop > 30 && (
+                                <ThemedText style={{ fontSize: 11, color: '#3B82F6' }}>
+                                  💧{day.pop}%
+                                </ThemedText>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </Pressable>
+                ) : null}
+
+                {/* Rain Warning + Indoor Alternatives */}
+                {rainInfo.hasRain && !trip.is_indoor && (
+                  <Pressable
+                    onPress={() => {
+                      router.push({ pathname: '/(tabs)/explore', params: { indoor: 'true' } } as any);
+                    }}
+                    style={({ pressed }) => [{
+                      marginTop: 8,
+                      backgroundColor: '#FEF3C7',
+                      borderRadius: 10,
+                      padding: 12,
+                      opacity: pressed ? 0.85 : 1,
+                    }]}
+                  >
+                    <ThemedText style={{ fontSize: 14, color: '#92400E', marginBottom: 6 }}>
+                      ⚠️ Heute Regen erwartet – dieser Ausflug ist hauptsächlich draussen
+                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}>
+                      <ThemedText style={{ fontSize: 14, color: '#FFFFFF', fontWeight: '600' }}>
+                        🏠 Indoor-Alternativen anzeigen
+                      </ThemedText>
+                    </View>
+                  </Pressable>
                 )}
               </View>
             )}
@@ -699,48 +926,16 @@ export default function TripDetailScreen() {
             <View style={styles.section}>
               <ThemedText style={styles.sectionTitle}>{t.detailsTitle}</ThemedText>
 
-              {trip.hundefreundlich !== undefined ? (
-                <InfoRow icon="pawprint.fill" label={t.dogFriendly} value={trip.hundefreundlich ? t.yes : t.no} />
-              ) : null}
-
-              {trip.land ? (
-                <InfoRow icon="flag.fill" label={t.country} value={trip.land} />
-              ) : null}
-
-              {trip.parkplatz ? (
-                <InfoRow icon="parkingsign" label={t.parkingLocation} value={trip.parkplatz} />
-              ) : null}
-
-              {trip.parkplatz_anzahl ? (
-                <InfoRow
-                  icon="car.fill"
-                  label="Parkplätze"
-                  value={
-                    trip.parkplatz_anzahl === 'genuegend' ? "Genügend vorhanden" :
-                      trip.parkplatz_anzahl === 'maessig' ? "Mässig vorhanden" :
-                        "Keine vorhanden"
-                  }
-                />
-              ) : null}
-
-              {trip.parkplatz_kostenlos !== null && trip.parkplatz_kostenlos !== undefined ? (
-                <InfoRow icon="banknote" label="Parkplatz Kosten" value={trip.parkplatz_kostenlos ? "Gratis" : "Kostenpflichtig"} />
-              ) : null}
-
               {trip.altersempfehlung ? (
                 <InfoRow icon="person.2.fill" label={t.ageRecommendation} value={trip.altersempfehlung} />
               ) : null}
 
-              {trip.dauer ? (
-                <InfoRow icon="clock.fill" label={t.duration} value={trip.dauer} />
+              {trip.kategorie_alt && (trip.kategorie_alt.includes('Abenteuerweg') || trip.kategorie_alt.includes('Schnitzeljagd') || trip.kategorie_alt.includes('Wandern')) ? (
+                <InfoRow icon="point.topleft.down.to.point.bottomright.curvepath.fill" label="Streckentyp" value={trip.is_rundtour ? "Rundtour" : trip.is_von_a_nach_b ? "Von A nach B" : "Nicht angegeben"} />
               ) : null}
 
-              {trip.parkplaetze !== undefined ? (
-                <InfoRow icon="parkingsign.circle.fill" label={t.parking} value={trip.parkplaetze ? t.yes : t.no} />
-              ) : null}
-
-              {trip.oeffentlicher_verkehr !== undefined ? (
-                <InfoRow icon="tram.fill" label={t.publicTransport} value={trip.oeffentlicher_verkehr ? t.yes : t.no} />
+              {trip.parkplatz_kostenlos !== null && trip.parkplatz_kostenlos !== undefined ? (
+                <InfoRow icon="p.square.fill" label="Parkplatz Kosten" value={trip.parkplatz_kostenlos ? "Gratis" : "Kostenpflichtig"} />
               ) : null}
 
               {trip.jahreszeiten ? (
@@ -749,6 +944,10 @@ export default function TripDetailScreen() {
                   label={t.seasons}
                   value={translateSeasons(trip.jahreszeiten, t)}
                 />
+              ) : null}
+
+              {trip.land ? (
+                <InfoRow icon="globe.europe.africa.fill" label={t.country} value={trip.land} />
               ) : null}
             </View>
 
@@ -841,8 +1040,155 @@ export default function TripDetailScreen() {
         </ScrollView>
 
 
-      </View>
-    </View>
+      </View >
+
+      {/* Popup Notification Modal */}
+      {trip && (
+        <Modal
+          visible={showPopup}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowPopup(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: colors.background, borderRadius: 16, width: '100%', maxWidth: 400, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 }}>
+              {/* Header with colored background */}
+              <View style={{
+                backgroundColor: trip.popup_level === 'info' ? '#3B82F6' : trip.popup_level === 'warnung' ? '#F59E0B' : '#EF4444',
+                paddingVertical: 16,
+                paddingHorizontal: 20,
+                alignItems: 'center',
+              }}>
+                <ThemedText style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: trip.popup_level === 'wichtig' ? '#000000' : '#FFFFFF',
+                  textAlign: 'center',
+                }}>
+                  {trip.popup_level === 'info' ? 'ℹ️ ' : trip.popup_level === 'warnung' ? '⚠️ ' : '🚨 '}
+                  {trip.popup_title || 'Hinweis'}
+                </ThemedText>
+              </View>
+
+              {/* Message Body */}
+              {trip.popup_message ? (
+                <View style={{ padding: 20 }}>
+                  <ThemedText style={{ fontSize: 15, lineHeight: 22, color: colors.text, textAlign: 'center' }}>
+                    {trip.popup_message}
+                  </ThemedText>
+                </View>
+              ) : null}
+
+              {/* Buttons */}
+              <View style={{ flexDirection: 'row', padding: 16, gap: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+                <Pressable
+                  onPress={async () => {
+                    await AsyncStorage.setItem(`popup_dismissed_${trip.id}`, Date.now().toString());
+                    setShowPopup(false);
+                  }}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    backgroundColor: pressed ? '#DC2626' : '#EF4444',
+                    borderRadius: 10,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                  })}
+                >
+                  <ThemedText style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                    Nicht wieder anzeigen
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={() => setShowPopup(false)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    backgroundColor: pressed ? '#16A34A' : '#22C55E',
+                    borderRadius: 10,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                  })}
+                >
+                  <ThemedText style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+                    Verstanden
+                  </ThemedText>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Fullscreen Image Modal */}
+      <Modal
+        visible={showFullscreenImage}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowFullscreenImage(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' }}>
+          {/* Close Button */}
+          <Pressable
+            onPress={() => setShowFullscreenImage(false)}
+            style={{
+              position: 'absolute',
+              top: insets.top + 10,
+              right: 16,
+              zIndex: 10,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <IconSymbol name="xmark" size={22} color="#FFFFFF" />
+          </Pressable>
+
+          {/* Image */}
+          {allPhotos.length > 0 ? (
+            <>
+              <ImagePager
+                style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').height * 0.75 }}
+                initialPage={currentPhotoIndex}
+                onPageSelected={(e) => setCurrentPhotoIndex(e.nativeEvent.position)}
+              >
+                {allPhotos.map((url, index) => (
+                  <View key={`fullscreen-${index}`} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={{ uri: url }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="contain"
+                    />
+                  </View>
+                ))}
+              </ImagePager>
+              {allPhotos.length > 1 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16, gap: 6 }}>
+                  {allPhotos.map((_, index) => (
+                    <View
+                      key={index}
+                      style={{
+                        width: index === currentPhotoIndex ? 10 : 7,
+                        height: index === currentPhotoIndex ? 10 : 7,
+                        borderRadius: 5,
+                        backgroundColor: index === currentPhotoIndex ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
+          ) : photoUrl ? (
+            <Image
+              source={{ uri: photoUrl }}
+              style={{ width: '100%', height: '80%' }}
+              contentFit="contain"
+            />
+          ) : null}
+        </View>
+      </Modal>
+    </View >
   );
 }
 

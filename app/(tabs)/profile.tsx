@@ -220,11 +220,16 @@ export default function ProfileScreen() {
   }, []);
 
   async function checkBiometricStatus() {
+    if (Platform.OS === 'web') {
+      setIsBiometricEnabled(false);
+      return;
+    }
     const hasEmail = await SecureStore.getItemAsync('user_email');
     setIsBiometricEnabled(!!hasEmail);
   }
 
   async function toggleBiometric(value: boolean) {
+    if (Platform.OS === 'web') return;
     if (!value) {
       // Disable
       await SecureStore.deleteItemAsync('user_email');
@@ -292,6 +297,70 @@ export default function ProfileScreen() {
             );
           },
         },
+      ]
+    );
+  };
+
+  const handleFixCoordinates = async () => {
+    Alert.alert(
+      "Koordinaten reparieren",
+      "Sollen alle Ausflüge ohne Koordinaten automatisch geocodiert werden?",
+      [
+        { text: "Abbrechen", style: "cancel" },
+        {
+          text: "Starten",
+          onPress: async () => {
+            try {
+              // 1. Fetch all trips
+              const { getAllAusfluege, updateAusflug } = require("@/lib/supabase-api");
+              const { geocodeAddress } = require("@/lib/geocoding");
+
+              const allTrips = await getAllAusfluege();
+              const tripsWithoutCoords = allTrips.filter((t: any) => !t.lat || !t.lng);
+
+              if (tripsWithoutCoords.length === 0) {
+                Alert.alert("Info", "Alle Ausflüge haben bereits Koordinaten.");
+                return;
+              }
+
+              Alert.alert("Info", `${tripsWithoutCoords.length} Ausflüge ohne Koordinaten gefunden. Reparatur startet...`);
+
+              let successCount = 0;
+              let failCount = 0;
+
+              for (const trip of tripsWithoutCoords) {
+                if (trip.adresse) {
+                  try {
+                    console.log(`[FixCoords] Geocoding ${trip.name} (${trip.adresse})...`);
+                    const result = await geocodeAddress(trip.adresse);
+                    if (result && result.lat && result.lng) {
+                      await updateAusflug(trip.id, {
+                        lat: result.lat,
+                        lng: result.lng
+                      });
+                      successCount++;
+                    } else {
+                      console.log(`[FixCoords] Failed for ${trip.name}`);
+                      failCount++;
+                    }
+                  } catch (e) {
+                    console.error(`[FixCoords] Error for ${trip.name}`, e);
+                    failCount++;
+                  }
+                  // Small delay to be nice to API
+                  await new Promise(resolve => setTimeout(resolve, 200));
+                } else {
+                  failCount++;
+                }
+              }
+
+              Alert.alert("Abgeschlossen", `${successCount} repariert, ${failCount} fehlgeschlagen.`);
+
+            } catch (error: any) {
+              Alert.alert("Fehler", error.message);
+            }
+          }
+        }
       ]
     );
   };
@@ -485,11 +554,25 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/admin/create-trip" as any)}
                 />
                 <SettingItem
+                  icon="tray.full.fill"
+                  iconColor="#F59E0B"
+                  title="Eingereichte Ausflüge"
+                  subtitle="Benutzer-Vorschläge prüfen"
+                  onPress={() => router.push("/admin/pending-submissions" as any)}
+                />
+                <SettingItem
                   icon="paperplane.fill"
                   iconColor="#FF6B35"
                   title="Push-Benachrichtigungen"
                   subtitle="Broadcast an alle User senden"
                   onPress={() => router.push("/broadcast" as any)}
+                />
+                <SettingItem
+                  icon="mappin.and.ellipse"
+                  iconColor="#3B82F6"
+                  title="Fehlende Koordinaten reparieren"
+                  subtitle="Automatisch Geocoding für Trips ohne Koords"
+                  onPress={handleFixCoordinates}
                 />
               </SettingSection>
             )}

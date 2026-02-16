@@ -14,7 +14,7 @@ import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { MapViewComponent } from "@/components/map-view-component";
+import { TripMapView } from "@/components/ui/trip-map-view";
 import { Colors, BrandColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
@@ -237,7 +237,7 @@ export default function PlanDetailScreen() {
               <ThemedText style={styles.sectionTitle}>Karte</ThemedText>
             </View>
             <View style={styles.mapContainer}>
-              <MapViewComponent
+              <TripMapView
                 trips={activities.map((a) => ({
                   id: a.ausflug_id,
                   name: a.name,

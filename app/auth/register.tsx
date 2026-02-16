@@ -24,7 +24,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { signUp } = useSupabaseAuth();
   const insets = useSafeAreaInsets();
-  
+
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
@@ -46,22 +46,28 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, name);
-    setLoading(false);
+    try {
+      const { error } = await signUp(email, password, name);
 
-    if (error) {
-      Alert.alert('Registrierung fehlgeschlagen', error.message);
-    } else {
-      Alert.alert(
-        'Registrierung erfolgreich',
-        'Bitte überprüfe deine E-Mail, um dein Konto zu bestätigen.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/auth/login' as any),
-          },
-        ]
-      );
+      if (error) {
+        Alert.alert('Registrierung fehlgeschlagen', error.message);
+      } else {
+        Alert.alert(
+          'Registrierung erfolgreich',
+          'Bitte überprüfe deine E-Mail, um dein Konto zu bestätigen.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/auth/login' as any),
+            },
+          ]
+        );
+      }
+    } catch (e: any) {
+      console.error('[Register] Unexpected error:', e);
+      Alert.alert('Fehler', e?.message || 'Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setLoading(false);
     }
   };
 

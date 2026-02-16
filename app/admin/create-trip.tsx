@@ -28,6 +28,7 @@ import { Image } from "expo-image";
 export default function CreateTripScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { isAdmin } = useAdmin();
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? "light"];
     const { canEdit } = useAdmin();
@@ -54,6 +55,12 @@ export default function CreateTripScreen() {
         altersempfehlung: "",
         parkplatz: "",
         kategorie_alt: [] as string[],
+        is_indoor: false,
+        is_rundtour: false,
+        is_von_a_nach_b: false,
+        popup_title: "",
+        popup_message: "",
+        popup_level: "deaktiviert" as "info" | "warnung" | "wichtig" | "deaktiviert",
     });
 
     // Derive nice-to-know options from selected categories
@@ -183,7 +190,17 @@ export default function CreateTripScreen() {
             }
 
             setIsCreating(false);
-            router.replace(`/trip/${result.id}` as any);
+
+            // If pending (user submission), show confirmation and go back
+            if (result.isPending) {
+                Alert.alert(
+                    "✅ Eingereicht!",
+                    "Dein Ausflug-Vorschlag wurde eingereicht und wird von einem Admin geprüft. Du wirst benachrichtigt, sobald er freigeschaltet wird.",
+                    [{ text: "OK", onPress: () => router.back() }]
+                );
+            } else {
+                router.replace(`/trip/${result.id}` as any);
+            }
         } else {
             Alert.alert("Fehler", result.error || "Unbekannter Fehler");
         }
@@ -345,6 +362,119 @@ export default function CreateTripScreen() {
                                     numberOfLines={4}
                                     textAlignVertical="top"
                                 />
+                            </View>
+
+                            {/* Indoor/Outdoor Toggle */}
+                            <View style={styles.inputGroup}>
+                                <ThemedText style={styles.label}>Indoor / Outdoor</ThemedText>
+                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                                    <Pressable
+                                        onPress={() => setFormData({ ...formData, is_indoor: false })}
+                                        style={[styles.checkboxItem, {
+                                            borderColor: !formData.is_indoor ? colors.primary : colors.border,
+                                            backgroundColor: !formData.is_indoor ? colors.primary + '15' : colors.surface,
+                                            flex: 1,
+                                            justifyContent: 'center',
+                                        }]}
+                                    >
+                                        <ThemedText style={[styles.checkboxLabel, { color: !formData.is_indoor ? colors.primary : colors.text }]}>
+                                            🌳 Outdoor
+                                        </ThemedText>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={() => setFormData({ ...formData, is_indoor: true })}
+                                        style={[styles.checkboxItem, {
+                                            borderColor: formData.is_indoor ? colors.primary : colors.border,
+                                            backgroundColor: formData.is_indoor ? colors.primary + '15' : colors.surface,
+                                            flex: 1,
+                                            justifyContent: 'center',
+                                        }]}
+                                    >
+                                        <ThemedText style={[styles.checkboxLabel, { color: formData.is_indoor ? colors.primary : colors.text }]}>
+                                            🏠 Indoor
+                                        </ThemedText>
+                                    </Pressable>
+                                </View>
+                            </View>
+
+                            {/* Rundtour / Von A nach B - only for route-based categories */}
+                            {(formData.kategorie_alt.includes('Abenteuerweg') ||
+                                formData.kategorie_alt.includes('Schnitzeljagd') ||
+                                formData.kategorie_alt.includes('Wandern')) && (
+                                    <View style={styles.inputGroup}>
+                                        <ThemedText style={styles.label}>Streckentyp</ThemedText>
+                                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                                            <Pressable
+                                                onPress={() => setFormData({ ...formData, is_rundtour: true, is_von_a_nach_b: false })}
+                                                style={[styles.checkboxItem, {
+                                                    borderColor: formData.is_rundtour ? colors.primary : colors.border,
+                                                    backgroundColor: formData.is_rundtour ? colors.primary + '15' : colors.surface,
+                                                    flex: 1,
+                                                    justifyContent: 'center',
+                                                }]}
+                                            >
+                                                <ThemedText style={[styles.checkboxLabel, { color: formData.is_rundtour ? colors.primary : colors.text }]}>
+                                                    🔄 Rundtour
+                                                </ThemedText>
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={() => setFormData({ ...formData, is_rundtour: false, is_von_a_nach_b: true })}
+                                                style={[styles.checkboxItem, {
+                                                    borderColor: formData.is_von_a_nach_b ? colors.primary : colors.border,
+                                                    backgroundColor: formData.is_von_a_nach_b ? colors.primary + '15' : colors.surface,
+                                                    flex: 1,
+                                                    justifyContent: 'center',
+                                                }]}
+                                            >
+                                                <ThemedText style={[styles.checkboxLabel, { color: formData.is_von_a_nach_b ? colors.primary : colors.text }]}>
+                                                    ➡️ Von A nach B
+                                                </ThemedText>
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                )}
+
+                            {/* Popup Hinweis */}
+                            <View style={styles.inputGroup}>
+                                <ThemedText style={styles.label}>Popup-Hinweis</ThemedText>
+                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                    {(['deaktiviert', 'info', 'warnung', 'wichtig'] as const).map((level) => (
+                                        <Pressable
+                                            key={level}
+                                            onPress={() => setFormData({ ...formData, popup_level: level })}
+                                            style={[styles.checkboxItem, {
+                                                borderColor: formData.popup_level === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.border,
+                                                backgroundColor: formData.popup_level === level ? (level === 'info' ? '#3B82F615' : level === 'warnung' ? '#F59E0B15' : level === 'wichtig' ? '#EF444415' : colors.primary + '15') : colors.surface,
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 8,
+                                            }]}
+                                        >
+                                            <ThemedText style={[styles.checkboxLabel, { color: formData.popup_level === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.text }]}>
+                                                {level === 'deaktiviert' ? '⛔ Deaktiviert' : level === 'info' ? 'ℹ️ Info' : level === 'warnung' ? '⚠️ Warnung' : '🚨 Wichtig'}
+                                            </ThemedText>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                                {formData.popup_level !== 'deaktiviert' && (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, marginTop: 8 }]}
+                                            value={formData.popup_title}
+                                            onChangeText={(text) => setFormData({ ...formData, popup_title: text })}
+                                            placeholder="Popup Titel"
+                                            placeholderTextColor={colors.textDisabled}
+                                        />
+                                        <TextInput
+                                            style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border, marginTop: 8, minHeight: 80, textAlignVertical: 'top' }]}
+                                            value={formData.popup_message}
+                                            onChangeText={(text) => setFormData({ ...formData, popup_message: text })}
+                                            placeholder="Popup Nachricht"
+                                            placeholderTextColor={colors.textDisabled}
+                                            multiline
+                                            numberOfLines={3}
+                                        />
+                                    </>
+                                )}
                             </View>
 
                             <View style={styles.inputGroup}>

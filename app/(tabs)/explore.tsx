@@ -18,7 +18,7 @@ import { Image } from "expo-image";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { MapViewComponent } from "@/components/map-view-component";
+import { TripMapView } from "@/components/ui/trip-map-view";
 import { Colors, BrandColors, SemanticColors, Spacing, BorderRadius, CostColors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
@@ -300,7 +300,8 @@ export default function ExploreScreen() {
     favorites: false,
     notDone: false,
     bookmarked: false,
-    hasVoucher: false, // New filter
+    hasVoucher: false,
+    indoor: false,
   });
   const { isAuthenticated } = useAuth();
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -321,7 +322,15 @@ export default function ExploreScreen() {
     if (params.cost === 'free') {
       setSelectedCost('free');
     }
-  }, [params.view, params.cost]); // React to URL parameter changes
+    // Reset all filters, then activate only if explicitly passed
+    setActiveFilters({
+      favorites: false,
+      notDone: false,
+      bookmarked: false,
+      hasVoucher: false,
+      indoor: params.indoor === 'true',
+    });
+  }, [params.view, params.cost, params.indoor]);
 
 
   // Fetch trips with filters and photos
@@ -393,6 +402,10 @@ export default function ExploreScreen() {
     }
     // Apply "Not Done" filter
     if (activeFilters.notDone && doneTripIds.has(trip.id)) {
+      return false;
+    }
+    // Apply "Indoor" filter (Schlechtwetter)
+    if (activeFilters.indoor && !trip.is_indoor) {
       return false;
     }
     return true;
@@ -519,8 +532,8 @@ export default function ExploreScreen() {
             style={[
               styles.viewModeButton,
               {
-                backgroundColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher) ? colors.primary + "20" : colors.surface,
-                borderColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher) ? colors.primary : colors.border
+                backgroundColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher || activeFilters.indoor) ? colors.primary + "20" : colors.surface,
+                borderColor: (activeFilters.favorites || activeFilters.notDone || activeFilters.bookmarked || activeFilters.hasVoucher || activeFilters.indoor) ? colors.primary : colors.border
               }
             ]}
           >
@@ -648,6 +661,26 @@ export default function ExploreScreen() {
               <IconSymbol name="checkmark" size={16} color={colors.primary} />
             )}
           </Pressable>
+
+          <Pressable
+            onPress={() => setActiveFilters(prev => ({ ...prev, indoor: !prev.indoor }))}
+            style={[
+              styles.sortMenuItem,
+              activeFilters.indoor && { backgroundColor: colors.primary + "15" },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.sortMenuItemText,
+                activeFilters.indoor && { color: colors.primary, fontWeight: "600" },
+              ]}
+            >
+              Schlechtwetter (Indoor)
+            </ThemedText>
+            {activeFilters.indoor && (
+              <IconSymbol name="checkmark" size={16} color={colors.primary} />
+            )}
+          </Pressable>
         </View>
       )}
 
@@ -721,7 +754,7 @@ export default function ExploreScreen() {
 
       {/* Content - Grid or Map */}
       {viewMode === "map" ? (
-        <MapViewComponent
+        <TripMapView
           trips={trips as any}
           onMarkerPress={handleTripPress}
         />

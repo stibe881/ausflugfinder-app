@@ -24,8 +24,9 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors, BrandColors, Spacing, BorderRadius } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
-import { getAusflugeStatistics } from "@/lib/supabase-api";
+import { getAusflugeStatistics, getCurrentWeather, getRainForecastToday, getIndoorTrips, getWeatherIconUrl, getPrimaryPhotosForTrips, type Ausflug } from "@/lib/supabase-api";
 import { useLanguage } from "@/contexts/language-context";
+import * as Location from "expo-location";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -153,6 +154,12 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<{ totalActivities: number; freeActivities: number; totalRegions: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // Weather-based homepage state
+  const [isRaining, setIsRaining] = useState(false);
+  const [rainBannerText, setRainBannerText] = useState<string | null>(null);
+  const [indoorTrips, setIndoorTrips] = useState<(Ausflug & { primaryPhotoUrl?: string })[]>([]);
+  const [weatherChecked, setWeatherChecked] = useState(false);
+
   useFocusEffect(
     useCallback(() => {
       async function loadStats() {
@@ -164,6 +171,35 @@ export default function HomeScreen() {
       loadStats();
     }, [])
   );
+
+  // Check weather at user location for rain banner
+  useEffect(() => {
+    async function checkWeather() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+
+        const location = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = location.coords;
+
+        const rainResult = await getRainForecastToday(latitude, longitude);
+        if (rainResult.hasRain) {
+          setIsRaining(true);
+          setRainBannerText(rainResult.rainText);
+          // Load indoor trips
+          const trips = await getIndoorTrips(10);
+          const photoMap = await getPrimaryPhotosForTrips(trips.map(t => t.id));
+          const tripsWithPhotos = trips.map(t => ({ ...t, primaryPhotoUrl: photoMap[t.id] || undefined }));
+          setIndoorTrips(tripsWithPhotos);
+        }
+      } catch (error) {
+        console.error('[HomeWeather] Error:', error);
+      } finally {
+        setWeatherChecked(true);
+      }
+    }
+    checkWeather();
+  }, []);
 
   return (
     <ScrollView
@@ -241,6 +277,68 @@ export default function HomeScreen() {
           )}
         </View>
       </View>
+
+      {/* Rain Weather Banner + Indoor Carousel */}
+      {isRaining && indoorTrips.length > 0 && (
+        <View style={styles.section}>
+          <View style={{
+            backgroundColor: '#1E3A5F',
+            borderRadius: 16,
+            padding: 16,
+            marginBottom: 12,
+          }}>
+            <ThemedText style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 }}>
+              🌧️ Regenwetter heute?
+            </ThemedText>
+            <ThemedText style={{ fontSize: 14, color: '#CBD5E1' }}>
+              Diese Indoor-Ausflüge sind perfekt dafür!
+            </ThemedText>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 12 }}
+          >
+            {indoorTrips.map((trip) => (
+              <Pressable
+                key={trip.id}
+                onPress={() => router.push(`/trip/${trip.id}` as any)}
+                style={({ pressed }) => [{
+                  width: 200,
+                  borderRadius: 12,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  overflow: 'hidden',
+                  opacity: pressed ? 0.8 : 1,
+                }]}
+              >
+                <Image
+                  source={{ uri: trip.primaryPhotoUrl || 'https://via.placeholder.com/200x120' }}
+                  style={{ width: 200, height: 120 }}
+                  contentFit="cover"
+                />
+                <View style={{ padding: 10 }}>
+                  <ThemedText style={{ fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+                    {trip.name}
+                  </ThemedText>
+                  {trip.kategorie_alt && (
+                    <ThemedText style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
+                      {trip.kategorie_alt}
+                    </ThemedText>
+                  )}
+                  {trip.region && (
+                    <ThemedText style={{ fontSize: 11, color: colors.textSecondary }} numberOfLines={1}>
+                      📍 {trip.region}
+                    </ThemedText>
+                  )}
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Statistics Section */}
       <View style={styles.section}>

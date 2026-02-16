@@ -22,10 +22,10 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   isAuthenticated: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null }),
-  signOut: async () => {},
+  signOut: async () => { },
   resetPassword: async () => ({ error: null }),
-  refresh: async () => {},
-  logout: async () => {},
+  refresh: async () => { },
+  logout: async () => { },
 });
 
 export function SupabaseAuthProvider({ children }: { children: React.ReactNode }) {
@@ -54,32 +54,61 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Check if email is confirmed
+    if (!error && data?.user && !data.user.email_confirmed_at) {
+      // Sign out immediately - email not verified
+      await supabase.auth.signOut();
+      return { error: { message: 'Bitte bestätige zuerst deine E-Mail-Adresse. Überprüfe dein Postfach (auch den Spam-Ordner).' } };
+    }
+
     return { error };
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
-    console.log('[SupabaseAuth] signUp called with:', { email, hasPassword: !!password, name });
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
+    try {
+      console.log('[SupabaseAuth] signUp called with:', { email, hasPassword: !!password, name });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
         },
-        emailRedirectTo: undefined, // No email confirmation redirect needed
-      },
-    });
-    console.log('[SupabaseAuth] signUp result:', { 
-      hasData: !!data, 
-      hasUser: !!data?.user,
-      hasSession: !!data?.session,
-      error: error?.message 
-    });
-    return { error };
+      });
+      console.log('[SupabaseAuth] signUp result:', {
+        hasData: !!data,
+        hasUser: !!data?.user,
+        hasSession: !!data?.session,
+        error: error?.message
+      });
+
+      // Sign out immediately after registration to prevent auto-login before email verification
+      if (!error && data?.session) {
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.warn('[SupabaseAuth] signOut after signUp failed:', signOutError);
+        }
+      }
+      // Normalize error to always have a .message property
+      if (error) {
+        const errorMsg = error.message || (error as any).status
+          ? `Server-Fehler (${(error as any).status || 'unbekannt'}). Bitte versuche es später erneut.`
+          : 'Registrierung fehlgeschlagen. Bitte versuche es später erneut.';
+        return { error: { message: error.message || errorMsg } };
+      }
+
+      return { error: null };
+    } catch (e: any) {
+      console.error('[SupabaseAuth] signUp exception:', e);
+      return { error: { message: e?.message || 'Registrierung fehlgeschlagen' } };
+    }
   };
 
   const signOut = async () => {

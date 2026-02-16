@@ -47,7 +47,7 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     config: {
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAdDy_5jIriXd0kBJ4bzSNO8pKcegr9Z3E",
     },
     infoPlist: {
       CFBundleIconName: "AppIcon",
@@ -70,7 +70,7 @@ const config: ExpoConfig = {
     package: env.androidPackage,
     config: {
       googleMaps: {
-        apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+        apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAdDy_5jIriXd0kBJ4bzSNO8pKcegr9Z3E",
       },
     },
     permissions: ["POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
@@ -124,7 +124,7 @@ const config: ExpoConfig = {
     // [
     //   "react-native-maps",
     //   {
-    //     googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBWdywvMrHBFABO6D0vXF0ErXvrhvmLNNs",
+    //     googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyAdDy_5jIriXd0kBJ4bzSNO8pKcegr9Z3E",
     //   },
     // ],
     "./plugins/withDisableSandbox.cjs",

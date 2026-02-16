@@ -114,6 +114,7 @@ export const ausfluege = pgTable("ausfluege", {
   isRundtour: boolean("is_rundtour").default(false).notNull(),
   isVonANachB: boolean("is_von_a_nach_b").default(false).notNull(),
   altersempfehlung: varchar("altersempfehlung", { length: 255 }),
+  googlePlaceId: varchar("google_place_id", { length: 255 }),
 });
 
 // Day Plans

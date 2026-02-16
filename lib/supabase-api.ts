@@ -36,6 +36,14 @@ export type Ausflug = {
     parkplaetze?: boolean;
     oeffentlicher_verkehr?: boolean;
     parkplatz_anzahl?: 'genuegend' | 'maessig' | 'keine' | null;
+    google_place_id?: string | null;
+    is_indoor?: boolean | null;
+    status?: 'pending' | 'approved' | 'rejected' | null;
+    submitted_by?: string | null;
+    submitted_by_email?: string | null;
+    popup_title?: string | null;
+    popup_message?: string | null;
+    popup_level?: 'info' | 'warnung' | 'wichtig' | 'deaktiviert' | null;
 };
 
 // Search ausfluege with optional filters
@@ -50,6 +58,7 @@ export async function searchAusfluege(params?: {
     let query = supabase
         .from("ausfluege")
         .select(selectString)
+        .or('status.is.null,status.eq.approved')
         .order("created_at", { ascending: false });
 
     if (params?.keyword) {
@@ -250,6 +259,126 @@ export async function searchAusfluegWithPhotos(params?: {
 
 // ========== ADMIN FUNCTIONS ==========
 
+// ============ USER SUBMISSIONS ============
+
+// ADMIN_EMAILS list for fast lookup (same as in admin-context.tsx)
+const ADMIN_EMAILS_LIST = [
+    "stefan.gross@hotmail.ch",
+];
+
+/**
+ * Check if user is admin (via email match)
+ */
+export async function isUserAdmin(userId: string): Promise<boolean> {
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.email) return false;
+        return ADMIN_EMAILS_LIST.includes(user.email.toLowerCase());
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Get pending submissions (admin only)
+ */
+export async function getPendingSubmissions(): Promise<Ausflug[]> {
+    const { data, error } = await supabase
+        .from('ausfluege')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('[getPendingSubmissions] Error:', error);
+        return [];
+    }
+    return data || [];
+}
+
+/**
+ * Approve a pending submission
+ */
+export async function approveSubmission(tripId: number): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('ausfluege')
+            .update({ status: 'approved' })
+            .eq('id', tripId);
+
+        if (error) {
+            console.error('[approveSubmission] Error:', error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Reject a pending submission
+ */
+export async function rejectSubmission(tripId: number): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { error } = await supabase
+            .from('ausfluege')
+            .update({ status: 'rejected' })
+            .eq('id', tripId);
+
+        if (error) {
+            console.error('[rejectSubmission] Error:', error);
+            return { success: false, error: error.message };
+        }
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Notify admins about a new pending submission via push notification
+ */
+export async function notifyAdminsNewSubmission(tripName: string, submitterEmail: string): Promise<void> {
+    try {
+        // Get admin user push tokens  
+        const { data: adminProfiles, error } = await supabase
+            .from('user_profiles')
+            .select('push_token, user_id')
+            .not('push_token', 'is', null);
+
+        if (error || !adminProfiles) {
+            console.error('[notifyAdminsNewSubmission] Error fetching admin profiles:', error);
+            return;
+        }
+
+        // Filter for admin emails
+        for (const profile of adminProfiles) {
+            // Get user email to check if admin
+            const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
+            if (userData?.user?.email && ADMIN_EMAILS_LIST.includes(userData.user.email.toLowerCase())) {
+                // Send push notification
+                try {
+                    await fetch('https://exp.host/--/api/v2/push/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            to: profile.push_token,
+                            title: '📝 Neuer Ausflug eingereicht',
+                            body: `${submitterEmail} hat "${tripName}" zur Genehmigung eingereicht.`,
+                            data: { type: 'pending_submission' },
+                        }),
+                    });
+                } catch (pushError) {
+                    console.error('[notifyAdminsNewSubmission] Push error:', pushError);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[notifyAdminsNewSubmission] Error:', error);
+    }
+}
+
 // Create a new ausflug (admin only)
 export async function createAusflug(data: {
     name: string;
@@ -275,20 +404,35 @@ export async function createAusflug(data: {
     distanz_km?: string;
     is_rundtour?: boolean;
     is_von_a_nach_b?: boolean;
-}): Promise<{ success: boolean; id?: number; error?: string; notificationResult?: any }> {
+    is_indoor?: boolean;
+}): Promise<{ success: boolean; id?: number; error?: string; notificationResult?: any; isPending?: boolean }> {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return { success: false, error: "Not authenticated" };
         }
 
+        // Check if user is admin
+        const isAdmin = await isUserAdmin(user.id);
+
+        const insertData: any = {
+            ...data,
+            created_at: new Date().toISOString(),
+        };
+
+        if (isAdmin) {
+            insertData.status = 'approved';
+            insertData.user_id = null; // Admin trips have no specific user
+        } else {
+            insertData.status = 'pending';
+            insertData.submitted_by = user.id;
+            insertData.submitted_by_email = user.email;
+            insertData.user_id = null;
+        }
+
         const { data: result, error } = await supabase
             .from("ausfluege")
-            .insert({
-                ...data,
-                user_id: null, // Admin trips have no specific user
-                created_at: new Date().toISOString(),
-            })
+            .insert(insertData)
             .select('id')
             .single();
 
@@ -299,19 +443,25 @@ export async function createAusflug(data: {
 
         console.log("[createAusflug] Created successfully:", result.id);
 
-        // Notify users about the new trip (awaiting for debug purposes)
+        // If pending (user submission), notify admins
+        if (!isAdmin) {
+            notifyAdminsNewSubmission(data.name, user.email || 'Unbekannt');
+            return { success: true, id: result.id, isPending: true };
+        }
+
+        // Only notify users about approved trips (admin-created)
         let notificationResult = null;
         try {
-            const { data, error } = await supabase.functions.invoke('notify-new-trip', {
+            const { data: notifData, error: notifError } = await supabase.functions.invoke('notify-new-trip', {
                 body: { record: { id: result.id, ...data } }
             });
 
-            if (error) {
-                console.error("[createAusflug] Notification error:", error);
-                notificationResult = { error: error };
+            if (notifError) {
+                console.error("[createAusflug] Notification error:", notifError);
+                notificationResult = { error: notifError };
             } else {
-                console.log("[createAusflug] Notification result:", data);
-                notificationResult = data;
+                console.log("[createAusflug] Notification result:", notifData);
+                notificationResult = notifData;
             }
         } catch (e) {
             console.error("[createAusflug] Notification exception:", e);
@@ -499,13 +649,23 @@ export async function uploadAusflugPhoto(
 
         console.log('[Upload] Starting upload:', storagePath);
 
-        // For React Native, we need to use FormData approach
+        // Create FormData - different approach for web vs native
         const formData = new FormData();
-        formData.append('file', {
-            uri: fileUri,
-            name: cleanFileName,
-            type: 'image/jpeg',
-        } as any);
+
+        const { Platform } = require('react-native');
+        if (Platform.OS === 'web') {
+            // On web, image picker returns blob/data URLs - fetch as blob first
+            const response = await fetch(fileUri);
+            const blob = await response.blob();
+            formData.append('file', blob, cleanFileName);
+        } else {
+            // On native, use RN-style FormData object
+            formData.append('file', {
+                uri: fileUri,
+                name: cleanFileName,
+                type: 'image/jpeg',
+            } as any);
+        }
 
         // Upload using fetch directly to Supabase Storage API
         const { data: { session } } = await supabase.auth.getSession();
@@ -1057,28 +1217,42 @@ export async function toggleTripDone(tripId: number): Promise<{ success: boolean
         return { success: false, error: "Benutzer nicht gefunden" };
     }
 
-    // Get current state
+    // Check if user trip exists
     const { data: userTrip } = await supabase
         .from("user_trips")
         .select("is_done")
         .eq("user_id", userData.id)
         .eq("trip_id", tripId)
-        .single();
+        .maybeSingle();
 
     if (!userTrip) {
-        return { success: false, error: "Trip nicht in deiner Liste" };
-    }
+        // If not exists, insert with is_done = true (and implicit is_saved = true)
+        const { error: insertError } = await supabase
+            .from("user_trips")
+            .insert({
+                user_id: userData.id,
+                trip_id: tripId,
+                is_done: true,
+                is_favorite: false, // Default
+                is_bookmarked: false // Default
+            });
 
-    // Toggle
-    const { error } = await supabase
-        .from("user_trips")
-        .update({ is_done: !userTrip.is_done })
-        .eq("user_id", userData.id)
-        .eq("trip_id", tripId);
+        if (insertError) {
+            console.error("[Supabase] Error inserting user trip for done toggle:", insertError);
+            return { success: false, error: insertError.message };
+        }
+    } else {
+        // Toggle existing
+        const { error } = await supabase
+            .from("user_trips")
+            .update({ is_done: !userTrip.is_done })
+            .eq("user_id", userData.id)
+            .eq("trip_id", tripId);
 
-    if (error) {
-        console.error("[Supabase] Error toggling done:", error);
-        return { success: false, error: error.message };
+        if (error) {
+            console.error("[Supabase] Error toggling done:", error);
+            return { success: false, error: error.message };
+        }
     }
 
     return { success: true };
@@ -1794,6 +1968,134 @@ export function getWeatherIconUrl(iconCode: string): string {
     return `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
 }
 
+/**
+ * Get rain forecast for today - returns when rain is expected
+ */
+export async function getRainForecastToday(lat: number, lng: number): Promise<{ hasRain: boolean; rainText: string | null; maxPop: number }> {
+    try {
+        const response = await fetch(
+            `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&lang=de&appid=${OPENWEATHER_API_KEY}`
+        );
+
+        if (!response.ok) {
+            return { hasRain: false, rainText: null, maxPop: 0 };
+        }
+
+        const data = await response.json();
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        // Filter for today's remaining forecast entries
+        const todayEntries = data.list.filter((item: any) => {
+            const itemDate = item.dt_txt.split(' ')[0];
+            const itemTime = new Date(item.dt * 1000);
+            return itemDate === todayStr && itemTime > now;
+        });
+
+        let maxPop = 0;
+        let firstRainTime: Date | null = null;
+
+        todayEntries.forEach((item: any) => {
+            const pop = item.pop || 0;
+            if (pop > maxPop) maxPop = pop;
+            // Check if it's a rain condition
+            const weatherId = item.weather[0]?.id || 0;
+            const isRain = weatherId >= 200 && weatherId < 700; // Rain, drizzle, thunderstorm, snow
+            if (isRain && !firstRainTime) {
+                firstRainTime = new Date(item.dt * 1000);
+            }
+        });
+
+        const hasRain = maxPop > 0.4; // >40% chance
+        let rainText: string | null = null;
+
+        if (hasRain && firstRainTime) {
+            const hours = (firstRainTime as Date).getHours();
+            const minutes = (firstRainTime as Date).getMinutes();
+            rainText = `Regen ab ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        } else if (hasRain) {
+            rainText = `Regenwahrscheinlichkeit ${Math.round(maxPop * 100)}%`;
+        }
+
+        return { hasRain, rainText, maxPop: Math.round(maxPop * 100) };
+    } catch (error) {
+        console.error('[getRainForecastToday] Error:', error);
+        return { hasRain: false, rainText: null, maxPop: 0 };
+    }
+}
+
+
+
+/**
+ * Search for indoor trips near a given location
+ */
+export async function searchIndoorNearby(lat: number, lng: number, radiusKm: number = 30): Promise<Ausflug[]> {
+    try {
+        const { data, error } = await supabase
+            .from('ausfluege')
+            .select('*')
+            .eq('is_indoor', true)
+            .not('lat', 'is', null)
+            .not('lng', 'is', null);
+
+        if (error || !data) {
+            console.error('[searchIndoorNearby] Error:', error);
+            return [];
+        }
+
+        // Filter by radius
+        const results = data.filter((trip: any) => {
+            const tripLat = parseFloat(trip.lat);
+            const tripLng = parseFloat(trip.lng);
+            if (isNaN(tripLat) || isNaN(tripLng)) return false;
+            return haversineDistance(lat, lng, tripLat, tripLng) <= radiusKm;
+        });
+
+        return results;
+    } catch (error) {
+        console.error('[searchIndoorNearby] Error:', error);
+        return [];
+    }
+}
+
+/**
+ * Haversine distance calculation in kilometers
+ */
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+/**
+ * Get indoor trips for homepage weather banner
+ */
+export async function getIndoorTrips(limit: number = 10): Promise<Ausflug[]> {
+    try {
+        const { data, error } = await supabase
+            .from('ausfluege')
+            .select('*')
+            .eq('is_indoor', true)
+            .or('status.is.null,status.eq.approved')
+            .limit(limit);
+
+        if (error || !data) {
+            console.error('[getIndoorTrips] Error:', error);
+            return [];
+        }
+
+        return data;
+    } catch (error) {
+        console.error('[getIndoorTrips] Error:', error);
+        return [];
+    }
+}
+
 // ============ TRIP VOUCHERS ============
 
 export type TripVoucher = {
@@ -1872,5 +2174,156 @@ export async function openVoucherDeepLink(deepLink: string): Promise<{ success: 
             [{ text: "OK" }]
         );
         return { success: false, error: error.message };
+    }
+}
+
+// ==========================================
+// Google Places API - Opening Hours
+// ==========================================
+
+export type OpeningHoursPeriod = {
+    day: number; // 0=Sunday, 1=Monday, ..., 6=Saturday
+    open: string; // "HH:MM"
+    close: string; // "HH:MM"
+};
+
+export type OpeningHoursResult = {
+    isOpen: boolean | null;
+    periods: OpeningHoursPeriod[];
+    weekdayText: string[]; // e.g. ["Montag: 09:00–17:00", ...]
+};
+
+const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+// Find Google Place ID by name and coordinates using Places API (New) Text Search
+export async function findGooglePlaceId(
+    name: string,
+    lat: string | null,
+    lng: string | null
+): Promise<string | null> {
+    if (!GOOGLE_API_KEY) {
+        console.error("[Places] Google Maps API key not found");
+        return null;
+    }
+
+    try {
+        const body: any = {
+            textQuery: name,
+            languageCode: "de",
+        };
+
+        // Add location bias if coordinates are available
+        if (lat && lng) {
+            body.locationBias = {
+                circle: {
+                    center: {
+                        latitude: parseFloat(lat),
+                        longitude: parseFloat(lng),
+                    },
+                    radius: 5000.0,
+                },
+            };
+        }
+
+        const response = await fetch(
+            "https://places.googleapis.com/v1/places:searchText",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": GOOGLE_API_KEY,
+                    "X-Goog-FieldMask": "places.id,places.displayName",
+                },
+                body: JSON.stringify(body),
+            }
+        );
+
+        if (!response.ok) {
+            console.error("[Places] Text Search failed:", response.status, await response.text());
+            return null;
+        }
+
+        const data = await response.json();
+        if (data.places && data.places.length > 0) {
+            console.log(`[Places] Found place: ${data.places[0].displayName?.text} -> ${data.places[0].id}`);
+            return data.places[0].id;
+        }
+
+        console.warn("[Places] No place found for:", name);
+        return null;
+    } catch (error) {
+        console.error("[Places] Error finding place ID:", error);
+        return null;
+    }
+}
+
+// Fetch opening hours from Google Places API (New) Place Details
+export async function fetchOpeningHours(placeId: string): Promise<OpeningHoursResult | null> {
+    if (!GOOGLE_API_KEY) {
+        console.error("[Places] Google Maps API key not found");
+        return null;
+    }
+
+    try {
+        const response = await fetch(
+            `https://places.googleapis.com/v1/places/${placeId}`,
+            {
+                method: "GET",
+                headers: {
+                    "X-Goog-Api-Key": GOOGLE_API_KEY,
+                    "X-Goog-FieldMask": "currentOpeningHours,regularOpeningHours",
+                },
+            }
+        );
+
+        if (!response.ok) {
+            console.error("[Places] Place Details failed:", response.status, await response.text());
+            return null;
+        }
+
+        const data = await response.json();
+
+        // Prefer currentOpeningHours (includes holiday adjustments), fall back to regularOpeningHours
+        const hours = data.currentOpeningHours || data.regularOpeningHours;
+        if (!hours) {
+            console.warn("[Places] No opening hours available for place:", placeId);
+            return null;
+        }
+
+        // Parse periods
+        const periods: OpeningHoursPeriod[] = (hours.periods || []).map((p: any) => ({
+            day: p.open?.day ?? 0,
+            open: p.open ? `${String(p.open.hour ?? 0).padStart(2, "0")}:${String(p.open.minute ?? 0).padStart(2, "0")}` : "00:00",
+            close: p.close ? `${String(p.close.hour ?? 0).padStart(2, "0")}:${String(p.close.minute ?? 0).padStart(2, "0")}` : "23:59",
+        }));
+
+        // Get weekday text (localized by API)
+        const weekdayText: string[] = hours.weekdayDescriptions || [];
+
+        // Determine if currently open
+        const isOpen = hours.openNow ?? null;
+
+        return { isOpen, periods, weekdayText };
+    } catch (error) {
+        console.error("[Places] Error fetching opening hours:", error);
+        return null;
+    }
+}
+
+// Cache Google Place ID in DB to avoid repeat lookups
+export async function cacheGooglePlaceId(ausflugId: number, placeId: string): Promise<void> {
+    try {
+        const { error } = await supabase
+            .from("ausfluege")
+            .update({ google_place_id: placeId })
+            .eq("id", ausflugId);
+
+        if (error) {
+            console.error("[Places] Error caching place ID:", error);
+        } else {
+            console.log(`[Places] Cached place ID for ausflug ${ausflugId}: ${placeId}`);
+        }
+    } catch (error) {
+        console.error("[Places] Error caching place ID:", error);
     }
 }

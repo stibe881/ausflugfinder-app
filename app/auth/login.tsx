@@ -33,6 +33,10 @@ export default function LoginScreen() {
 
   useEffect(() => {
     (async () => {
+      if (Platform.OS === 'web') {
+        setIsBiometricSupported(false);
+        return;
+      }
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       const hasCredentials = await SecureStore.getItemAsync('user_email');
@@ -83,12 +87,14 @@ export default function LoginScreen() {
     if (error) {
       Alert.alert('Login fehlgeschlagen', error.message);
     } else {
-      // Save credentials locally for biometric login
-      try {
-        await SecureStore.setItemAsync('user_email', email);
-        await SecureStore.setItemAsync('user_password', password);
-      } catch (e) {
-        console.warn('Could not save credentials for biometrics');
+      // Save credentials locally for biometric login (native only)
+      if (Platform.OS !== 'web') {
+        try {
+          await SecureStore.setItemAsync('user_email', email);
+          await SecureStore.setItemAsync('user_password', password);
+        } catch (e) {
+          console.warn('Could not save credentials for biometrics');
+        }
       }
       router.replace('/(tabs)');
     }

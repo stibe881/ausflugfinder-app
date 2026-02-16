@@ -62,6 +62,12 @@ export default function EditTripScreen() {
     const [parkplatzKostenlos, setParkplatzKostenlos] = useState(false);
     const [jahreszeiten, setJahreszeiten] = useState("");
     const [jahreszeitenExpanded, setJahreszeitenExpanded] = useState(false);
+    const [isIndoor, setIsIndoor] = useState(false);
+    const [isRundtour, setIsRundtour] = useState(false);
+    const [isVonANachB, setIsVonANachB] = useState(false);
+    const [popupTitle, setPopupTitle] = useState("");
+    const [popupMessage, setPopupMessage] = useState("");
+    const [popupLevel, setPopupLevel] = useState<'info' | 'warnung' | 'wichtig' | 'deaktiviert'>('deaktiviert');
 
     useEffect(() => {
         async function loadData() {
@@ -85,6 +91,12 @@ export default function EditTripScreen() {
                 // Parse nice_to_know and kategorie_alt from comma-separated strings to arrays
                 setNiceToKnow(tripData.nice_to_know ? tripData.nice_to_know.split(',').map(v => v.trim()) : []);
                 setKategorie(tripData.kategorie_alt ? tripData.kategorie_alt.split(',').map(v => v.trim()) : []);
+                setIsIndoor(tripData.is_indoor || false);
+                setIsRundtour(tripData.is_rundtour || false);
+                setIsVonANachB(tripData.is_von_a_nach_b || false);
+                setPopupTitle(tripData.popup_title || "");
+                setPopupMessage(tripData.popup_message || "");
+                setPopupLevel(tripData.popup_level || 'deaktiviert');
             }
 
             // Load options
@@ -133,6 +145,12 @@ export default function EditTripScreen() {
             jahreszeiten: jahreszeiten,
             nice_to_know: niceToKnow.join(", "),
             kategorie_alt: kategorie.join(", "),
+            is_indoor: isIndoor,
+            is_rundtour: isRundtour,
+            is_von_a_nach_b: isVonANachB,
+            popup_title: popupTitle || null,
+            popup_message: popupMessage || null,
+            popup_level: popupLevel,
             ...(updatedLat && updatedLng ? { lat: updatedLat, lng: updatedLng, google_place_id: null } : {}),
         });
         setIsSaving(false);
@@ -354,6 +372,119 @@ export default function EditTripScreen() {
                                 multiline
                                 numberOfLines={4}
                             />
+                        </View>
+
+                        {/* Indoor/Outdoor Toggle */}
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Indoor / Outdoor</ThemedText>
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                                <Pressable
+                                    onPress={() => setIsIndoor(false)}
+                                    style={[styles.input, {
+                                        flex: 1,
+                                        alignItems: 'center',
+                                        borderColor: !isIndoor ? colors.primary : colors.border,
+                                        backgroundColor: !isIndoor ? colors.primary + '15' : colors.surface,
+                                    }]}
+                                >
+                                    <ThemedText style={{ color: !isIndoor ? colors.primary : colors.text, fontWeight: '600' }}>
+                                        🌳 Outdoor
+                                    </ThemedText>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => setIsIndoor(true)}
+                                    style={[styles.input, {
+                                        flex: 1,
+                                        alignItems: 'center',
+                                        borderColor: isIndoor ? colors.primary : colors.border,
+                                        backgroundColor: isIndoor ? colors.primary + '15' : colors.surface,
+                                    }]}
+                                >
+                                    <ThemedText style={{ color: isIndoor ? colors.primary : colors.text, fontWeight: '600' }}>
+                                        🏠 Indoor
+                                    </ThemedText>
+                                </Pressable>
+                            </View>
+                        </View>
+
+                        {/* Rundtour / Von A nach B - only for route-based categories */}
+                        {(kategorie.includes('Abenteuerweg') ||
+                            kategorie.includes('Schnitzeljagd') ||
+                            kategorie.includes('Wandern')) && (
+                                <View style={styles.field}>
+                                    <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Streckentyp</ThemedText>
+                                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                                        <Pressable
+                                            onPress={() => { setIsRundtour(true); setIsVonANachB(false); }}
+                                            style={[styles.input, {
+                                                flex: 1,
+                                                alignItems: 'center',
+                                                borderColor: isRundtour ? colors.primary : colors.border,
+                                                backgroundColor: isRundtour ? colors.primary + '15' : colors.surface,
+                                            }]}
+                                        >
+                                            <ThemedText style={{ color: isRundtour ? colors.primary : colors.text, fontWeight: '600' }}>
+                                                🔄 Rundtour
+                                            </ThemedText>
+                                        </Pressable>
+                                        <Pressable
+                                            onPress={() => { setIsRundtour(false); setIsVonANachB(true); }}
+                                            style={[styles.input, {
+                                                flex: 1,
+                                                alignItems: 'center',
+                                                borderColor: isVonANachB ? colors.primary : colors.border,
+                                                backgroundColor: isVonANachB ? colors.primary + '15' : colors.surface,
+                                            }]}
+                                        >
+                                            <ThemedText style={{ color: isVonANachB ? colors.primary : colors.text, fontWeight: '600' }}>
+                                                ➡️ Von A nach B
+                                            </ThemedText>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            )}
+
+                        {/* Popup Hinweis */}
+                        <View style={styles.field}>
+                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Popup-Hinweis</ThemedText>
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                {(['deaktiviert', 'info', 'warnung', 'wichtig'] as const).map((level) => (
+                                    <Pressable
+                                        key={level}
+                                        onPress={() => setPopupLevel(level)}
+                                        style={[styles.input, {
+                                            alignItems: 'center',
+                                            paddingHorizontal: 12,
+                                            borderColor: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.border,
+                                            backgroundColor: popupLevel === level ? (level === 'info' ? '#3B82F615' : level === 'warnung' ? '#F59E0B15' : level === 'wichtig' ? '#EF444415' : colors.primary + '15') : colors.surface,
+                                        }]}
+                                    >
+                                        <ThemedText style={{ color: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.text, fontWeight: '600' }}>
+                                            {level === 'deaktiviert' ? '⛔ Aus' : level === 'info' ? 'ℹ️ Info' : level === 'warnung' ? '⚠️ Warnung' : '🚨 Wichtig'}
+                                        </ThemedText>
+                                    </Pressable>
+                                ))}
+                            </View>
+                            {popupLevel !== 'deaktiviert' && (
+                                <>
+                                    <TextInput
+                                        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8 }]}
+                                        value={popupTitle}
+                                        onChangeText={setPopupTitle}
+                                        placeholder="Popup Titel"
+                                        placeholderTextColor={colors.textDisabled}
+                                    />
+                                    <TextInput
+                                        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8, minHeight: 80, textAlignVertical: 'top' }]}
+                                        value={popupMessage}
+                                        onChangeText={setPopupMessage}
+                                        placeholder="Popup Nachricht"
+                                        placeholderTextColor={colors.textDisabled}
+                                        multiline
+                                        numberOfLines={3}
+                                    />
+                                </>
+                            )}
                         </View>
 
                         <View style={styles.field}>

@@ -18,17 +18,20 @@ const MAPPING = {
   "heart.fill": "favorite",
   "calendar": "event",
   "person.fill": "person",
-  
+
   // Actions
   "plus": "add",
+  "plus.circle": "add-circle",
+  "plus.circle.fill": "add-circle",
   "xmark": "close",
+  "xmark.circle.fill": "cancel",
   "chevron.left": "chevron-left",
   "chevron.right": "chevron-right",
   "chevron.down": "expand-more",
   "chevron.up": "expand-less",
   "arrow.left": "arrow-back",
   "arrow.right": "arrow-forward",
-  
+
   // Trip related
   "map.fill": "map",
   "map": "map",
@@ -36,9 +39,13 @@ const MAPPING = {
   "location.fill": "my-location",
   "star.fill": "star",
   "star": "star-border",
+  "heart": "favorite-border",
   "checkmark.circle.fill": "check-circle",
+  "checkmark.circle": "check-circle-outline",
   "checkmark": "check",
-  
+  "bookmark": "bookmark-border",
+  "bookmark.fill": "bookmark",
+
   // Content
   "photo.fill": "photo",
   "camera.fill": "camera-alt",
@@ -47,26 +54,26 @@ const MAPPING = {
   "list.bullet": "format-list-bulleted",
   "square.grid.2x2.fill": "grid-view",
   "square.grid.2x2": "grid-view",
-  
+
   // Weather
   "sun.max.fill": "wb-sunny",
   "cloud.fill": "cloud",
   "cloud.rain.fill": "grain",
   "snowflake": "ac-unit",
-  
+
   // Social
   "person.2.fill": "people",
   "bubble.left.fill": "chat",
   "paperplane.fill": "send",
   "square.and.arrow.up": "share",
-  
+
   // Settings
   "gearshape.fill": "settings",
   "bell.fill": "notifications",
   "globe": "language",
   "moon.fill": "dark-mode",
   "sun.min.fill": "light-mode",
-  
+
   // Misc
   "info.circle.fill": "info",
   "exclamationmark.triangle.fill": "warning",
@@ -79,7 +86,14 @@ const MAPPING = {
   "bag.fill": "shopping-bag",
   "mountain.2.fill": "terrain",
   "figure.walk": "directions-walk",
-  
+  "arrow.up.arrow.down": "swap-vert",
+  "creditcard.fill": "credit-card",
+  "globe.europe.africa.fill": "public",
+  "lightbulb.fill": "lightbulb",
+  "arrow.triangle.swap": "swap-horiz",
+  "p.square.fill": "local-parking",
+  "point.topleft.down.to.point.bottomright.curvepath.fill": "alt-route",
+
   // Legacy
   "chevron.left.forwardslash.chevron.right": "code",
 } as IconMapping;

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
-import { Loader } from "@googlemaps/js-api-loader";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
-import { ThemedText } from "./themed-text";
+import { ThemedText } from "@/components/themed-text";
 import { Colors, BrandColors, Spacing } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
@@ -78,6 +78,9 @@ function createInfoWindowTemplate(trip: Trip): string {
   `;
 }
 
+// Initialize once
+let optionsSet = false;
+
 export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "light"];
@@ -101,18 +104,24 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
       return;
     }
 
-    const loader = new Loader({
-      apiKey,
-      version: "weekly",
-    });
+    // Set options once
+    if (!optionsSet) {
+      setOptions({ key: apiKey, v: "weekly" });
+      optionsSet = true;
+    }
 
-    (loader as any)
-      .load()
-      .then((google: any) => {
+    // Use importLibrary to load Maps
+    Promise.all([
+      importLibrary("maps"),
+      importLibrary("marker"),
+    ])
+      .then(() => {
         if (!mapRef.current) return;
 
+        const gm = (window as any).google.maps;
+
         // Calculate center and bounds
-        const bounds = new google.maps.LatLngBounds();
+        const bounds = new gm.LatLngBounds();
         tripsWithCoords.forEach((trip) => {
           const lat = parseFloat(trip.lat!);
           const lng = parseFloat(trip.lng!);
@@ -122,7 +131,7 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
         const center = bounds.getCenter();
 
         // Create map
-        const map = new google.maps.Map(mapRef.current, {
+        const map = new gm.Map(mapRef.current, {
           center: { lat: center.lat(), lng: center.lng() },
           zoom: 8,
           mapTypeControl: true,
@@ -150,11 +159,11 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
           const lng = parseFloat(trip.lng!);
           const costInfo = CostInfo[trip.kosten_stufe ?? 0];
 
-          const marker = new google.maps.Marker({
+          const marker = new gm.Marker({
             position: { lat, lng },
             title: trip.name,
             icon: {
-              path: google.maps.SymbolPath.CIRCLE,
+              path: gm.SymbolPath.CIRCLE,
               fillColor: costInfo.color,
               fillOpacity: 0.9,
               strokeColor: "#ffffff",
@@ -164,14 +173,14 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
           });
 
           // Create custom info window
-          const infoWindow = new google.maps.InfoWindow({
+          const infoWindow = new gm.InfoWindow({
             content: createInfoWindowTemplate(trip),
           });
 
           // Open info window on marker click
           marker.addListener("click", () => {
             // Close all other info windows
-            markersRef.current.forEach((m) => {
+            markersRef.current.forEach((m: any) => {
               if (m.infoWindow && m.infoWindow !== infoWindow) {
                 m.infoWindow.close();
               }
@@ -181,7 +190,7 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
           });
 
           // Navigate to trip details when info window content is clicked
-          google.maps.event.addListener(infoWindow, "domready", () => {
+          gm.event.addListener(infoWindow, "domready", () => {
             const content = document.querySelector(`[data-trip-id="${trip.id}"]`) as HTMLElement;
             if (content) {
               content.style.cursor = "pointer";
@@ -209,10 +218,10 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
             render: ({ count, position }: any) => {
               const color = count > 20 ? "#EF4444" : count > 10 ? BrandColors.secondary : BrandColors.primary;
 
-              return new google.maps.Marker({
+              return new gm.Marker({
                 position,
                 icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
+                  path: gm.SymbolPath.CIRCLE,
                   fillColor: color,
                   fillOpacity: 0.8,
                   strokeColor: "#ffffff",
@@ -225,11 +234,11 @@ export function GoogleMapsWeb({ trips, onMarkerPress }: GoogleMapsWebProps) {
                   fontSize: "14px",
                   fontWeight: "bold",
                 },
-                zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+                zIndex: Number(gm.Marker.MAX_ZINDEX) + count,
               });
             },
           },
-          onClusterClick: (_, cluster: any) => {
+          onClusterClick: (_: any, cluster: any) => {
             map.panTo(cluster.position);
             map.setZoom((map.getZoom() || 10) + 2);
           },
