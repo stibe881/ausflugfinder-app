@@ -554,13 +554,6 @@ export default function ProfileScreen() {
                   onPress={() => router.push("/admin/create-trip" as any)}
                 />
                 <SettingItem
-                  icon="tray.full.fill"
-                  iconColor="#F59E0B"
-                  title="Eingereichte Ausflüge"
-                  subtitle="Benutzer-Vorschläge prüfen"
-                  onPress={() => router.push("/admin/pending-submissions" as any)}
-                />
-                <SettingItem
                   icon="paperplane.fill"
                   iconColor="#FF6B35"
                   title="Push-Benachrichtigungen"

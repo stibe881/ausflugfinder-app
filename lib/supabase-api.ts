@@ -379,7 +379,7 @@ export async function notifyAdminsNewSubmission(tripName: string, submitterEmail
     }
 }
 
-// Create a new ausflug (admin only)
+// Create a new ausflug (all authenticated users)
 export async function createAusflug(data: {
     name: string;
     beschreibung?: string;
@@ -405,30 +405,21 @@ export async function createAusflug(data: {
     is_rundtour?: boolean;
     is_von_a_nach_b?: boolean;
     is_indoor?: boolean;
-}): Promise<{ success: boolean; id?: number; error?: string; notificationResult?: any; isPending?: boolean }> {
+}): Promise<{ success: boolean; id?: number; error?: string; notificationResult?: any }> {
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             return { success: false, error: "Not authenticated" };
         }
 
-        // Check if user is admin
-        const isAdmin = await isUserAdmin(user.id);
-
         const insertData: any = {
             ...data,
             created_at: new Date().toISOString(),
+            status: 'approved',
+            submitted_by: user.id,
+            submitted_by_email: user.email,
+            user_id: null,
         };
-
-        if (isAdmin) {
-            insertData.status = 'approved';
-            insertData.user_id = null; // Admin trips have no specific user
-        } else {
-            insertData.status = 'pending';
-            insertData.submitted_by = user.id;
-            insertData.submitted_by_email = user.email;
-            insertData.user_id = null;
-        }
 
         const { data: result, error } = await supabase
             .from("ausfluege")
@@ -443,13 +434,7 @@ export async function createAusflug(data: {
 
         console.log("[createAusflug] Created successfully:", result.id);
 
-        // If pending (user submission), notify admins
-        if (!isAdmin) {
-            notifyAdminsNewSubmission(data.name, user.email || 'Unbekannt');
-            return { success: true, id: result.id, isPending: true };
-        }
-
-        // Only notify users about approved trips (admin-created)
+        // Notify users about the new trip
         let notificationResult = null;
         try {
             const { data: notifData, error: notifError } = await supabase.functions.invoke('notify-new-trip', {

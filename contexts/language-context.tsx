@@ -263,6 +263,27 @@ type Translations = {
   categoryWellness: string;
   categoryGastronomy: string;
   categoryShopping: string;
+  // Wizard
+  wizardTitle: string;
+  wizardStep1Title: string;
+  wizardStep1Desc: string;
+  wizardStep1Short: string;
+  wizardStep2Title: string;
+  wizardStep2Desc: string;
+  wizardStep2Short: string;
+  wizardStep3Title: string;
+  wizardStep3Desc: string;
+  wizardStep3Short: string;
+  wizardStep4Title: string;
+  wizardStep4Desc: string;
+  wizardStep4Short: string;
+  wizardStep5Title: string;
+  wizardStep5Desc: string;
+  wizardStep5Short: string;
+  wizardNextButton: string;
+  wizardSubmitButton: string;
+  suggestTrip: string;
+  suggestTripDesc: string;
 };
 
 const translations: Record<Language, Translations> = {
@@ -525,6 +546,27 @@ const translations: Record<Language, Translations> = {
     categoryWellness: "Wellness",
     categoryGastronomy: "Gastronomie",
     categoryShopping: "Shopping",
+    // Wizard
+    wizardTitle: "Ausflug vorschlagen",
+    wizardStep1Title: "Grundlagen",
+    wizardStep1Desc: "Wie heisst der Ausflug und welche Kategorie passt?",
+    wizardStep1Short: "Basis",
+    wizardStep2Title: "Standort",
+    wizardStep2Desc: "Wo befindet sich das Ausflugsziel?",
+    wizardStep2Short: "Ort",
+    wizardStep3Title: "Details",
+    wizardStep3Desc: "Kosten, Jahreszeiten und weitere Infos",
+    wizardStep3Short: "Details",
+    wizardStep4Title: "Extras & Fotos",
+    wizardStep4Desc: "Website, Parkplatz und Bilder hinzufügen",
+    wizardStep4Short: "Extras",
+    wizardStep5Title: "Zusammenfassung",
+    wizardStep5Desc: "Überprüfe deine Angaben und erstelle den Ausflug",
+    wizardStep5Short: "Fertig",
+    wizardNextButton: "Weiter",
+    wizardSubmitButton: "Ausflug erstellen",
+    suggestTrip: "Ausflug hinzufügen",
+    suggestTripDesc: "Füge einen neuen Ausflug hinzu — er wird für alle sichtbar sein",
   },
   en: {
     // Navigation
@@ -785,6 +827,27 @@ const translations: Record<Language, Translations> = {
     categoryWellness: "Wellness",
     categoryGastronomy: "Gastronomy",
     categoryShopping: "Shopping",
+    // Wizard
+    wizardTitle: "Suggest a trip",
+    wizardStep1Title: "Basics",
+    wizardStep1Desc: "What is the trip called and what category fits?",
+    wizardStep1Short: "Basics",
+    wizardStep2Title: "Location",
+    wizardStep2Desc: "Where is the destination located?",
+    wizardStep2Short: "Location",
+    wizardStep3Title: "Details",
+    wizardStep3Desc: "Costs, seasons and additional info",
+    wizardStep3Short: "Details",
+    wizardStep4Title: "Extras & Photos",
+    wizardStep4Desc: "Add website, parking and photos",
+    wizardStep4Short: "Extras",
+    wizardStep5Title: "Summary",
+    wizardStep5Desc: "Review your information and create the trip",
+    wizardStep5Short: "Done",
+    wizardNextButton: "Next",
+    wizardSubmitButton: "Create trip",
+    suggestTrip: "Add trip",
+    suggestTripDesc: "Add a new trip — it will be visible to everyone",
   },
   fr: {
     // Navigation
@@ -1045,6 +1108,27 @@ const translations: Record<Language, Translations> = {
     categoryWellness: "Bien-être",
     categoryGastronomy: "Gastronomie",
     categoryShopping: "Shopping",
+    // Wizard
+    wizardTitle: "Proposer une excursion",
+    wizardStep1Title: "Base",
+    wizardStep1Desc: "Comment s'appelle l'excursion et quelle catégorie convient ?",
+    wizardStep1Short: "Base",
+    wizardStep2Title: "Lieu",
+    wizardStep2Desc: "Où se trouve la destination ?",
+    wizardStep2Short: "Lieu",
+    wizardStep3Title: "Détails",
+    wizardStep3Desc: "Coûts, saisons et informations supplémentaires",
+    wizardStep3Short: "Détails",
+    wizardStep4Title: "Extras & Photos",
+    wizardStep4Desc: "Ajouter site web, parking et photos",
+    wizardStep4Short: "Extras",
+    wizardStep5Title: "Résumé",
+    wizardStep5Desc: "Vérifiez vos informations et créez l'excursion",
+    wizardStep5Short: "Terminé",
+    wizardNextButton: "Suivant",
+    wizardSubmitButton: "Créer l'excursion",
+    suggestTrip: "Ajouter une excursion",
+    suggestTripDesc: "Ajoutez une nouvelle excursion — elle sera visible par tous",
   },
   it: {
     // Navigation
@@ -1305,6 +1389,27 @@ const translations: Record<Language, Translations> = {
     categoryWellness: "Benessere",
     categoryGastronomy: "Gastronomia",
     categoryShopping: "Shopping",
+    // Wizard
+    wizardTitle: "Suggerisci un'escursione",
+    wizardStep1Title: "Base",
+    wizardStep1Desc: "Come si chiama l'escursione e quale categoria si adatta?",
+    wizardStep1Short: "Base",
+    wizardStep2Title: "Posizione",
+    wizardStep2Desc: "Dove si trova la destinazione?",
+    wizardStep2Short: "Luogo",
+    wizardStep3Title: "Dettagli",
+    wizardStep3Desc: "Costi, stagioni e informazioni aggiuntive",
+    wizardStep3Short: "Dettagli",
+    wizardStep4Title: "Extra & Foto",
+    wizardStep4Desc: "Aggiungi sito web, parcheggio e foto",
+    wizardStep4Short: "Extra",
+    wizardStep5Title: "Riepilogo",
+    wizardStep5Desc: "Verifica le tue informazioni e crea l'escursione",
+    wizardStep5Short: "Fatto",
+    wizardNextButton: "Avanti",
+    wizardSubmitButton: "Crea escursione",
+    suggestTrip: "Aggiungi escursione",
+    suggestTripDesc: "Aggiungi una nuova escursione — sarà visibile a tutti",
   },
 };
 

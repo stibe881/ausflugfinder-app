@@ -820,6 +820,20 @@ export default function ExploreScreen() {
           )}
         />
       )}
+
+      {/* FAB - Suggest Trip */}
+      {isAuthenticated && (
+        <Pressable
+          onPress={() => router.push("/create-trip-wizard" as any)}
+          style={({ pressed }) => [styles.fab, {
+            backgroundColor: colors.primary,
+            opacity: pressed ? 0.85 : 1,
+            bottom: insets.bottom + 16,
+          }]}
+        >
+          <IconSymbol name="plus" size={28} color="#FFFFFF" />
+        </Pressable>
+      )}
     </ThemedView>
   );
 }
@@ -1041,5 +1055,20 @@ const styles = StyleSheet.create({
   tripCategoryText: {
     fontSize: 10,
     fontWeight: "500",
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 6,
+    zIndex: 100,
   },
 });

@@ -191,16 +191,8 @@ export default function CreateTripScreen() {
 
             setIsCreating(false);
 
-            // If pending (user submission), show confirmation and go back
-            if (result.isPending) {
-                Alert.alert(
-                    "✅ Eingereicht!",
-                    "Dein Ausflug-Vorschlag wurde eingereicht und wird von einem Admin geprüft. Du wirst benachrichtigt, sobald er freigeschaltet wird.",
-                    [{ text: "OK", onPress: () => router.back() }]
-                );
-            } else {
-                router.replace(`/trip/${result.id}` as any);
-            }
+            // Navigate to the newly created trip
+            router.replace(`/trip/${result.id}` as any);
         } else {
             Alert.alert("Fehler", result.error || "Unbekannter Fehler");
         }

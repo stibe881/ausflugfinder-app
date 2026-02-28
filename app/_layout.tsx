@@ -109,7 +109,7 @@ export default function RootLayout() {
                         <Stack.Screen name="settings/location" options={{ headerShown: true, title: "Standort" }} />
                         <Stack.Screen name="broadcast" options={{ headerShown: true, title: "Push-Benachrichtigung", headerBackTitle: "Zurück" }} />
                         <Stack.Screen name="admin/create-trip" options={{ headerShown: true, title: "Neuer Ausflug" }} />
-                        <Stack.Screen name="admin/pending-submissions" options={{ headerShown: true, title: "Eingereichte Ausflüge", headerBackTitle: "Zurück" }} />
+                        <Stack.Screen name="create-trip-wizard" options={{ headerShown: false }} />
                         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
                         <Stack.Screen name="auth/register" options={{ headerShown: false }} />
                         <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />

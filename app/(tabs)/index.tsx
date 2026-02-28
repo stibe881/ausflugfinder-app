@@ -105,7 +105,7 @@ function FeatureItem({
   description,
   onPress,
 }: {
-  icon: "magnifyingglass" | "calendar" | "person.2.fill" | "map.fill";
+  icon: "magnifyingglass" | "calendar" | "person.2.fill" | "map.fill" | "plus.circle.fill";
   title: string;
   description: string;
   onPress?: () => void;
@@ -383,6 +383,14 @@ export default function HomeScreen() {
             description={t.discoverTripsDesc}
             onPress={() => router.push("/(tabs)/explore?view=list" as any)}
           />
+          {isAuthenticated && (
+            <FeatureItem
+              icon="plus.circle.fill"
+              title={t.suggestTrip}
+              description={t.suggestTripDesc}
+              onPress={() => router.push("/create-trip-wizard" as any)}
+            />
+          )}
           <FeatureItem
             icon="calendar"
             title={t.dayPlanning}
