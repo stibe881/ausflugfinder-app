@@ -66,6 +66,7 @@ export default function CreateTripWizardScreen() {
         parkplatz: "",
         kategorie_alt: [] as string[],
         is_indoor: false,
+        is_outdoor: false,
         is_rundtour: false,
         is_von_a_nach_b: false,
         // Admin-only fields
@@ -99,7 +100,7 @@ export default function CreateTripWizardScreen() {
 
     // Redirect if not authenticated
     if (!isAuthenticated) {
-        router.back();
+        router.replace('/(tabs)' as any);
         return null;
     }
 
@@ -148,15 +149,40 @@ export default function CreateTripWizardScreen() {
                     Alert.alert(t.error, t.pleaseEnterName);
                     return false;
                 }
+                if (formData.kategorie_alt.length === 0) {
+                    Alert.alert(t.error, 'Bitte wähle mindestens eine Kategorie aus.');
+                    return false;
+                }
+                if (!formData.is_indoor && !formData.is_outdoor) {
+                    Alert.alert(t.error, 'Bitte wähle Indoor, Outdoor oder beides aus.');
+                    return false;
+                }
                 return true;
             case 2:
                 if (!formData.adresse.trim()) {
                     Alert.alert(t.error, t.pleaseEnterAddress);
                     return false;
                 }
+                if (!formData.land.trim()) {
+                    Alert.alert(t.error, 'Bitte gib ein Land ein.');
+                    return false;
+                }
+                if (!formData.region.trim()) {
+                    Alert.alert(t.error, 'Bitte gib eine Region ein.');
+                    return false;
+                }
+                if (!formData.beschreibung.trim()) {
+                    Alert.alert(t.error, 'Bitte gib eine Beschreibung ein.');
+                    return false;
+                }
                 return true;
             case 3:
+                return true;
             case 4:
+                if (selectedImages.length === 0) {
+                    Alert.alert(t.error, 'Bitte füge mindestens ein Foto hinzu.');
+                    return false;
+                }
                 return true;
             default:
                 return true;
@@ -205,8 +231,10 @@ export default function CreateTripWizardScreen() {
             }
         }
 
+        // Strip is_outdoor (UI-only, not in DB) before sending
+        const { is_outdoor, ...dbFormData } = formData;
         const result = await createAusflug({
-            ...formData,
+            ...dbFormData,
             kosten_stufe: formData.kosten_stufe,
             lat: validLat || undefined,
             lng: validLng || undefined,
@@ -273,7 +301,7 @@ export default function CreateTripWizardScreen() {
                     onPress={() => setKategorieExpanded(!kategorieExpanded)}
                     style={[styles.collapsibleHeader, { borderColor: colors.border }]}
                 >
-                    <ThemedText style={styles.label}>{t.category}</ThemedText>
+                    <ThemedText style={styles.label}>{t.category} *</ThemedText>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         {formData.kategorie_alt.length > 0 && (
                             <View style={[styles.badge, { backgroundColor: colors.primary }]}>
@@ -319,21 +347,21 @@ export default function CreateTripWizardScreen() {
 
             {/* Indoor/Outdoor */}
             <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Indoor / Outdoor</ThemedText>
+                <ThemedText style={styles.label}>Indoor / Outdoor *</ThemedText>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                     <Pressable
-                        onPress={() => setFormData(prev => ({ ...prev, is_indoor: false }))}
+                        onPress={() => setFormData(prev => ({ ...prev, is_outdoor: !prev.is_outdoor }))}
                         style={[styles.toggleButton, {
-                            borderColor: !formData.is_indoor ? colors.primary : colors.border,
-                            backgroundColor: !formData.is_indoor ? colors.primary + '15' : colors.surface,
+                            borderColor: formData.is_outdoor ? colors.primary : colors.border,
+                            backgroundColor: formData.is_outdoor ? colors.primary + '15' : colors.surface,
                         }]}
                     >
-                        <ThemedText style={[styles.toggleText, { color: !formData.is_indoor ? colors.primary : colors.text }]}>
+                        <ThemedText style={[styles.toggleText, { color: formData.is_outdoor ? colors.primary : colors.text }]}>
                             🌳 Outdoor
                         </ThemedText>
                     </Pressable>
                     <Pressable
-                        onPress={() => setFormData(prev => ({ ...prev, is_indoor: true }))}
+                        onPress={() => setFormData(prev => ({ ...prev, is_indoor: !prev.is_indoor }))}
                         style={[styles.toggleButton, {
                             borderColor: formData.is_indoor ? colors.primary : colors.border,
                             backgroundColor: formData.is_indoor ? colors.primary + '15' : colors.surface,
@@ -381,7 +409,7 @@ export default function CreateTripWizardScreen() {
 
             {/* Land */}
             <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>{t.country}</ThemedText>
+                <ThemedText style={styles.label}>{t.country} *</ThemedText>
                 <TextInput
                     style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                     value={formData.land}
@@ -393,7 +421,7 @@ export default function CreateTripWizardScreen() {
 
             {/* Region */}
             <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>{t.region}</ThemedText>
+                <ThemedText style={styles.label}>{t.region} *</ThemedText>
                 <TextInput
                     style={[styles.input, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                     value={formData.region}
@@ -405,7 +433,7 @@ export default function CreateTripWizardScreen() {
 
             {/* Beschreibung */}
             <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>{t.tripDescription}</ThemedText>
+                <ThemedText style={styles.label}>{t.tripDescription} *</ThemedText>
                 <TextInput
                     style={[styles.input, styles.textArea, { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border }]}
                     value={formData.beschreibung}
@@ -649,7 +677,7 @@ export default function CreateTripWizardScreen() {
 
             {/* Fotos */}
             <View style={styles.inputGroup}>
-                <ThemedText style={styles.label}>Fotos</ThemedText>
+                <ThemedText style={styles.label}>Fotos *</ThemedText>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                     {selectedImages.map((uri, index) => (
                         <View key={index} style={styles.imagePreviewWrapper}>
@@ -773,7 +801,9 @@ export default function CreateTripWizardScreen() {
                     {/* Indoor/Outdoor */}
                     <View style={styles.summaryRow}>
                         <ThemedText style={[styles.summaryLabel, { color: colors.textSecondary }]}>Typ</ThemedText>
-                        <ThemedText style={styles.summaryValue}>{formData.is_indoor ? "🏠 Indoor" : "🌳 Outdoor"}</ThemedText>
+                        <ThemedText style={styles.summaryValue}>
+                            {[formData.is_outdoor && '🌳 Outdoor', formData.is_indoor && '🏠 Indoor'].filter(Boolean).join(' + ') || '—'}
+                        </ThemedText>
                     </View>
 
                     {/* Adresse */}

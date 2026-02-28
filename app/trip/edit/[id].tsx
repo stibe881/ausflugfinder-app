@@ -63,6 +63,7 @@ export default function EditTripScreen() {
     const [jahreszeiten, setJahreszeiten] = useState("");
     const [jahreszeitenExpanded, setJahreszeitenExpanded] = useState(false);
     const [isIndoor, setIsIndoor] = useState(false);
+    const [isOutdoor, setIsOutdoor] = useState(true);
     const [isRundtour, setIsRundtour] = useState(false);
     const [isVonANachB, setIsVonANachB] = useState(false);
     const [popupTitle, setPopupTitle] = useState("");
@@ -92,6 +93,7 @@ export default function EditTripScreen() {
                 setNiceToKnow(tripData.nice_to_know ? tripData.nice_to_know.split(',').map(v => v.trim()) : []);
                 setKategorie(tripData.kategorie_alt ? tripData.kategorie_alt.split(',').map(v => v.trim()) : []);
                 setIsIndoor(tripData.is_indoor || false);
+                setIsOutdoor(!tripData.is_indoor);
                 setIsRundtour(tripData.is_rundtour || false);
                 setIsVonANachB(tripData.is_von_a_nach_b || false);
                 setPopupTitle(tripData.popup_title || "");
@@ -379,20 +381,20 @@ export default function EditTripScreen() {
                             <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Indoor / Outdoor</ThemedText>
                             <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                                 <Pressable
-                                    onPress={() => setIsIndoor(false)}
+                                    onPress={() => setIsOutdoor(!isOutdoor)}
                                     style={[styles.input, {
                                         flex: 1,
                                         alignItems: 'center',
-                                        borderColor: !isIndoor ? colors.primary : colors.border,
-                                        backgroundColor: !isIndoor ? colors.primary + '15' : colors.surface,
+                                        borderColor: isOutdoor ? colors.primary : colors.border,
+                                        backgroundColor: isOutdoor ? colors.primary + '15' : colors.surface,
                                     }]}
                                 >
-                                    <ThemedText style={{ color: !isIndoor ? colors.primary : colors.text, fontWeight: '600' }}>
+                                    <ThemedText style={{ color: isOutdoor ? colors.primary : colors.text, fontWeight: '600' }}>
                                         🌳 Outdoor
                                     </ThemedText>
                                 </Pressable>
                                 <Pressable
-                                    onPress={() => setIsIndoor(true)}
+                                    onPress={() => setIsIndoor(!isIndoor)}
                                     style={[styles.input, {
                                         flex: 1,
                                         alignItems: 'center',
@@ -444,48 +446,50 @@ export default function EditTripScreen() {
                                 </View>
                             )}
 
-                        {/* Popup Hinweis */}
-                        <View style={styles.field}>
-                            <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Popup-Hinweis</ThemedText>
-                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                                {(['deaktiviert', 'info', 'warnung', 'wichtig'] as const).map((level) => (
-                                    <Pressable
-                                        key={level}
-                                        onPress={() => setPopupLevel(level)}
-                                        style={[styles.input, {
-                                            alignItems: 'center',
-                                            paddingHorizontal: 12,
-                                            borderColor: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.border,
-                                            backgroundColor: popupLevel === level ? (level === 'info' ? '#3B82F615' : level === 'warnung' ? '#F59E0B15' : level === 'wichtig' ? '#EF444415' : colors.primary + '15') : colors.surface,
-                                        }]}
-                                    >
-                                        <ThemedText style={{ color: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.text, fontWeight: '600' }}>
-                                            {level === 'deaktiviert' ? '⛔ Aus' : level === 'info' ? 'ℹ️ Info' : level === 'warnung' ? '⚠️ Warnung' : '🚨 Wichtig'}
-                                        </ThemedText>
-                                    </Pressable>
-                                ))}
+                        {/* Popup Hinweis - Admin only */}
+                        {canEdit && (
+                            <View style={styles.field}>
+                                <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Popup-Hinweis</ThemedText>
+                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                                    {(['deaktiviert', 'info', 'warnung', 'wichtig'] as const).map((level) => (
+                                        <Pressable
+                                            key={level}
+                                            onPress={() => setPopupLevel(level)}
+                                            style={[styles.input, {
+                                                alignItems: 'center',
+                                                paddingHorizontal: 12,
+                                                borderColor: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.border,
+                                                backgroundColor: popupLevel === level ? (level === 'info' ? '#3B82F615' : level === 'warnung' ? '#F59E0B15' : level === 'wichtig' ? '#EF444415' : colors.primary + '15') : colors.surface,
+                                            }]}
+                                        >
+                                            <ThemedText style={{ color: popupLevel === level ? (level === 'info' ? '#3B82F6' : level === 'warnung' ? '#F59E0B' : level === 'wichtig' ? '#EF4444' : colors.primary) : colors.text, fontWeight: '600' }}>
+                                                {level === 'deaktiviert' ? '⛔ Aus' : level === 'info' ? 'ℹ️ Info' : level === 'warnung' ? '⚠️ Warnung' : '🚨 Wichtig'}
+                                            </ThemedText>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                                {popupLevel !== 'deaktiviert' && (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8 }]}
+                                            value={popupTitle}
+                                            onChangeText={setPopupTitle}
+                                            placeholder="Popup Titel"
+                                            placeholderTextColor={colors.textDisabled}
+                                        />
+                                        <TextInput
+                                            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8, minHeight: 80, textAlignVertical: 'top' }]}
+                                            value={popupMessage}
+                                            onChangeText={setPopupMessage}
+                                            placeholder="Popup Nachricht"
+                                            placeholderTextColor={colors.textDisabled}
+                                            multiline
+                                            numberOfLines={3}
+                                        />
+                                    </>
+                                )}
                             </View>
-                            {popupLevel !== 'deaktiviert' && (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8 }]}
-                                        value={popupTitle}
-                                        onChangeText={setPopupTitle}
-                                        placeholder="Popup Titel"
-                                        placeholderTextColor={colors.textDisabled}
-                                    />
-                                    <TextInput
-                                        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, marginTop: 8, minHeight: 80, textAlignVertical: 'top' }]}
-                                        value={popupMessage}
-                                        onChangeText={setPopupMessage}
-                                        placeholder="Popup Nachricht"
-                                        placeholderTextColor={colors.textDisabled}
-                                        multiline
-                                        numberOfLines={3}
-                                    />
-                                </>
-                            )}
-                        </View>
+                        )}
 
                         <View style={styles.field}>
                             <ThemedText style={[styles.label, { color: colors.textSecondary }]}>Adresse *</ThemedText>

@@ -56,6 +56,7 @@ export default function CreateTripScreen() {
         parkplatz: "",
         kategorie_alt: [] as string[],
         is_indoor: false,
+        is_outdoor: true,
         is_rundtour: false,
         is_von_a_nach_b: false,
         popup_title: "",
@@ -165,8 +166,10 @@ export default function CreateTripScreen() {
         }
 
         setIsCreating(true);
+        // Strip is_outdoor (UI-only, not in DB)
+        const { is_outdoor, ...dbFormData } = formData;
         const result = await createAusflug({
-            ...formData,
+            ...dbFormData,
             kosten_stufe: formData.kosten_stufe,
             lat: validLat || undefined,
             lng: validLng || undefined,
@@ -361,20 +364,20 @@ export default function CreateTripScreen() {
                                 <ThemedText style={styles.label}>Indoor / Outdoor</ThemedText>
                                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
                                     <Pressable
-                                        onPress={() => setFormData({ ...formData, is_indoor: false })}
+                                        onPress={() => setFormData({ ...formData, is_outdoor: !formData.is_outdoor })}
                                         style={[styles.checkboxItem, {
-                                            borderColor: !formData.is_indoor ? colors.primary : colors.border,
-                                            backgroundColor: !formData.is_indoor ? colors.primary + '15' : colors.surface,
+                                            borderColor: formData.is_outdoor ? colors.primary : colors.border,
+                                            backgroundColor: formData.is_outdoor ? colors.primary + '15' : colors.surface,
                                             flex: 1,
                                             justifyContent: 'center',
                                         }]}
                                     >
-                                        <ThemedText style={[styles.checkboxLabel, { color: !formData.is_indoor ? colors.primary : colors.text }]}>
+                                        <ThemedText style={[styles.checkboxLabel, { color: formData.is_outdoor ? colors.primary : colors.text }]}>
                                             🌳 Outdoor
                                         </ThemedText>
                                     </Pressable>
                                     <Pressable
-                                        onPress={() => setFormData({ ...formData, is_indoor: true })}
+                                        onPress={() => setFormData({ ...formData, is_indoor: !formData.is_indoor })}
                                         style={[styles.checkboxItem, {
                                             borderColor: formData.is_indoor ? colors.primary : colors.border,
                                             backgroundColor: formData.is_indoor ? colors.primary + '15' : colors.surface,

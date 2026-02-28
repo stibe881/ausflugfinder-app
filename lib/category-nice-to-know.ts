@@ -25,6 +25,7 @@ export const KATEGORIE_OPTIONS: string[] = [
     "Sport & Action",
     "Stadt & Sightseeing",
     "Tierpark & Zoos",
+    "Sonstiges",
 ];
 
 /**

@@ -434,26 +434,20 @@ export async function createAusflug(data: {
 
         console.log("[createAusflug] Created successfully:", result.id);
 
-        // Notify users about the new trip
-        let notificationResult = null;
-        try {
-            const { data: notifData, error: notifError } = await supabase.functions.invoke('notify-new-trip', {
-                body: { record: { id: result.id, ...data } }
-            });
-
+        // Fire-and-forget: notify users about the new trip (don't block save)
+        supabase.functions.invoke('notify-new-trip', {
+            body: { record: { id: result.id, ...data } }
+        }).then(({ data: notifData, error: notifError }) => {
             if (notifError) {
                 console.error("[createAusflug] Notification error:", notifError);
-                notificationResult = { error: notifError };
             } else {
-                console.log("[createAusflug] Notification result:", notifData);
-                notificationResult = notifData;
+                console.log("[createAusflug] Notification sent:", notifData);
             }
-        } catch (e) {
+        }).catch(e => {
             console.error("[createAusflug] Notification exception:", e);
-            notificationResult = { exception: e };
-        }
+        });
 
-        return { success: true, id: result.id, notificationResult };
+        return { success: true, id: result.id };
     } catch (error: any) {
         console.error("[createAusflug] Unexpected error:", error);
         return { success: false, error: error.message };
