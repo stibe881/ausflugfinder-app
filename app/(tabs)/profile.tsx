@@ -608,7 +608,7 @@ export default function ProfileScreen() {
             {/* App Version */}
             <View style={styles.versionContainer}>
               <ThemedText style={[styles.versionText, { color: colors.textDisabled }]}>
-                AusflugFinder v{Constants.expoConfig?.version || "1.0.0"} (Build {Constants.expoConfig?.ios?.buildNumber || Constants.expoConfig?.android?.versionCode || "1"})
+                AusflugFinder v2.0.1
               </ThemedText>
             </View>
           </>
